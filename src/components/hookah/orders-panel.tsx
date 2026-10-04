@@ -196,12 +196,20 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              {active.length > 0 && (
+              {incoming.length > 0 && (
                 <Badge
                   variant="secondary"
                   className="gap-1 border border-primary/30 bg-primary/15 text-primary"
                 >
-                  <Flame className="size-3" /> {active.length} active
+                  <Flame className="size-3" /> {incoming.length} incoming
+                </Badge>
+              )}
+              {(mine.length + othersActive.length) > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 border border-amber-500/30 bg-amber-500/15 text-amber-500"
+                >
+                  <ChefHat className="size-3" /> {mine.length + othersActive.length} active
                 </Badge>
               )}
               <Button

@@ -151,3 +151,17 @@ prisma:query COMMIT
  POST /api/orders 200 in 24ms (compile: 1443µs, render: 23ms)
 prisma:query SELECT `main`.`FlavorStock`.`id`, `main`.`FlavorStock`.`brandId`, `main`.`FlavorStock`.`brandIdRaw`, `main`.`FlavorStock`.`brandName`, `main`.`FlavorStock`.`flavorName`, `main`.`FlavorStock`.`stockGrams`, `main`.`FlavorStock`.`lowStockThreshold`, `main`.`FlavorStock`.`updatedAt` FROM `main`.`FlavorStock` WHERE 1=1 ORDER BY `main`.`FlavorStock`.`brandName` ASC, `main`.`FlavorStock`.`flavorName` ASC LIMIT ? OFFSET ?
  GET /api/flavor-stock 200 in 6ms (compile: 1323µs, render: 4ms)
+ GET / 200 in 36ms (compile: 4ms, render: 32ms)
+ GET / 200 in 30ms (compile: 3ms, render: 27ms)
+prisma:query SELECT 1
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 9ms (compile: 2ms, render: 7ms)
+✓ Compiled in 157ms
+ GET / 200 in 190ms (compile: 53ms, render: 137ms)
+ GET / 200 in 120ms (compile: 99ms, render: 22ms)
+ GET / 200 in 144ms (compile: 5ms, render: 139ms)
+ GET / 200 in 43ms (compile: 5ms, render: 38ms)
+ GET / 200 in 25ms (compile: 2ms, render: 23ms)
+prisma:query SELECT 1
+prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
+ GET /api/orders 200 in 8ms (compile: 3ms, render: 5ms)
