@@ -33,6 +33,8 @@ interface CheckoutDialogProps {
   employeeId?: string | null;
   defaultCustomer?: string;
   defaultTable?: string;
+  /** id of a saved favorite mix applied to this order (optional) */
+  favoriteMixId?: string | null;
 }
 
 interface PlaceOrderPayload {
@@ -49,6 +51,7 @@ interface PlaceOrderPayload {
   source: string;
   orderedByName: string;
   employeeId?: string | null;
+  favoriteMixId?: string | null;
 }
 
 export function CheckoutDialog({
@@ -59,6 +62,7 @@ export function CheckoutDialog({
   employeeId,
   defaultCustomer,
   defaultTable,
+  favoriteMixId,
 }: CheckoutDialogProps) {
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
@@ -84,7 +88,8 @@ export function CheckoutDialog({
     }
   }, [open]);
 
-  const valid = name.trim().length > 0;
+  // Customer name is now optional — the order can be placed with just a table.
+  const valid = true;
 
   const submit = async () => {
     if (!valid || submitting) return;
@@ -103,6 +108,7 @@ export function CheckoutDialog({
       source,
       orderedByName,
       employeeId: employeeId ?? null,
+      favoriteMixId: favoriteMixId ?? null,
     };
     try {
       const res = await fetch("/api/orders", {
@@ -181,11 +187,11 @@ export function CheckoutDialog({
             </DialogHeader>
 
             <div className="slim-scroll max-h-[60vh] space-y-4 overflow-y-auto px-6 pb-2">
-              <Field label="Customer name" icon={<User className="size-3.5" />}>
+              <Field label="Customer name (optional)" icon={<User className="size-3.5" />}>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Customer name"
+                  placeholder="Customer name (optional)"
                   aria-label="Customer name"
                 />
               </Field>

@@ -241,33 +241,46 @@ function RequestCard({
   onAck?: () => void;
   ackLabel?: string;
 }) {
+  const isCoal = req.type === "coal_request";
+  const title = isCoal
+    ? "Coal request"
+    : req.type === "call_shisha_man"
+    ? "Call the shisha man"
+    : req.type;
   return (
     <div
       className={cn(
         "rounded-2xl border bg-card p-4",
         req.status === "pending"
-          ? "border-primary/50"
+          ? isCoal
+            ? "border-amber-500/50"
+            : "border-primary/50"
           : req.status === "acknowledged"
           ? "border-amber-500/40"
           : "border-border opacity-70"
       )}
     >
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
-          <HandHelping className="size-5" />
+        <span
+          className={cn(
+            "grid size-10 shrink-0 place-items-center rounded-xl",
+            isCoal
+              ? "bg-amber-500/15 text-amber-500"
+              : "bg-primary/15 text-primary"
+          )}
+        >
+          {isCoal ? <Flame className="size-5" /> : <HandHelping className="size-5" />}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">
-              {req.type === "call_shisha_man"
-                ? "Call the shisha man"
-                : req.type}
-            </p>
+            <p className="font-semibold">{title}</p>
             <Badge
               variant="secondary"
               className={cn(
                 req.status === "pending"
-                  ? "border border-primary/30 bg-primary/15 text-primary"
+                  ? isCoal
+                    ? "border border-amber-500/30 bg-amber-500/15 text-amber-500"
+                    : "border border-primary/30 bg-primary/15 text-primary"
                   : req.status === "acknowledged"
                   ? "border border-amber-500/30 bg-amber-500/15 text-amber-500"
                   : "bg-muted/60 text-muted-foreground"

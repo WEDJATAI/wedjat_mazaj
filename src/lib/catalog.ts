@@ -248,3 +248,58 @@ export function egp(n: number): string {
     maximumFractionDigits: rounded % 1 === 0 ? 0 : 2,
   })} EGP`;
 }
+
+// ---------------------------------------------------------------------------
+// Supplies (consumables: coal, foil). Tracked separately from molasses and
+// auto-deducted when an order is placed.
+// ---------------------------------------------------------------------------
+
+export interface SupplyDef {
+  key: string;
+  name: string;
+  unit: string; // "pcs" | "sheets"
+  emoji: string;
+  /** how many units are consumed per single hookah in an order */
+  perHookah: number;
+  defaultStock: number;
+  lowThreshold: number;
+}
+
+export const SUPPLIES: SupplyDef[] = [
+  {
+    key: "regular_coal",
+    name: "Regular coal",
+    unit: "pcs",
+    emoji: "⚫",
+    perHookah: 1,
+    defaultStock: 200,
+    lowThreshold: 30,
+  },
+  {
+    key: "cubed_coal",
+    name: "Cubed coal",
+    unit: "pcs",
+    emoji: "🟫",
+    perHookah: 1,
+    defaultStock: 150,
+    lowThreshold: 25,
+  },
+  {
+    key: "foil",
+    name: "Foil",
+    unit: "sheets",
+    emoji: "📄",
+    perHookah: 1,
+    defaultStock: 300,
+    lowThreshold: 40,
+  },
+];
+
+export function getSupply(key: string): SupplyDef | undefined {
+  return SUPPLIES.find((s) => s.key === key);
+}
+
+/** Total supply units consumed for a given number of hookahs (all items). */
+export function supplyConsumption(totalHookahs: number): { key: string; amount: number }[] {
+  return SUPPLIES.map((s) => ({ key: s.key, amount: s.perHookah * totalHookahs }));
+}

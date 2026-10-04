@@ -20,6 +20,7 @@ import {
   ScanLine,
 } from "lucide-react";
 import { BarcodeModal } from "./barcode-modal";
+import { SessionTimer } from "./session-timer";
 
 function useMounted() {
   const [m, setM] = React.useState(false);
@@ -39,6 +40,10 @@ interface OrderScreenProps {
   onSignOut?: () => void;
   /** show the scan button + barcode modal (guest mode) */
   enableScan?: boolean;
+  /** show the session timer card (employee) */
+  showTimer?: boolean;
+  /** optional banner shown above the hero (e.g. returning-guest welcome) */
+  returningBanner?: React.ReactNode;
   /** pixels to lift the floating cart bar (e.g. above a bottom tab bar) */
   bottomInset?: number;
 }
@@ -54,6 +59,8 @@ export function OrderScreen({
   headerExtra,
   onSignOut,
   enableScan = false,
+  showTimer = false,
+  returningBanner,
   bottomInset = 0,
 }: OrderScreenProps) {
   const mounted = useMounted();
@@ -164,6 +171,13 @@ export function OrderScreen({
         </header>
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-40 pt-6">
+          {returningBanner}
+          {showTimer && (
+            <section className="mb-6">
+              <SessionTimer />
+            </section>
+          )}
+
           {/* Hero */}
           <section className="relative overflow-hidden rounded-3xl border border-border">
             <div

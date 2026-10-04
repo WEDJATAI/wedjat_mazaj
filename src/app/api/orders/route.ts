@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { getBrand, mixPrice, chargeableQty, MOLASSES_GRAMS } from "@/lib/catalog";
+import { MOLASSES_GRAMS, supplyConsumption, SUPPLIES } from "@/lib/catalog";
 
 const ComponentSchema = z.object({
   brandId: z.string(),
@@ -39,6 +39,7 @@ const CreateOrderSchema = z.object({
   source: z.enum(["employee", "guest_scan", "guest_call"]).default("employee"),
   orderedByName: z.string().trim().max(80).optional().nullable(),
   employeeId: z.string().optional().nullable(),
+  favoriteMixId: z.string().optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
@@ -58,26 +59,29 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data;
 
-    // --- Inventory deduction (transactional) ---
-    // For each cart line, deduct component grams × qty from each brand's stock.
-    // Build a map of brandId -> total grams to deduct.
-    const deductions = new Map<string, number>();
+    const totalHookahs = data.items.reduce((sum, i) => sum + i.qty, 0);
+
+    // --- Molasses deductions (per brand) ---
+    const molassesDeductions = new Map<string, number>();
     for (const it of data.items) {
       for (const c of it.components) {
-        deductions.set(
+        molassesDeductions.set(
           c.brandId,
-          (deductions.get(c.brandId) ?? 0) + c.grams * it.qty
+          (molassesDeductions.get(c.brandId) ?? 0) + c.grams * it.qty
         );
       }
     }
 
-    // Validate enough stock before writing.
+    // --- Supply deductions (coal + foil, per hookah) ---
+    const supplyDeductions = supplyConsumption(totalHookahs); // {key, amount}
+
+    // --- Validate molasses stock ---
     const inventoryRows = await db.inventoryItem.findMany({
-      where: { brandId: { in: [...deductions.keys()] } },
+      where: { brandId: { in: [...molassesDeductions.keys()] } },
     });
     const short: { brandName: string; need: number; have: number }[] = [];
     for (const row of inventoryRows) {
-      const need = deductions.get(row.brandId) ?? 0;
+      const need = molassesDeductions.get(row.brandId) ?? 0;
       if (need > row.stockGrams + 0.001) {
         short.push({
           brandName: row.brandName,
@@ -98,7 +102,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create order + deduct stock in a single transaction.
+    // --- Validate supply stock ---
+    const supplyRows = await db.supplyItem.findMany({
+      where: { key: { in: supplyDeductions.map((d) => d.key) } },
+    });
+    const shortSupplies: { name: string; need: number; have: number }[] = [];
+    for (const d of supplyDeductions) {
+      const row = supplyRows.find((r) => r.key === d.key);
+      const have = row?.stock ?? 0;
+      if (d.amount > have + 0.001) {
+        const def = SUPPLIES.find((s) => s.key === d.key);
+        shortSupplies.push({
+          name: def?.name ?? d.key,
+          need: d.amount,
+          have: Math.round(have),
+        });
+      }
+    }
+    if (shortSupplies.length > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Not enough supplies: ${shortSupplies
+            .map((s) => `${s.name} (need ${s.need}, have ${s.have})`)
+            .join("; ")}`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // --- Create order + deduct everything in a single transaction ---
     const order = await db.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
@@ -112,19 +145,48 @@ export async function POST(req: NextRequest) {
           total: data.total,
           bogo: data.bogo,
           ownType: data.ownType ?? null,
-          itemCount: data.items.reduce((sum, i) => sum + i.qty, 0),
+          itemCount: totalHookahs,
           status: "pending",
           source: data.source,
           orderedByName: data.orderedByName || null,
           employeeId: data.employeeId || null,
+          favoriteMixId: data.favoriteMixId || null,
         },
       });
 
-      for (const [brandId, grams] of deductions) {
+      // deduct molasses
+      for (const [brandId, grams] of molassesDeductions) {
         await tx.inventoryItem.update({
           where: { brandId },
           data: { stockGrams: { decrement: grams } },
         });
+      }
+
+      // deduct supplies (upsert so missing rows are created then decremented)
+      for (const d of supplyDeductions) {
+        const existing = await tx.supplyItem.findUnique({
+          where: { key: d.key },
+        });
+        if (existing) {
+          await tx.supplyItem.update({
+            where: { key: d.key },
+            data: { stock: { decrement: d.amount } },
+          });
+        } else {
+          const def = SUPPLIES.find((s) => s.key === d.key);
+          if (def) {
+            await tx.supplyItem.create({
+              data: {
+                key: def.key,
+                name: def.name,
+                unit: def.unit,
+                emoji: def.emoji,
+                stock: def.defaultStock - d.amount,
+                lowStockThreshold: def.lowThreshold,
+              },
+            });
+          }
+        }
       }
 
       return created;
@@ -151,6 +213,31 @@ export async function GET() {
     console.error("list orders error", err);
     return NextResponse.json(
       { ok: false, error: "Could not load orders" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH used to update order status (pending -> preparing -> done)
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { id, status } = body as { id?: string; status?: string };
+    if (!id || !status) {
+      return NextResponse.json(
+        { ok: false, error: "id and status required" },
+        { status: 400 }
+      );
+    }
+    const updated = await db.order.update({
+      where: { id },
+      data: { status },
+    });
+    return NextResponse.json({ ok: true, order: updated });
+  } catch (err) {
+    console.error("update order error", err);
+    return NextResponse.json(
+      { ok: false, error: "Could not update order" },
       { status: 500 }
     );
   }

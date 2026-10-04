@@ -95,3 +95,40 @@ Verification (Agent Browser, mobile 412×915, fresh DB each run):
 Stage Summary:
 - All 4 requirements implemented & browser-verified.
 - Lint clean. Dev server serves / + all API routes 200.
+
+---
+Task ID: 20-28
+Agent: main (Z.ai Code)
+Task: Round 3 — order comments, optional name, coal request button, coal/foil supplies in inventory, saved favorite mixes, creative value-adds.
+
+Work Log:
+- Prisma schema: added SupplyItem, FavoriteMix, OrderComment models; Order.favoriteMixId; Order↔OrderComment relation. db:push + seed (supplies + Sara's Signature favorite).
+- catalog.ts: SUPPLIES def (regular_coal, cubed_coal, foil) with perHookah consumption + supplyConsumption().
+- API routes: /api/supplies (GET+POST restock), /api/favorites (GET by guestName + POST + DELETE /:id), /api/orders/[id]/comments (GET+POST). Updated /api/orders: customerName optional, favoriteMixId, transactional deduction of molasses + coal + foil with low-stock guards, PATCH for status.
+- checkout-dialog.tsx: customerName now optional (valid always true), favoriteMixId prop/payload wired.
+- guest-order.tsx: added Favorites button (with count badge), Coal request button (Regular/Cubed chooser dialog), returning-guest recognition (fetches favorites on check-in → "Welcome back, {name}! Your usual: {label} · {price}" banner + Re-order button).
+- favorites-sheet.tsx: save current cart mix as named favorite, list favorites, one-tap apply (adds to cart at correct mix price), delete.
+- requests-panel.tsx: coal_request type rendered with flame icon + amber styling distinct from call_shisha_man.
+- inventory-panel.tsx: added Supplies section (coal + foil) with stock bars, low-stock badges, restock sheet; merged into low-stock count.
+- orders-panel.tsx (NEW): employee Order Queue tab — active/done sections, order cards (customer/table/source/items/total), status workflow (pending→preparing→done), comments sheet (list + add with author).
+- employee-dashboard.tsx: added 4th "Queue" tab.
+- session-timer.tsx (NEW creative): start/pause/reset timer, target presets (30/45/60/90m), progress bar, overtime warning + toast when target passed (prompts coal refresh).
+- order-screen.tsx: showTimer + returningBanner props.
+
+Verification (Agent Browser, mobile 412×915, fresh DB):
+1. Employee login → Session timer card visible on order screen.
+2. Inventory → Supplies section shows Regular coal 200 pcs, Cubed coal 150 pcs, Foil 300 sheets (all In stock).
+3. Requests tab shows seeded "Call the shisha man · Sara · Table 3 · pending".
+4. Guest (Sara) check-in → "Welcome back, Sara! Your usual: Sara's Signature · 145 EGP" banner + Favorites badge (1).
+5. Coal request → dialog with Regular/Cubed chooser → "Coal request sent! Cubed coal on the way" toast.
+6. Favorites sheet → Apply "Sara's Signature" → "Added Sara's Signature · 2 flavors · 145 EGP" → cart bar 145 EGP.
+7. Checkout with EMPTY customer name → "Order placed!" (name optional confirmed).
+8. API: POST order (2 hookahs, no name) → supplies auto-deducted: regular_coal 200→198, cubed_coal 150→148, foil 300→298.
+9. Orders queue shows "Walk-in · 1 hookah · 125 EGP" (omitted name → "Walk-in" display).
+10. Comments sheet → filled Author "Hassan" + body "Extra coal needed" → posted → "Hassan · just now · Extra coal needed" shown.
+11. No page/console errors throughout. Lint clean.
+
+Stage Summary:
+- All 7 requirements implemented & browser-verified.
+- Creative value-adds: Session Timer (coal-refresh prompts), returning-guest recognition (one-tap re-order).
+- Supplies (coal + foil) tracked & auto-deducted alongside molasses. Lint clean, dev server 200.

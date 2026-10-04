@@ -1,5 +1,5 @@
 import { db } from "../src/lib/db";
-import { BRANDS } from "../src/lib/catalog";
+import { BRANDS, SUPPLIES } from "../src/lib/catalog";
 
 async function main() {
   // --- Employees ---
@@ -18,8 +18,7 @@ async function main() {
   }
   console.log(`Seeded ${employees.length} employees`);
 
-  // --- Inventory ---
-  // Give each brand a starting stock (in grams of molasses).
+  // --- Molasses inventory ---
   for (const brand of BRANDS) {
     await db.inventoryItem.upsert({
       where: { brandId: brand.id },
@@ -33,6 +32,23 @@ async function main() {
     });
   }
   console.log(`Seeded inventory for ${BRANDS.length} brands`);
+
+  // --- Supplies (coal + foil) ---
+  for (const s of SUPPLIES) {
+    await db.supplyItem.upsert({
+      where: { key: s.key },
+      update: {},
+      create: {
+        key: s.key,
+        name: s.name,
+        unit: s.unit,
+        emoji: s.emoji,
+        stock: s.defaultStock,
+        lowStockThreshold: s.lowThreshold,
+      },
+    });
+  }
+  console.log(`Seeded ${SUPPLIES.length} supply items`);
 
   // --- A sample guest service request so the Requests panel isn't empty ---
   const existingReq = await db.serviceRequest.findFirst({
@@ -49,6 +65,36 @@ async function main() {
       },
     });
     console.log("Seeded sample service request");
+  }
+
+  // --- A sample favorite mix so returning-guest demo works ---
+  const existingFav = await db.favoriteMix.findFirst({
+    where: { guestName: "Sara", label: "Sara's Signature" },
+  });
+  if (!existingFav) {
+    await db.favoriteMix.create({
+      data: {
+        guestName: "Sara",
+        label: "Sara's Signature",
+        componentsJson: JSON.stringify([
+          {
+            brandId: "mazaya",
+            brandName: "Mazaya",
+            flavorName: "Blueberry",
+            emoji: "🌹",
+            grams: 10,
+          },
+          {
+            brandId: "al-fakher",
+            brandName: "Al Fakher",
+            flavorName: "Mint",
+            emoji: "🔴",
+            grams: 10,
+          },
+        ]),
+      },
+    });
+    console.log("Seeded sample favorite mix (Sara's Signature)");
   }
 }
 

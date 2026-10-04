@@ -28,15 +28,36 @@ model InventoryItem {
   updatedAt         DateTime @updatedAt
 }
 
+// Consumable supplies (coal, foil, …). Tracked in their own unit, auto-deducted on order.
+model SupplyItem {
+  id                String   @id @default(cuid())
+  key               String   @unique // regular_coal | cubed_coal | foil | ...
+  name              String
+  unit              String   // pcs | sheets | ...
+  stock             Float
+  lowStockThreshold Float    @default(20)
+  emoji             String   @default("📦")
+  updatedAt         DateTime @updatedAt
+}
+
 model ServiceRequest {
   id              String   @id @default(cuid())
-  type            String   @default("call_shisha_man") // call_shisha_man | ...
+  type            String   @default("call_shisha_man") // call_shisha_man | coal_request | ...
   guestName       String?
   table           String?
   note            String?
   status          String   @default("pending") // pending | acknowledged | done
   createdAt       DateTime @default(now())
   acknowledgedAt  DateTime?
+}
+
+// A guest's saved favorite mix (their go-to bowl).
+model FavoriteMix {
+  id          String   @id @default(cuid())
+  guestName   String
+  label       String
+  componentsJson String // serialized FlavorComponent[]
+  createdAt   DateTime @default(now())
 }
 
 model Order {
@@ -56,5 +77,17 @@ model Order {
   source        String   @default("employee") // employee | guest_scan | guest_call
   orderedByName String?
   employeeId    String?
+  favoriteMixId String?
   createdAt     DateTime @default(now())
+
+  comments OrderComment[]
+}
+
+model OrderComment {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  author    String
+  body      String
+  createdAt DateTime @default(now())
 }

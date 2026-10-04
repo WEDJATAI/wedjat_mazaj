@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { BRANDS } from "@/lib/catalog";
+import { BRANDS, SUPPLIES } from "@/lib/catalog";
 
 interface InventoryRow {
   id: string;
@@ -35,23 +35,39 @@ interface InventoryRow {
   updatedAt: string;
 }
 
+interface SupplyRow {
+  id: string;
+  key: string;
+  name: string;
+  unit: string;
+  stock: number;
+  lowStockThreshold: number;
+  emoji: string;
+  updatedAt: string;
+}
+
 function hookahsFromGrams(g: number): number {
   return Math.floor(g / 20);
 }
 
 export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
   const [rows, setRows] = React.useState<InventoryRow[]>([]);
+  const [supplies, setSupplies] = React.useState<SupplyRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [restockBrand, setRestockBrand] = React.useState<InventoryRow | null>(null);
+  const [restockSupply, setRestockSupply] = React.useState<SupplyRow | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/inventory");
-      const data = await res.json();
-      if (data.ok) {
-        // merge with catalog so every brand shows even if seeded
-        const byId = new Map(data.items.map((r: InventoryRow) => [r.brandId, r]));
+      const [invRes, supRes] = await Promise.all([
+        fetch("/api/inventory"),
+        fetch("/api/supplies"),
+      ]);
+      const invData = await invRes.json();
+      const supData = await supRes.json();
+      if (invData.ok) {
+        const byId = new Map(invData.items.map((r: InventoryRow) => [r.brandId, r]));
         const merged = BRANDS.map(
           (b) =>
             byId.get(b.id) ?? {
@@ -67,6 +83,25 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
       } else {
         toast.error("Could not load inventory");
       }
+      if (supData.ok) {
+        const byKey = new Map(supData.items.map((r: SupplyRow) => [r.key, r]));
+        const mergedSup = SUPPLIES.map(
+          (s) =>
+            byKey.get(s.key) ?? {
+              id: s.key,
+              key: s.key,
+              name: s.name,
+              unit: s.unit,
+              stock: 0,
+              lowStockThreshold: s.lowThreshold,
+              emoji: s.emoji,
+              updatedAt: new Date().toISOString(),
+            }
+        );
+        setSupplies(mergedSup as SupplyRow[]);
+      } else {
+        toast.error("Could not load supplies");
+      }
     } catch {
       toast.error("Could not load inventory");
     } finally {
@@ -78,9 +113,9 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
     load();
   }, [load]);
 
-  const lowCount = rows.filter(
-    (r) => r.stockGrams <= r.lowStockThreshold
-  ).length;
+  const lowCount =
+    rows.filter((r) => r.stockGrams <= r.lowStockThreshold).length +
+    supplies.filter((s) => s.stock <= s.lowStockThreshold).length;
 
   return (
     <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
@@ -131,7 +166,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
         </header>
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6">
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard
               label="Brands tracked"
               value={String(rows.length)}
@@ -154,6 +189,106 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
               warn={lowCount > 0}
             />
           </div>
+
+          {/* Supplies section */}
+          <section className="mb-8">
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-lg font-bold tracking-tight">Supplies</h2>
+              <Badge variant="secondary" className="bg-muted/60 text-muted-foreground">
+                coal · foil
+              </Badge>
+            </div>
+            {loading ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-28 rounded-2xl" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {supplies.map((s) => {
+                  const low = s.stock <= s.lowStockThreshold;
+                  const def = SUPPLIES.find((d) => d.key === s.key);
+                  const pct = Math.max(
+                    4,
+                    Math.min(100, (s.stock / (def?.defaultStock ?? 200)) * 100)
+                  );
+                  return (
+                    <div
+                      key={s.id}
+                      className={cn(
+                        "rounded-2xl border bg-card p-4",
+                        low ? "border-amber-500/50" : "border-border"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="grid size-9 place-items-center rounded-xl bg-muted/60 text-lg">
+                            {s.emoji}
+                          </span>
+                          <div>
+                            <p className="font-semibold">{s.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {Math.round(s.stock)} {s.unit}
+                            </p>
+                          </div>
+                        </div>
+                        {low ? (
+                          <Badge
+                            variant="secondary"
+                            className="gap-1 border border-amber-500/30 bg-amber-500/15 text-amber-500"
+                          >
+                            <AlertTriangle className="size-3" /> Low
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className="border border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+                          >
+                            In stock
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <div className="mb-1 flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">stock</span>
+                          <span className="text-muted-foreground">
+                            min {Math.round(s.lowStockThreshold)}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              low ? "bg-amber-500" : "bg-primary"
+                            )}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 w-full rounded-xl"
+                        onClick={() => setRestockSupply(s)}
+                      >
+                        <PackagePlus className="size-4" /> Restock
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Molasses section */}
+          <section>
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-lg font-bold tracking-tight">Molasses</h2>
+              <Badge variant="secondary" className="bg-muted/60 text-muted-foreground">
+                {rows.length} brands
+              </Badge>
+            </div>
 
           {loading ? (
             <div className="grid gap-3 sm:grid-cols-2">
@@ -240,6 +375,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
               })}
             </div>
           )}
+          </section>
         </main>
 
         <footer className="relative mt-auto border-t border-border bg-background/60 py-6">
@@ -254,6 +390,12 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
         row={restockBrand}
         open={!!restockBrand}
         onOpenChange={(o) => !o && setRestockBrand(null)}
+        onDone={load}
+      />
+      <RestockSupplySheet
+        row={restockSupply}
+        open={!!restockSupply}
+        onOpenChange={(o) => !o && setRestockSupply(null)}
         onDone={load}
       />
     </div>
@@ -376,6 +518,104 @@ function RestockSheet({
             onClick={submit}
           >
             {saving ? "Saving…" : `Add ${grams}g`}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function RestockSupplySheet({
+  row,
+  open,
+  onOpenChange,
+  onDone,
+}: {
+  row: SupplyRow | null;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onDone: () => void;
+}) {
+  const [amount, setAmount] = React.useState(50);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (open) setAmount(50);
+  }, [open]);
+
+  if (!row) return null;
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/supplies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: row.key, addAmount: amount }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error ?? "Could not restock");
+      }
+      toast.success(`Restocked ${row.name}`, {
+        description: `+${amount} ${row.unit}`,
+      });
+      onOpenChange(false);
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not restock");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const presets = [20, 50, 100, 200];
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="mx-auto w-full max-w-xl rounded-t-3xl">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <span>{row.emoji}</span> Restock {row.name}
+          </SheetTitle>
+          <SheetDescription>
+            Current: {Math.round(row.stock)} {row.unit} · adds stock.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="px-4 pb-2">
+          <Label className="mb-2 block text-xs font-medium text-muted-foreground">
+            Amount ({row.unit})
+          </Label>
+          <div className="grid grid-cols-4 gap-2">
+            {presets.map((p) => (
+              <Button
+                key={p}
+                variant={amount === p ? "default" : "outline"}
+                className="rounded-xl"
+                onClick={() => setAmount(p)}
+              >
+                {p}
+              </Button>
+            ))}
+          </div>
+          <Input
+            type="number"
+            min={1}
+            value={amount}
+            onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+            className="mt-3"
+          />
+        </div>
+
+        <SheetFooter>
+          <Button
+            className="w-full rounded-xl"
+            size="lg"
+            disabled={saving}
+            onClick={submit}
+          >
+            {saving ? "Saving…" : `Add ${amount} ${row.unit}`}
           </Button>
         </SheetFooter>
       </SheetContent>
