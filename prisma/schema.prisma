@@ -1,0 +1,28 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id           String   @id @default(cuid())
+  customerName String?
+  phone        String?
+  table        String?
+  notes        String?
+  itemsJson    String
+  subtotal     Float
+  discount     Float    @default(0)
+  total        Float
+  bogo         Boolean  @default(false)
+  ownType      String?
+  itemCount    Int      @default(0)
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+}

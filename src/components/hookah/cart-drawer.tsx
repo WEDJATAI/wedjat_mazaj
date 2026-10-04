@@ -1,0 +1,278 @@
+"use client";
+
+import * as React from "react";
+import { useCart, computeTotals, OwnType } from "@/store/cart";
+import { chargeableQty, egp } from "@/lib/catalog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ShoppingBag,
+  Sparkles,
+  Wind,
+  FlaskRound,
+  PartyPopper,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface CartDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCheckout: () => void;
+}
+
+const OWN_OPTIONS: {
+  value: Exclude<OwnType, null>;
+  label: string;
+  desc: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    value: "hookah",
+    label: "Bring my own hookah",
+    desc: "You bring the device, we bring the molasses.",
+    icon: <Wind className="size-4" />,
+  },
+  {
+    value: "molasses",
+    label: "Bring my own molasses",
+    desc: "You bring the molasses, we bring the setup.",
+    icon: <FlaskRound className="size-4" />,
+  },
+];
+
+export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) {
+  const items = useCart((s) => s.items);
+  const ownType = useCart((s) => s.ownType);
+  const setQty = useCart((s) => s.setQty);
+  const removeItem = useCart((s) => s.removeItem);
+  const setOwnType = useCart((s) => s.setOwnType);
+
+  const totals = computeTotals(items, ownType);
+  const bogo = totals.bogo;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+      >
+        <SheetHeader className="border-b border-border px-5 py-4">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="size-5 text-primary" />
+            <SheetTitle className="text-lg">Your order</SheetTitle>
+            {totals.totalQty > 0 && (
+              <Badge
+                variant="secondary"
+                className="ml-auto bg-primary/15 text-primary"
+              >
+                {totals.totalQty} hookah{totals.totalQty > 1 ? "s" : ""}
+              </Badge>
+            )}
+          </div>
+          <SheetDescription>
+            Each hookah is 20g of molasses.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="slim-scroll flex-1 overflow-y-auto px-5 py-4">
+          {items.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 py-16 text-center">
+              <div className="grid size-16 place-items-center rounded-full bg-muted/50">
+                <ShoppingBag className="size-7 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium">Your cart is empty</p>
+                <p className="text-sm text-muted-foreground">
+                  Pick a brand to start your session.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {items.map((it) => {
+                const charged = chargeableQty(it.qty, bogo);
+                const free = it.qty - charged;
+                return (
+                  <li
+                    key={it.id}
+                    className="rounded-2xl border border-border bg-card p-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={cn(
+                          "grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-xl",
+                          it.accent
+                        )}
+                      >
+                        {it.emoji}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">
+                              {it.brandName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {it.flavorLabel} · {egp(it.unitPrice)} · 20g
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(it.id)}
+                            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            aria-label={`Remove ${it.brandName}`}
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="flex items-center gap-1 rounded-lg border border-border bg-background">
+                            <button
+                              type="button"
+                              className="grid size-8 place-items-center rounded-l-lg text-muted-foreground hover:bg-muted"
+                              onClick={() => setQty(it.id, it.qty - 1)}
+                              aria-label="Decrease"
+                            >
+                              <Minus className="size-3.5" />
+                            </button>
+                            <span className="min-w-8 text-center text-sm font-semibold tabular-nums">
+                              {it.qty}
+                            </span>
+                            <button
+                              type="button"
+                              className="grid size-8 place-items-center rounded-r-lg text-muted-foreground hover:bg-muted"
+                              onClick={() => setQty(it.id, it.qty + 1)}
+                              aria-label="Increase"
+                            >
+                              <Plus className="size-3.5" />
+                            </button>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">
+                              {egp(it.unitPrice * charged)}
+                            </p>
+                            {bogo && free > 0 && (
+                              <p className="text-[11px] font-medium text-primary">
+                                {free} free · {charged} charged
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {items.length > 0 && (
+          <div className="border-t border-border px-5 py-4">
+            {/* BYO promo */}
+            <div className="mb-4 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <Sparkles className="size-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">
+                  Bring Your Own · 2 for 1
+                </p>
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Bring your own hookah <em>or</em> your own molasses and get{" "}
+                <span className="font-semibold text-primary">
+                  2 hookahs for the price of 1
+                </span>
+                .
+              </p>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setOwnType(null)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all",
+                    ownType === null
+                      ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                      : "border-border bg-card hover:border-primary/50"
+                  )}
+                >
+                  <PartyPopper className="size-4 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Use lounge setup</p>
+                    <p className="text-xs text-muted-foreground">
+                      Standard pricing, no promo.
+                    </p>
+                  </div>
+                </button>
+                {OWN_OPTIONS.map((opt) => {
+                  const active = ownType === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setOwnType(opt.value)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all",
+                        active
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                          : "border-border bg-card hover:border-primary/50"
+                      )}
+                    >
+                      <span className="text-primary">{opt.icon}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{opt.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {opt.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Separator className="my-3" />
+
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span className="tabular-nums">{egp(totals.subtotal)}</span>
+              </div>
+              {totals.discount > 0 && (
+                <div className="flex justify-between font-medium text-primary">
+                  <span>BYO 2-for-1 saving</span>
+                  <span className="tabular-nums">−{egp(totals.discount)}</span>
+                </div>
+              )}
+              <div className="flex items-baseline justify-between pt-1">
+                <span className="font-semibold">Total</span>
+                <span className="text-xl font-bold tabular-nums">
+                  {egp(totals.total)}
+                </span>
+              </div>
+            </div>
+
+            <Button
+              size="lg"
+              className="mt-4 w-full rounded-xl text-base font-semibold"
+              onClick={onCheckout}
+            >
+              Checkout · {egp(totals.total)}
+            </Button>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
