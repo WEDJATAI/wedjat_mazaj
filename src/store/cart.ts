@@ -60,6 +60,70 @@ function makeId(
   return `${primaryBrandId}:${flavor}:${sig}`;
 }
 
+/**
+ * Normalize a possibly-stale cart item into the current CartItem shape.
+ * Older app versions persisted items WITHOUT `components` (and used
+ * `brandId`/`brandName` instead of `primaryBrandId`/`primaryBrandName`).
+ * This reconstructs a single-component entry from those legacy fields so
+ * old carts survive the schema change instead of crashing the UI.
+ */
+function normalizeItem(raw: unknown): CartItem | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+
+  // Prefer the new `components` field; otherwise rebuild one from legacy fields.
+  let components: FlavorComponent[] | undefined;
+  if (Array.isArray(r.components) && r.components.length > 0) {
+    components = r.components as FlavorComponent[];
+  } else {
+    const brandId = (r.primaryBrandId as string) ?? (r.brandId as string);
+    const brandName = (r.primaryBrandName as string) ?? (r.brandName as string);
+    if (!brandId || !brandName) return null; // unrecoverable
+    const emoji = (r.emoji as string) ?? "🔥";
+    const flavorName =
+      (r.flavorLabel as string) ?? // legacy fallback
+      "Standard";
+    components = [
+      { brandId, brandName, flavorName, emoji, grams: MOLASSES_GRAMS },
+    ];
+  }
+
+  const primaryBrandId =
+    (r.primaryBrandId as string) ??
+    (components[0]?.brandId as string | undefined) ??
+    "";
+  const primaryBrandName =
+    (r.primaryBrandName as string) ??
+    (components[0]?.brandName as string | undefined) ??
+    "";
+
+  const flavor = (r.flavor as FlavorType) ?? "fruits";
+  const flavorLabel =
+    (r.flavorLabel as string) ?? FLAVOR_LABELS[flavor] ?? "Fruits";
+  const id =
+    (r.id as string) ?? makeId(primaryBrandId, flavor, components);
+
+  return {
+    id,
+    primaryBrandId,
+    primaryBrandName,
+    emoji: (r.emoji as string) ?? "🔥",
+    accent: (r.accent as string) ?? "from-amber-500/25 to-amber-500/5",
+    flavor,
+    flavorLabel,
+    components,
+    molassesGrams: (r.molassesGrams as number) ?? MOLASSES_GRAMS,
+    unitPrice: (r.unitPrice as number) ?? 0,
+    qty: typeof r.qty === "number" && r.qty > 0 ? r.qty : 1,
+  };
+}
+
+/** Persisted-state shape (may include legacy fields). */
+interface PersistedCart {
+  items?: unknown[];
+  ownType?: OwnType;
+}
+
 /** Split 20g evenly across components, rounded to 2 decimals. */
 export function splitGrams(count: number): number[] {
   if (count <= 1) return [MOLASSES_GRAMS];
@@ -101,7 +165,19 @@ export const useCart = create<CartState>()(
     }),
     {
       name: "mazaj-cart",
+      version: 2,
       partialize: (state) => ({ items: state.items, ownType: state.ownType }),
+      // Rehydrate legacy persisted carts (pre-`components` schema) into the
+      // current CartItem shape so the UI never sees a missing `components`.
+      migrate: (persisted: unknown) => {
+        const p = (persisted ?? {}) as PersistedCart;
+        const items = Array.isArray(p.items)
+          ? p.items
+              .map(normalizeItem)
+              .filter((i): i is CartItem => i !== null)
+          : [];
+        return { items, ownType: p.ownType ?? null };
+      },
     }
   )
 );
@@ -126,9 +202,11 @@ export function computeTotals(items: CartItem[], ownType: OwnType): CartTotals {
   let total = 0;
   let totalQty = 0;
   for (const it of items) {
-    subtotal += it.unitPrice * it.qty;
-    total += it.unitPrice * chargeableQty(it.qty, bogo);
-    totalQty += it.qty;
+    const unit = typeof it.unitPrice === "number" ? it.unitPrice : 0;
+    const qty = typeof it.qty === "number" && it.qty > 0 ? it.qty : 0;
+    subtotal += unit * qty;
+    total += unit * chargeableQty(qty, bogo);
+    totalQty += qty;
   }
   const discount = Math.max(0, subtotal - total);
   return { totalQty, subtotal, discount, total, bogo };
@@ -141,9 +219,9 @@ export function computeTotals(items: CartItem[], ownType: OwnType): CartTotals {
  */
 export function priceForConfig(
   flavor: FlavorType,
-  components: FlavorComponent[]
+  components: FlavorComponent[] | undefined
 ): number {
-  if (components.length === 0) return 0;
+  if (!components || components.length === 0) return 0;
   const primary = getBrand(components[0].brandId);
   if (flavor === "fruits") return primary?.pricing.fruits ?? 0;
   if (flavor === "flat") return primary?.pricing.flat ?? 0;
@@ -154,10 +232,17 @@ export function priceForConfig(
 
 /** Human-readable summary of a cart item's flavors. */
 export function flavorSummary(item: CartItem): string {
-  if (item.components.length === 1) {
-    return item.components[0].flavorName;
+  const comps = item.components;
+  if (!Array.isArray(comps) || comps.length === 0) {
+    return item.flavorLabel ?? item.primaryBrandName ?? "Hookah";
   }
-  return item.components.map((c) => `${c.brandName} ${c.flavorName}`).join(" + ");
+  if (comps.length === 1) {
+    return comps[0].flavorName || item.flavorLabel || "Standard";
+  }
+  return comps
+    .map((c) => `${c.brandName} ${c.flavorName}`)
+    .filter(Boolean)
+    .join(" + ");
 }
 
 export { FLAVOR_LABELS, MOLASSES_GRAMS };
