@@ -36,7 +36,19 @@ export interface Brand {
   flavors: string[];
   /** short barcode used by the guest scanner, e.g. "MZ-001" */
   barcode: string;
+  /** purchasable pack sizes for this brand (Egyptian market wholesale) */
+  packs: PackOption[];
   badge?: string;
+}
+
+/** A purchasable pack of molasses. */
+export interface PackOption {
+  /** grams in the pack (e.g. 250 or 1000) */
+  grams: number;
+  /** pack label, e.g. "250g pack" */
+  label: string;
+  /** wholesale cost in EGP to buy this pack */
+  costEgp: number;
 }
 
 export const MOLASSES_GRAMS = 20;
@@ -65,6 +77,10 @@ export const BRANDS: Brand[] = [
       "Guava",
     ],
     barcode: "MZ-001",
+    packs: [
+      { grams: 250, label: "250g pack", costEgp: 85 },
+      { grams: 1000, label: "1kg pack", costEgp: 280 },
+    ],
   },
   {
     id: "al-fakher",
@@ -89,6 +105,10 @@ export const BRANDS: Brand[] = [
       "Rose",
     ],
     barcode: "AF-002",
+    packs: [
+      { grams: 250, label: "250g pack", costEgp: 90 },
+      { grams: 1000, label: "1kg pack", costEgp: 300 },
+    ],
   },
   {
     id: "dandash",
@@ -104,6 +124,10 @@ export const BRANDS: Brand[] = [
     flavorTypes: ["fruits", "fruits-mix"],
     flavors: ["Double Apple", "Grape", "Mint", "Watermelon", "Lemon", "Peach"],
     barcode: "DN-003",
+    packs: [
+      { grams: 250, label: "250g pack", costEgp: 70 },
+      { grams: 1000, label: "1kg pack", costEgp: 240 },
+    ],
   },
   {
     id: "nakhla",
@@ -127,6 +151,10 @@ export const BRANDS: Brand[] = [
       "Rose",
     ],
     barcode: "NK-004",
+    packs: [
+      { grams: 250, label: "250g pack", costEgp: 65 },
+      { grams: 1000, label: "1kg pack", costEgp: 220 },
+    ],
   },
   {
     id: "amy",
@@ -149,6 +177,10 @@ export const BRANDS: Brand[] = [
       "Blueberry",
     ],
     barcode: "AM-005",
+    packs: [
+      { grams: 250, label: "250g pack", costEgp: 110 },
+      { grams: 1000, label: "1kg pack", costEgp: 380 },
+    ],
     badge: "Premium",
   },
   {
@@ -165,6 +197,7 @@ export const BRANDS: Brand[] = [
     flavorTypes: ["flat"],
     flavors: ["Standard", "Apple", "Grape", "Mint"],
     barcode: "SL-006",
+    packs: [{ grams: 250, label: "250g pack", costEgp: 35 }],
   },
   {
     id: "kass",
@@ -180,6 +213,7 @@ export const BRANDS: Brand[] = [
     flavorTypes: ["flat"],
     flavors: ["Standard", "Apple", "Grape", "Mint"],
     barcode: "KS-007",
+    packs: [{ grams: 250, label: "250g pack", costEgp: 35 }],
   },
 ];
 
@@ -274,7 +308,7 @@ export const SUPPLIES: SupplyDef[] = [
     unit: "pcs",
     emoji: "⚫",
     perHookah: 1,
-    cost: 0,
+    cost: 1.2, // ~120 EGP / 100 pcs box
     defaultStock: 200,
     lowThreshold: 30,
   },
@@ -284,7 +318,7 @@ export const SUPPLIES: SupplyDef[] = [
     unit: "pcs",
     emoji: "🟫",
     perHookah: 1,
-    cost: 0,
+    cost: 1.8, // ~130 EGP / 72 pcs box
     defaultStock: 150,
     lowThreshold: 25,
   },
@@ -294,7 +328,7 @@ export const SUPPLIES: SupplyDef[] = [
     unit: "sheets",
     emoji: "📄",
     perHookah: 1,
-    cost: 0,
+    cost: 0.5, // ~50 EGP / 100 sheets roll
     defaultStock: 300,
     lowThreshold: 40,
   },
@@ -320,6 +354,75 @@ export function supplyConsumption(totalHookahs: number): { key: string; amount: 
     key: s.key,
     amount: s.perHookah * totalHookahs,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Cost-of-goods & profit calculations.
+// A hookah's molasses cost is derived from the cheapest pack available for
+// each brand (so profit is always reported conservatively).
+// ---------------------------------------------------------------------------
+
+/**
+ * Cost (EGP) of the molasses in a single 20g hookah for a given brand,
+ * derived from the brand's cheapest pack per gram.
+ */
+export function molassesCostPerHookah(brandId: string): number {
+  const brand = getBrand(brandId);
+  if (!brand || brand.packs.length === 0) return 0;
+  const cheapestPerGram = Math.min(
+    ...brand.packs.map((p) => p.costEgp / p.grams)
+  );
+  return Math.round(cheapestPerGram * MOLASSES_GRAMS * 100) / 100;
+}
+
+/**
+ * Total cost-of-goods (EGP) for an order: molasses per component + supplies
+ * per hookah. Used server-side to record profit on each order.
+ */
+export function computeOrderCogs(
+  items: {
+    components: { brandId: string }[];
+    qty: number;
+  }[]
+): { molassesCost: number; suppliesCost: number; totalCogs: number } {
+  let molassesCost = 0;
+  let totalHookahs = 0;
+  for (const it of items) {
+    // each component contributes a share of the 20g; cost is per-20g-hookah
+    // so we sum per-component hookah cost weighted by component count.
+    const perHookahBrandCost = it.components.reduce(
+      (sum, c) => sum + molassesCostPerHookah(c.brandId),
+      0
+    );
+    // divide by component count since 20g is split across them
+    const componentCount = Math.max(1, it.components.length);
+    molassesCost += (perHookahBrandCost / componentCount) * it.qty;
+    totalHookahs += it.qty;
+  }
+  let suppliesCost = 0;
+  for (const s of SUPPLIES.filter((x) => x.perHookah > 0)) {
+    suppliesCost += s.cost * s.perHookah * totalHookahs;
+  }
+  const totalCogs = Math.round((molassesCost + suppliesCost) * 100) / 100;
+  return {
+    molassesCost: Math.round(molassesCost * 100) / 100,
+    suppliesCost: Math.round(suppliesCost * 100) / 100,
+    totalCogs,
+  };
+}
+
+export interface ProfitBreakdown {
+  revenue: number;
+  cogs: number;
+  netProfit: number;
+  marginPct: number;
+}
+
+export function computeProfit(revenue: number, cogs: number): ProfitBreakdown {
+  const netProfit = Math.round((revenue - cogs) * 100) / 100;
+  const marginPct =
+    revenue > 0 ? Math.round((netProfit / revenue) * 1000) / 10 : 0;
+  return { revenue, cogs, netProfit, marginPct };
 }
 
 /**

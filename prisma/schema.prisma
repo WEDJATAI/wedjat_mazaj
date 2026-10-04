@@ -106,6 +106,12 @@ model Order {
   assignment    String?  // unassigned | assigned
   assignedToName String?
   assignedToId   String?
+  // Profitability (computed server-side at order time)
+  cogs          Float    @default(0) // cost of goods sold (molasses + supplies)
+  molassesCost  Float    @default(0)
+  suppliesCost  Float    @default(0)
+  netProfit     Float    @default(0) // total - cogs
+  marginPct     Float    @default(0) // netProfit / total * 100
   createdAt     DateTime @default(now())
 
   comments OrderComment[]
@@ -118,4 +124,22 @@ model OrderComment {
   author    String
   body      String
   createdAt DateTime @default(now())
+}
+
+// A procurement purchase: buying molasses packs or supply boxes to restock.
+model Purchase {
+  id          String   @id @default(cuid())
+  // What was bought: "molasses" (brand pack) or "supply" (coal/foil/hose box)
+  kind        String   // molasses | supply
+  // For molasses: catalog brandId. For supply: supply key (regular_coal, ...).
+  refId       String
+  name        String   // display name, e.g. "Mazaya · 250g pack"
+  // Pack details
+  gramsOrUnits Float   // grams (molasses) or units (supply) per pack
+  packCount   Int      // how many packs were bought
+  unitCost    Float    // EGP per pack
+  totalCost   Float    // EGP total (unitCost * packCount)
+  // Optional: who recorded the purchase
+  buyerName   String?
+  createdAt   DateTime @default(now())
 }

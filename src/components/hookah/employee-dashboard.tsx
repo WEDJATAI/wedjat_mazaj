@@ -7,6 +7,8 @@ import { InventoryPanel } from "./inventory-panel";
 import { RequestsPanel } from "./requests-panel";
 import { OrdersPanel } from "./orders-panel";
 import { EmployeesPanel } from "./employees-panel";
+import { PurchasesPanel } from "./purchases-panel";
+import { ProfitPanel } from "./profit-panel";
 import { cn } from "@/lib/utils";
 import {
   hasPermission,
@@ -18,6 +20,8 @@ import {
   BellRing,
   ScrollText,
   Users,
+  ShoppingCart,
+  TrendingUp,
 } from "lucide-react";
 
 const TAB_BAR_H = 68;
@@ -76,6 +80,18 @@ export function EmployeeDashboard() {
         label: "Staff",
         icon: <Users className="size-5" />,
         render: (so) => <EmployeesPanel onSignOut={so} />,
+      },
+      {
+        key: "purchases",
+        label: "Buy",
+        icon: <ShoppingCart className="size-5" />,
+        render: (so) => <PurchasesPanel onSignOut={so} />,
+      },
+      {
+        key: "profit",
+        label: "Profit",
+        icon: <TrendingUp className="size-5" />,
+        render: (so) => <ProfitPanel onSignOut={so} />,
       },
     ],
     [employee]

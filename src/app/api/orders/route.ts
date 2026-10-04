@@ -4,6 +4,8 @@ import { z } from "zod";
 import {
   MOLASSES_GRAMS,
   SUPPLIES,
+  computeOrderCogs,
+  computeProfit,
   getBrand,
   recomputeOrderTotals,
   serverComponentGrams,
@@ -209,6 +211,10 @@ export async function POST(req: NextRequest) {
     const assignedToName = isGuestOrder ? null : data.orderedByName ?? null;
     const assignedToId = isGuestOrder ? null : data.employeeId ?? null;
 
+    // --- Compute cost-of-goods + profit (server-side, from catalog costs) ---
+    const cogs = computeOrderCogs(sanitizedItems);
+    const profit = computeProfit(totals.total, cogs.totalCogs);
+
     // --- Create order + deduct everything in a single transaction ---
     const order = await db.$transaction(async (tx) => {
       const created = await tx.order.create({
@@ -232,6 +238,11 @@ export async function POST(req: NextRequest) {
           assignment,
           assignedToName,
           assignedToId,
+          cogs: cogs.totalCogs,
+          molassesCost: cogs.molassesCost,
+          suppliesCost: cogs.suppliesCost,
+          netProfit: profit.netProfit,
+          marginPct: profit.marginPct,
         },
       });
 

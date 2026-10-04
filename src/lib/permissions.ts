@@ -32,6 +32,8 @@ export const ALL_PERMISSIONS = [
   "inventory", // view/restock molasses + supplies
   "requests", // guest service requests
   "employees", // manage employees + permissions (super admin only)
+  "purchases", // buy molasses packs / supply boxes (procurement)
+  "profit", // profit dashboard (revenue, COGS, net profit)
 ] as const;
 
 export type Permission = (typeof ALL_PERMISSIONS)[number];
@@ -45,12 +47,14 @@ export const PERMISSION_META: Record<
   inventory: { label: "Inventory", desc: "View & restock stock" },
   requests: { label: "Requests", desc: "Handle guest service calls" },
   employees: { label: "Employees", desc: "Manage staff & permissions" },
+  purchases: { label: "Purchases", desc: "Buy molasses packs & supplies" },
+  profit: { label: "Profit", desc: "Revenue, COGS & net profit" },
 };
 
 // Default permission set per role.
 export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
   super_admin: [...ALL_PERMISSIONS],
-  admin: ["queue", "new_order", "inventory", "requests"],
+  admin: ["queue", "new_order", "inventory", "requests", "purchases", "profit"],
   employee: ["queue", "new_order", "requests"],
 };
 

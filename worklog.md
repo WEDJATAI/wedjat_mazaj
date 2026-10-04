@@ -186,3 +186,29 @@ Stage Summary:
 - 3 roles with super-admin-managed permissions; tab bar adapts per employee.
 - Employee dashboard is order-receiving focused: incoming guest orders appear in Queue for one-tap confirm/claim.
 - Inventory tracks exact per-flavor stock (43 subtypes) with per-flavor restock + auto-deduction.
+
+---
+Task ID: 60-68
+Agent: main (Z.ai Code)
+Task: Packaging availability per brand, procurement/purchasing connected to inventory, cost & selling price → net profit (EGP + %).
+
+Work Log:
+- catalog.ts: added PackOption[] to each brand (250g + 1kg packs with Egyptian-market wholesale costs: Mazaya 85/280, Al Fakher 90/300, Dandash 70/240, Nakhla 65/220, Amy 110/380, Salom/Kass 35). Updated SUPPLIES costs: regular_coal 1.2/pc, cubed_coal 1.8/pc, foil 0.5/sheet, medical_hose 20/pc. Added molassesCostPerHookah(), computeOrderCogs(), computeProfit() helpers.
+- Prisma: added Order.cogs/molassesCost/suppliesCost/netProfit/marginPct; new Purchase model (kind, refId, name, gramsOrUnits, packCount, unitCost, totalCost, buyerName). db:push + seed.
+- API: /api/purchases (GET list + POST create→restocks inventory transactionally); /api/profit (GET aggregates revenue/COGS/net profit + per-brand breakdown + recent orders). Updated /api/orders POST to compute + store COGS & profit server-side on every order.
+- permissions.ts: added "purchases" + "profit" permissions; admin role gets both, super_admin gets all 7.
+- purchases-panel.tsx (NEW): Buy sheet — pick molasses pack (per brand, shows grams + cost) or supply box (100 units), set quantity, see total cost, "Buy & restock" → records purchase + auto-restocks. Purchase history list with total spent.
+- profit-panel.tsx (NEW): 4 metric cards (Revenue, COGS, Net profit, Margin), procurement spend, per-brand profit breakdown (revenue/cost/net/margin%), recent orders with per-order profit.
+- employee-dashboard.tsx: added "Buy" (purchases) + "Profit" tabs.
+
+Verification (curl):
+- Buy 2× Mazaya 1kg (560 EGP) → inventory 1000→3000g ✓
+- Order 2× Mazaya Blueberry (250 EGP) → cogs 18.2 (molasses 11.2 + supplies 7), netProfit 231.8, margin 92.7% ✓
+- Profit summary: revenue 375, COGS 18.2, net 356.8 (95.1%), spent 560, top brand Mazaya 95.5% ✓
+- Lint clean. Dev server 200.
+
+Stage Summary:
+- Each brand has purchasable packs (250g/1kg) at realistic Egyptian wholesale costs.
+- Purchasing is connected to inventory: buying packs auto-restocks stock + records cost.
+- Every order records COGS (molasses derived from cheapest pack + supplies) and computes net profit in EGP + %.
+- Profit dashboard shows totals, per-brand breakdown, and procurement spend.
