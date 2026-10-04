@@ -5,6 +5,9 @@
 //  - Amy (premium): Fruits 180 EGP, Fruits Mix 180 EGP.
 //  - Salom & Kass (special): 45 EGP flat (no fruits/mix distinction).
 //  - BYO promo: bring your own hookah OR your own molasses -> 2 hookahs for the price of 1.
+//  - Mix & match: a "fruits-mix" hookah may combine flavors from different brands.
+//    Its price is the MAX mix price across the chosen brands (Amy 180 wins if included,
+//    otherwise 145).
 
 export type FlavorType = "fruits" | "fruits-mix" | "flat";
 export type BrandCategory = "regular" | "premium" | "special";
@@ -29,6 +32,10 @@ export interface Brand {
   emoji: string;
   blurb: string;
   flavorTypes: FlavorType[];
+  /** flavors available for this brand */
+  flavors: string[];
+  /** short barcode used by the guest scanner, e.g. "MZ-001" */
+  barcode: string;
   badge?: string;
 }
 
@@ -47,6 +54,17 @@ export const BRANDS: Brand[] = [
     emoji: "🌹",
     blurb: "Juicy, smooth clouds — a modern lounge favourite.",
     flavorTypes: ["fruits", "fruits-mix"],
+    flavors: [
+      "Blueberry",
+      "Watermelon",
+      "Grape",
+      "Double Apple",
+      "Mint",
+      "Lemon",
+      "Peach",
+      "Guava",
+    ],
+    barcode: "MZ-001",
   },
   {
     id: "al-fakher",
@@ -60,6 +78,17 @@ export const BRANDS: Brand[] = [
     emoji: "🔴",
     blurb: "Reliable, flavour-packed sessions every time.",
     flavorTypes: ["fruits", "fruits-mix"],
+    flavors: [
+      "Double Apple",
+      "Mint",
+      "Grape",
+      "Watermelon",
+      "Blueberry",
+      "Lemon",
+      "Peach",
+      "Rose",
+    ],
+    barcode: "AF-002",
   },
   {
     id: "dandash",
@@ -73,6 +102,8 @@ export const BRANDS: Brand[] = [
     emoji: "🟡",
     blurb: "Local classic with rich, traditional taste.",
     flavorTypes: ["fruits", "fruits-mix"],
+    flavors: ["Double Apple", "Grape", "Mint", "Watermelon", "Lemon", "Peach"],
+    barcode: "DN-003",
   },
   {
     id: "nakhla",
@@ -86,6 +117,16 @@ export const BRANDS: Brand[] = [
     emoji: "📜",
     blurb: "The oldest name in Egyptian molasses.",
     flavorTypes: ["fruits", "fruits-mix"],
+    flavors: [
+      "Double Apple",
+      "Mint",
+      "Grape",
+      "Cinnamon",
+      "Peach",
+      "Watermelon",
+      "Rose",
+    ],
+    barcode: "NK-004",
   },
   {
     id: "amy",
@@ -99,6 +140,15 @@ export const BRANDS: Brand[] = [
     emoji: "👑",
     blurb: "Top-shelf sessions — fruits & mix both 180 EGP.",
     flavorTypes: ["fruits", "fruits-mix"],
+    flavors: [
+      "Double Apple",
+      "Grape",
+      "Mint",
+      "Watermelon",
+      "Peach",
+      "Blueberry",
+    ],
+    barcode: "AM-005",
     badge: "Premium",
   },
   {
@@ -113,6 +163,8 @@ export const BRANDS: Brand[] = [
     emoji: "🟠",
     blurb: "Light, budget-friendly sessions — 45 EGP flat.",
     flavorTypes: ["flat"],
+    flavors: ["Standard", "Apple", "Grape", "Mint"],
+    barcode: "SL-006",
   },
   {
     id: "kass",
@@ -126,6 +178,8 @@ export const BRANDS: Brand[] = [
     emoji: "🟥",
     blurb: "Quick, affordable smoke — 45 EGP flat.",
     flavorTypes: ["flat"],
+    flavors: ["Standard", "Apple", "Grape", "Mint"],
+    barcode: "KS-007",
   },
 ];
 
@@ -139,11 +193,42 @@ export function getBrand(id: string): Brand | undefined {
   return BRANDS.find((b) => b.id === id);
 }
 
-/** Unit price for a brand + flavor combo (EGP). */
+export function getBrandByBarcode(code: string): Brand | undefined {
+  const c = code.trim().toUpperCase();
+  return BRANDS.find((b) => b.barcode.toUpperCase() === c);
+}
+
+/** All mixable brands (everything except flat Salom/Kass used as mix base). */
+export const MIXABLE_BRANDS = BRANDS.filter((b) => b.pricing.fruitsMix !== undefined);
+
+/** All known flavors grouped by brand, used by the mix picker. */
+export function flavorGroups(): { brandId: string; brandName: string; emoji: string; flavors: string[] }[] {
+  return MIXABLE_BRANDS.map((b) => ({
+    brandId: b.id,
+    brandName: b.name,
+    emoji: b.emoji,
+    flavors: b.flavors,
+  }));
+}
+
+/** Unit price for a single-brand hookah (fruits / flat). */
 export function unitPrice(brand: Brand, flavor: FlavorType): number {
   if (flavor === "fruits") return brand.pricing.fruits ?? 0;
   if (flavor === "fruits-mix") return brand.pricing.fruitsMix ?? 0;
   return brand.pricing.flat ?? 0;
+}
+
+/**
+ * Price for a mix hookah given the set of brands involved.
+ * Cross-brand mixes use the MAX mix price among the chosen brands
+ * (so Amy 180 wins if included, otherwise 145).
+ */
+export function mixPrice(brandIds: string[]): number {
+  const prices = brandIds
+    .map((id) => getBrand(id)?.pricing.fruitsMix)
+    .filter((p): p is number => typeof p === "number" && p > 0);
+  if (prices.length === 0) return 0;
+  return Math.max(...prices);
 }
 
 /**

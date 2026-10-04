@@ -28,6 +28,11 @@ import { toast } from "sonner";
 interface CheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  source: "employee" | "guest_scan" | "guest_call";
+  orderedByName: string;
+  employeeId?: string | null;
+  defaultCustomer?: string;
+  defaultTable?: string;
 }
 
 interface PlaceOrderPayload {
@@ -41,9 +46,20 @@ interface PlaceOrderPayload {
   total: number;
   bogo: boolean;
   ownType: string | null;
+  source: string;
+  orderedByName: string;
+  employeeId?: string | null;
 }
 
-export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
+export function CheckoutDialog({
+  open,
+  onOpenChange,
+  source,
+  orderedByName,
+  employeeId,
+  defaultCustomer,
+  defaultTable,
+}: CheckoutDialogProps) {
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
   const clear = useCart((s) => s.clear);
@@ -58,15 +74,17 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     null
   );
 
-  // Reset form whenever the dialog is freshly opened.
+  // Prefill / reset whenever the dialog opens.
   React.useEffect(() => {
     if (open) {
       setDone(null);
       setSubmitting(false);
+      setName(defaultCustomer ?? "");
+      setTable(defaultTable ?? "");
     }
   }, [open]);
 
-  const valid = name.trim().length > 0 && phone.trim().length >= 6;
+  const valid = name.trim().length > 0;
 
   const submit = async () => {
     if (!valid || submitting) return;
@@ -82,6 +100,9 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       total: totals.total,
       bogo: totals.bogo,
       ownType: ownType,
+      source,
+      orderedByName,
+      employeeId: employeeId ?? null,
     };
     try {
       const res = await fetch("/api/orders", {
@@ -96,7 +117,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       setDone({ id: data.order.id, total: totals.total });
       clear();
       toast.success("Order placed!", {
-        description: "We'll get your session ready.",
+        description: "Session added to the queue.",
       });
     } catch (err) {
       toast.error("Could not place order", {
@@ -107,9 +128,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     }
   };
 
-  const close = () => {
-    onOpenChange(false);
-  };
+  const close = () => onOpenChange(false);
 
   return (
     <Dialog
@@ -127,7 +146,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             <div>
               <DialogTitle className="text-xl">Order placed!</DialogTitle>
               <DialogDescription className="mt-1">
-                Your hookah session is being prepared.
+                The hookah session is queued for preparation.
               </DialogDescription>
             </div>
             <div className="w-full rounded-2xl border border-border bg-muted/40 p-4 text-left text-sm">
@@ -139,7 +158,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
               </div>
               <Separator className="my-2" />
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total paid</span>
+                <span className="text-muted-foreground">Total</span>
                 <span className="font-bold text-primary">
                   {egp(done.total)}
                 </span>
@@ -154,33 +173,36 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             <DialogHeader className="px-6 pt-6">
               <DialogTitle>Checkout</DialogTitle>
               <DialogDescription>
-                Confirm your details and place the order.
+                {source === "employee"
+                  ? `Placing order as ${orderedByName}`
+                  : `Guest order by ${defaultCustomer ?? "guest"}`}
+                . Confirm and place.
               </DialogDescription>
             </DialogHeader>
 
             <div className="slim-scroll max-h-[60vh] space-y-4 overflow-y-auto px-6 pb-2">
-              <Field label="Name" icon={<User className="size-3.5" />}>
+              <Field label="Customer name" icon={<User className="size-3.5" />}>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  autoComplete="name"
+                  placeholder="Customer name"
+                  aria-label="Customer name"
                 />
               </Field>
-              <Field label="Phone" icon={<Phone className="size-3.5" />}>
+              <Field label="Phone (optional)" icon={<Phone className="size-3.5" />}>
                 <Input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="01xxxxxxxxx"
                   inputMode="tel"
-                  autoComplete="tel"
                 />
               </Field>
-              <Field label="Table / room (optional)" icon={<Hash className="size-3.5" />}>
+              <Field label="Table / room" icon={<Hash className="size-3.5" />}>
                 <Input
                   value={table}
                   onChange={(e) => setTable(e.target.value)}
                   placeholder="e.g. Table 7"
+                  aria-label="Table"
                 />
               </Field>
               <Field label="Notes (optional)" icon={<StickyNote className="size-3.5" />}>

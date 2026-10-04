@@ -10,19 +10,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Employee {
+  id        String   @id @default(cuid())
+  name      String
+  pin       String   @unique
+  role      String   @default("shisha_man") // shisha_man | admin
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model InventoryItem {
+  id                String   @id @default(cuid())
+  brandId           String   @unique
+  brandName         String
+  stockGrams        Float
+  lowStockThreshold Float    @default(100)
+  updatedAt         DateTime @updatedAt
+}
+
+model ServiceRequest {
+  id              String   @id @default(cuid())
+  type            String   @default("call_shisha_man") // call_shisha_man | ...
+  guestName       String?
+  table           String?
+  note            String?
+  status          String   @default("pending") // pending | acknowledged | done
+  createdAt       DateTime @default(now())
+  acknowledgedAt  DateTime?
+}
+
 model Order {
-  id           String   @id @default(cuid())
-  customerName String?
-  phone        String?
-  table        String?
-  notes        String?
-  itemsJson    String
-  subtotal     Float
-  discount     Float    @default(0)
-  total        Float
-  bogo         Boolean  @default(false)
-  ownType      String?
-  itemCount    Int      @default(0)
-  status       String   @default("pending")
-  createdAt    DateTime @default(now())
+  id            String   @id @default(cuid())
+  customerName  String?
+  phone         String?
+  table         String?
+  notes         String?
+  itemsJson     String
+  subtotal      Float
+  discount      Float    @default(0)
+  total         Float
+  bogo          Boolean  @default(false)
+  ownType       String?
+  itemCount     Int      @default(0)
+  status        String   @default("pending") // pending | preparing | done
+  source        String   @default("employee") // employee | guest_scan | guest_call
+  orderedByName String?
+  employeeId    String?
+  createdAt     DateTime @default(now())
 }

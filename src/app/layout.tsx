@@ -58,6 +58,7 @@ export default function RootLayout({
           theme="dark"
           richColors
           position="top-center"
+          duration={2600}
           toastOptions={{
             style: {
               borderRadius: "0.75rem",

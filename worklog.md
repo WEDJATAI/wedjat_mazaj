@@ -58,3 +58,40 @@ Work Log:
 Stage Summary:
 - App fully verified end-to-end: browse → configure → add to cart → BYO 2-for-1 promo → checkout → DB persistence.
 - All pricing/promo rules match the spec. No runtime errors. Task complete.
+
+---
+Task ID: 9-19
+Agent: main (Z.ai Code)
+Task: Expand app into a cafe POS — employee PIN login, inventory auto-deduct, flavor selection + cross-brand mix, guest mode (barcode scan + call shisha man).
+
+Work Log:
+- Prisma schema: added Employee, InventoryItem, ServiceRequest models; extended Order (source, orderedByName, employeeId). db:push + seed script (prisma/seed.ts) → 3 employees (Hassan 1234, Omar 5678, Manager 0000), 7 inventory items @1000g, 1 sample request.
+- catalog.ts: added per-brand flavor lists + barcodes; MIXABLE_BRANDS; mixPrice() (cross-brand = max mix price, Amy 180 wins); getBrandByBarcode().
+- cart store: rebuilt for FlavorComponent[] (single for fruits/flat, multi+cross-brand for mix); splitGrams() distributes 20g evenly; priceForConfig(); flavorSummary().
+- API routes: POST /api/auth/employee (PIN validate), GET/POST /api/inventory (list + restock), GET/POST /api/requests (service requests), PATCH /api/requests/[id] (acknowledge/done), rewrote POST /api/orders (transactional inventory deduction per component brand + low-stock guard).
+- Auth: useSession Zustand store (role employee|guest). SignIn screen with Employee PIN pad (auto-submit on 4th digit) + Guest check-in (name+table).
+- Reusable OrderScreen (app bar, hero, brand grid, config sheet, cart drawer, checkout, optional barcode scan). EmployeeDashboard (bottom tabs: Order/Inventory/Requests). GuestOrder (Scan + Call buttons).
+- ConfigSheet rebuilt: flavor picker (fruits=single, fruits-mix=multi cross-brand via grouped FlavorPicker, flat), qty, live price.
+- BarcodeModal: camera via BarcodeDetector API + manual entry fallback + direct brand picker; barcodes MZ-001 etc.
+- RequestsPanel: lists pending/acknowledged/done, acknowledge→done flow, auto-refresh 15s.
+- InventoryPanel: stock bars per brand, low-stock badges, hookahs-left, restock sheet (presets).
+- Added aria-labels to icon buttons + inputs for accessibility & testability. Reduced toast duration to 2600ms.
+- Fixed Prisma stale-client issue (regenerate + restart). Fixed sandbox process-persistence: orphaned next-server processes held port 3000 → thorough pkill cleanup in verification scripts; ran all Agent Browser steps within a single Bash call.
+
+Verification (Agent Browser, mobile 412×915, fresh DB each run):
+1. Sign-in shows Employee/Guest roles.
+2. Employee PIN 1234 → Hassan → dashboard with 7 brands + bottom tabs.
+3. Mix: Mazaya Blueberry + Al Fakher Grape (cross-brand) → "Add to cart · 145 EGP" (max mix price correct).
+4. Qty 2 added, cart bar appears.
+5. BYO hookah toggle → "1 free · 1 charged", "BYO 2-for-1 saving", total 290→145.
+6. Checkout (employee fills customer) → "Order placed!" confirmation; POST /api/orders 200.
+7. Inventory tab: Mazaya & Al Fakher = 980g (49 hookahs), others 1000g (50) — auto-deduct correct for the cross-brand mix (20g from each brand).
+8. Requests tab: seeded request (Sara, Table 3, pending) visible.
+9. Sign out → Guest check-in (Sara, Table 5) → guest order screen with Scan + Call buttons.
+10. Call shisha man: dialog opens, Send → toast "The shisha man is on the way!" → DB request count 2 (seeded + ours).
+11. Scan → manual "MZ-001" → toast "Scanned: Mazaya" → Mazaya config sheet (Fruits Mix 145, Add to cart 125).
+12. No page/console errors throughout.
+
+Stage Summary:
+- All 4 requirements implemented & browser-verified.
+- Lint clean. Dev server serves / + all API routes 200.

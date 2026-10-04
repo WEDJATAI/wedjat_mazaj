@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useCart, computeTotals, OwnType } from "@/store/cart";
+import { useCart, computeTotals, OwnType, flavorSummary } from "@/store/cart";
 import { chargeableQty, egp } from "@/lib/catalog";
 import {
   Sheet,
@@ -40,13 +40,13 @@ const OWN_OPTIONS: {
   {
     value: "hookah",
     label: "Bring my own hookah",
-    desc: "You bring the device, we bring the molasses.",
+    desc: "Customer brings the device, we bring the molasses.",
     icon: <Wind className="size-4" />,
   },
   {
     value: "molasses",
     label: "Bring my own molasses",
-    desc: "You bring the molasses, we bring the setup.",
+    desc: "Customer brings the molasses, we bring the setup.",
     icon: <FlaskRound className="size-4" />,
   },
 ];
@@ -70,7 +70,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
         <SheetHeader className="border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <ShoppingBag className="size-5 text-primary" />
-            <SheetTitle className="text-lg">Your order</SheetTitle>
+            <SheetTitle className="text-lg">Current order</SheetTitle>
             {totals.totalQty > 0 && (
               <Badge
                 variant="secondary"
@@ -80,9 +80,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
               </Badge>
             )}
           </div>
-          <SheetDescription>
-            Each hookah is 20g of molasses.
-          </SheetDescription>
+          <SheetDescription>Each hookah is 20g of molasses.</SheetDescription>
         </SheetHeader>
 
         <div className="slim-scroll flex-1 overflow-y-auto px-5 py-4">
@@ -94,7 +92,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
               <div>
                 <p className="font-medium">Your cart is empty</p>
                 <p className="text-sm text-muted-foreground">
-                  Pick a brand to start your session.
+                  Pick a brand to start a session.
                 </p>
               </div>
             </div>
@@ -121,7 +119,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="truncate font-semibold">
-                              {it.brandName}
+                              {it.primaryBrandName}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {it.flavorLabel} · {egp(it.unitPrice)} · 20g
@@ -131,11 +129,16 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                             type="button"
                             onClick={() => removeItem(it.id)}
                             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                            aria-label={`Remove ${it.brandName}`}
+                            aria-label={`Remove ${it.primaryBrandName}`}
                           >
                             <Trash2 className="size-4" />
                           </button>
                         </div>
+
+                        {/* flavor summary */}
+                        <p className="mt-1 line-clamp-2 text-xs text-foreground/80">
+                          {flavorSummary(it)}
+                        </p>
 
                         <div className="mt-2 flex items-center justify-between">
                           <div className="flex items-center gap-1 rounded-lg border border-border bg-background">
@@ -190,7 +193,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                 </p>
               </div>
               <p className="mb-3 text-xs text-muted-foreground">
-                Bring your own hookah <em>or</em> your own molasses and get{" "}
+                Customer brings own hookah <em>or</em> molasses →{" "}
                 <span className="font-semibold text-primary">
                   2 hookahs for the price of 1
                 </span>
