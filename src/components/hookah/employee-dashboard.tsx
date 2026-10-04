@@ -6,72 +6,137 @@ import { OrderScreen } from "./order-screen";
 import { InventoryPanel } from "./inventory-panel";
 import { RequestsPanel } from "./requests-panel";
 import { OrdersPanel } from "./orders-panel";
+import { EmployeesPanel } from "./employees-panel";
 import { cn } from "@/lib/utils";
-import { PlusCircle, Boxes, BellRing, ScrollText } from "lucide-react";
-
-type Tab = "order" | "orders" | "inventory" | "requests";
+import {
+  hasPermission,
+  type Permission,
+} from "@/lib/permissions";
+import {
+  PlusCircle,
+  Boxes,
+  BellRing,
+  ScrollText,
+  Users,
+} from "lucide-react";
 
 const TAB_BAR_H = 68;
+
+interface TabDef {
+  key: Permission;
+  label: string;
+  icon: React.ReactNode;
+  render: (signOut: () => void) => React.ReactNode;
+}
 
 export function EmployeeDashboard() {
   const employee = useSession((s) => s.employee) as EmployeeSession | null;
   const signOut = useSession((s) => s.signOut);
-  const [tab, setTab] = React.useState<Tab>("order");
+  const perms = employee?.permissions ?? [];
+
+  const tabs: TabDef[] = React.useMemo(
+    () => [
+      {
+        key: "queue",
+        label: "Queue",
+        icon: <ScrollText className="size-5" />,
+        render: (so) => <OrdersPanel onSignOut={so} />,
+      },
+      {
+        key: "new_order",
+        label: "New",
+        icon: <PlusCircle className="size-5" />,
+        render: (so) => (
+          <OrderScreen
+            title="New order"
+            subtitle={`Employee · ${employee?.name ?? ""}`}
+            source="employee"
+            orderedByName={employee?.name ?? ""}
+            employeeId={employee?.id}
+            onSignOut={so}
+            bottomInset={TAB_BAR_H}
+            showTimer
+          />
+        ),
+      },
+      {
+        key: "inventory",
+        label: "Inventory",
+        icon: <Boxes className="size-5" />,
+        render: (so) => <InventoryPanel onSignOut={so} />,
+      },
+      {
+        key: "requests",
+        label: "Requests",
+        icon: <BellRing className="size-5" />,
+        render: (so) => <RequestsPanel onSignOut={so} />,
+      },
+      {
+        key: "employees",
+        label: "Staff",
+        icon: <Users className="size-5" />,
+        render: (so) => <EmployeesPanel onSignOut={so} />,
+      },
+    ],
+    [employee]
+  );
+
+  // Filter tabs by the employee's permissions.
+  const visibleTabs = tabs.filter((t) => hasPermission(perms, t.key));
+
+  // Default to the first visible tab, preferring the queue (order-receiving focus).
+  const defaultTab = visibleTabs.find((t) => t.key === "queue") ?? visibleTabs[0];
+  const [tab, setTab] = React.useState<Permission | null>(
+    defaultTab?.key ?? null
+  );
+
+  // If the current tab is no longer visible (permissions changed), reset.
+  React.useEffect(() => {
+    if (tab && !visibleTabs.some((t) => t.key === tab)) {
+      setTab(defaultTab?.key ?? null);
+    }
+  }, [tab, visibleTabs, defaultTab]);
 
   if (!employee) return null;
+  if (visibleTabs.length === 0) {
+    return (
+      <div className="dark relative flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center text-foreground">
+        <p className="text-lg font-semibold">No access</p>
+        <p className="text-sm text-muted-foreground">
+          You don&apos;t have permission to access any section. Ask a super
+          admin to assign you a role.
+        </p>
+        <button
+          className="rounded-xl border border-border px-4 py-2 text-sm"
+          onClick={signOut}
+        >
+          Sign out
+        </button>
+      </div>
+    );
+  }
 
-  const handleSignOut = () => {
-    signOut();
-  };
+  const activeTab = visibleTabs.find((t) => t.key === tab) ?? defaultTab;
 
   return (
     <div className="relative min-h-screen bg-background">
-      {tab === "order" && (
-        <OrderScreen
-          title="New order"
-          subtitle={`Employee · ${employee.name}`}
-          source="employee"
-          orderedByName={employee.name}
-          employeeId={employee.id}
-          onSignOut={handleSignOut}
-          bottomInset={TAB_BAR_H}
-          showTimer
-        />
-      )}
-      {tab === "orders" && <OrdersPanel onSignOut={handleSignOut} />}
-      {tab === "inventory" && <InventoryPanel onSignOut={handleSignOut} />}
-      {tab === "requests" && <RequestsPanel onSignOut={handleSignOut} />}
+      {activeTab && activeTab.render(signOut)}
 
-      {/* Bottom tab bar */}
+      {/* Bottom tab bar — only shows tabs this employee can access */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/90 backdrop-blur-xl">
         <div
           className="mx-auto flex w-full max-w-5xl items-stretch justify-around px-1"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <TabButton
-            active={tab === "order"}
-            onClick={() => setTab("order")}
-            icon={<PlusCircle className="size-5" />}
-            label="New"
-          />
-          <TabButton
-            active={tab === "orders"}
-            onClick={() => setTab("orders")}
-            icon={<ScrollText className="size-5" />}
-            label="Queue"
-          />
-          <TabButton
-            active={tab === "inventory"}
-            onClick={() => setTab("inventory")}
-            icon={<Boxes className="size-5" />}
-            label="Inventory"
-          />
-          <TabButton
-            active={tab === "requests"}
-            onClick={() => setTab("requests")}
-            icon={<BellRing className="size-5" />}
-            label="Requests"
-          />
+          {visibleTabs.map((t) => (
+            <TabButton
+              key={t.key}
+              active={activeTab?.key === t.key}
+              onClick={() => setTab(t.key)}
+              icon={t.icon}
+              label={t.label}
+            />
+          ))}
         </div>
       </nav>
     </div>

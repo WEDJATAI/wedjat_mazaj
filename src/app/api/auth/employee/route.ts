@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { resolvePermissions, type Permission } from "@/lib/permissions";
 
 const Schema = z.object({
   pin: z
@@ -27,12 +28,14 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    const permissions = resolvePermissions(emp.role, emp.permissions);
     return NextResponse.json({
       ok: true,
       employee: {
         id: emp.id,
         name: emp.name,
         role: emp.role,
+        permissions,
       },
     });
   } catch (err) {
@@ -43,3 +46,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// Keep the Permission type referenced for downstream typing
+export type { Permission };

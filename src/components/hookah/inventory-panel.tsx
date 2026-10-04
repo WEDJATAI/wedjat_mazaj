@@ -47,6 +47,16 @@ interface SupplyRow {
   updatedAt: string;
 }
 
+interface FlavorRow {
+  id: string;
+  brandIdRaw: string;
+  brandName: string;
+  flavorName: string;
+  stockGrams: number;
+  lowStockThreshold: number;
+  updatedAt: string;
+}
+
 function hookahsFromGrams(g: number): number {
   return Math.floor(g / 20);
 }
@@ -54,19 +64,24 @@ function hookahsFromGrams(g: number): number {
 export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
   const [rows, setRows] = React.useState<InventoryRow[]>([]);
   const [supplies, setSupplies] = React.useState<SupplyRow[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [flavors, setFlavors] = React.useState<FlavorRow[]>([]);
+  const [expandedBrand, setExpandedBrand] = React.useState<string | null>(null);
   const [restockBrand, setRestockBrand] = React.useState<InventoryRow | null>(null);
   const [restockSupply, setRestockSupply] = React.useState<SupplyRow | null>(null);
+  const [restockFlavor, setRestockFlavor] = React.useState<FlavorRow | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [invRes, supRes] = await Promise.all([
+      const [invRes, supRes, flavRes] = await Promise.all([
         fetch("/api/inventory"),
         fetch("/api/supplies"),
+        fetch("/api/flavor-stock"),
       ]);
       const invData = await invRes.json();
       const supData = await supRes.json();
+      const flavData = await flavRes.json();
       if (invData.ok) {
         const byId = new Map(invData.items.map((r: InventoryRow) => [r.brandId, r]));
         const merged = BRANDS.map(
@@ -103,6 +118,9 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
         setSupplies(mergedSup as SupplyRow[]);
       } else {
         toast.error("Could not load supplies");
+      }
+      if (flavData.ok) {
+        setFlavors(flavData.items as FlavorRow[]);
       }
     } catch {
       toast.error("Could not load inventory");
@@ -383,6 +401,57 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                     >
                       <PackagePlus className="size-4" /> Restock
                     </Button>
+
+                    {/* Per-flavor subtypes (expandable) */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedBrand(expandedBrand === r.brandId ? null : r.brandId)
+                      }
+                      className="mt-2 flex w-full items-center justify-between rounded-xl bg-muted/40 px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                      aria-expanded={expandedBrand === r.brandId}
+                    >
+                      <span>
+                        Flavor stock ({flavors.filter((f) => f.brandIdRaw === r.brandId).length}{" "}
+                        flavors)
+                      </span>
+                      <span>{expandedBrand === r.brandId ? "−" : "+"}</span>
+                    </button>
+                    {expandedBrand === r.brandId && (
+                      <ul className="mt-2 space-y-1">
+                        {flavors
+                          .filter((f) => f.brandIdRaw === r.brandId)
+                          .map((f) => {
+                            const fLow = f.stockGrams <= f.lowStockThreshold;
+                            return (
+                              <li
+                                key={f.id}
+                                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-1.5"
+                              >
+                                <span className="truncate text-sm">{f.flavorName}</span>
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      "text-xs font-medium tabular-nums",
+                                      fLow ? "text-amber-500" : "text-muted-foreground"
+                                    )}
+                                  >
+                                    {Math.round(f.stockGrams)}g
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRestockFlavor(f)}
+                                    className="rounded-md p-1 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                                    aria-label={`Restock ${f.flavorName}`}
+                                  >
+                                    <PackagePlus className="size-3.5" />
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    )}
                   </div>
                 );
               })}
@@ -409,6 +478,12 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
         row={restockSupply}
         open={!!restockSupply}
         onOpenChange={(o) => !o && setRestockSupply(null)}
+        onDone={load}
+      />
+      <RestockFlavorSheet
+        row={restockFlavor}
+        open={!!restockFlavor}
+        onOpenChange={(o) => !o && setRestockFlavor(null)}
         onDone={load}
       />
     </div>
@@ -629,6 +704,108 @@ function RestockSupplySheet({
             onClick={submit}
           >
             {saving ? "Saving…" : `Add ${amount} ${row.unit}`}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function RestockFlavorSheet({
+  row,
+  open,
+  onOpenChange,
+  onDone,
+}: {
+  row: FlavorRow | null;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onDone: () => void;
+}) {
+  const [grams, setGrams] = React.useState(150);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (open) setGrams(150);
+  }, [open]);
+
+  if (!row) return null;
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/flavor-stock/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ addGrams: grams }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error ?? "Could not restock");
+      }
+      toast.success(`Restocked ${row.flavorName}`, {
+        description: `+${grams}g`,
+      });
+      onOpenChange(false);
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not restock");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const presets = [50, 100, 150, 300];
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="mx-auto w-full max-w-xl rounded-t-3xl">
+        <SheetHeader>
+          <SheetTitle>
+            Restock {row.brandName} · {row.flavorName}
+          </SheetTitle>
+          <SheetDescription>
+            Current: {Math.round(row.stockGrams)}g · adds stock to this flavor
+            (and the brand total).
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="px-4 pb-2">
+          <Label className="mb-2 block text-xs font-medium text-muted-foreground">
+            Amount (grams)
+          </Label>
+          <div className="grid grid-cols-4 gap-2">
+            {presets.map((p) => (
+              <Button
+                key={p}
+                variant={grams === p ? "default" : "outline"}
+                className="rounded-xl"
+                onClick={() => setGrams(p)}
+              >
+                {p}g
+              </Button>
+            ))}
+          </div>
+          <Input
+            type="number"
+            min={1}
+            value={grams}
+            onChange={(e) => setGrams(Math.max(1, Number(e.target.value)))}
+            className="mt-3"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            = {hookahsFromGrams(grams)} hookahs worth
+          </p>
+        </div>
+
+        <SheetFooter>
+          <Button
+            className="w-full rounded-xl"
+            size="lg"
+            disabled={saving}
+            onClick={submit}
+          >
+            {saving ? "Saving…" : `Add ${grams}g`}
           </Button>
         </SheetFooter>
       </SheetContent>

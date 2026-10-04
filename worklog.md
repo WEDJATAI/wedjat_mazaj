@@ -157,3 +157,32 @@ Stage Summary:
 - Nothing removed; all prior features intact + verified.
 - Backup infra in place (bun run backup). Hardened: server-authoritative pricing/grams, error boundary, status allowlist.
 - Medical hose added (reusable, 20 EGP/unit) — tracked but not consumed per order.
+
+---
+Task ID: 40-50
+Agent: main (Z.ai Code)
+Task: Role-based access (super admin/admin/employee) with permission management; order-receiving dashboard (confirm unassigned guest orders); per-flavor inventory subtypes.
+
+Work Log:
+- Prisma schema: Employee.permissions (comma-sep), FlavorStock model (brandIdRaw+flavorName unique), Order.assignment/assignedToName/assignedToId. db:push + seed (4 employees: Boss super_admin/1111, Manager admin/0000, Hassan employee/1234, Omar employee/5678; 43 flavor subtypes @150g each; 1 unassigned guest order).
+- src/lib/permissions.ts: roles (super_admin/admin/employee), ALL_PERMISSIONS (queue, new_order, inventory, requests, employees), ROLE_DEFAULTS, resolvePermissions(), hasPermission().
+- API: /api/auth/employee returns permissions; /api/employees (GET list + POST create, super admin); /api/employees/[id] (PATCH role/permissions/active, DELETE with last-super-admin guard); /api/orders/[id]/assign (POST claim unassigned → assigned + status preparing); /api/flavor-stock (GET merged list, PATCH /:id restock).
+- orders API: guest orders (guest_scan/guest_call) now created with assignment="unassigned"; deducts from FlavorStock per (brandId, flavorName) in addition to brand total; validates per-flavor stock.
+- session store: added permissions to EmployeeSession; persist migration v2 drops stale sessions lacking permissions.
+- employee-dashboard.tsx: permission-filtered tabs (Queue/New/Inventory/Requests/Staff); defaults to Queue (order-receiving focus); shows "No access" fallback if no perms.
+- employees-panel.tsx (NEW): super admin staff management — list by role, add/edit (name/PIN/role/permission toggles), activate/deactivate, delete (guard: never delete last super admin).
+- orders-panel.tsx: Incoming section (unassigned guest orders with "Confirm & take" button), My orders (assigned to me), Other active, Done; 10s polling.
+- inventory-panel.tsx: per-brand expandable "Flavor stock" list (each flavor with grams + low badge + restock); RestockFlavorSheet for individual flavors (syncs brand total).
+- sign-in.tsx: updated demo PINs (Boss 1111, Manager 0000, Hassan 1234, Omar 5678).
+
+Verification (curl + browser):
+- Auth: 1111→Boss(super_admin, 5 perms), 0000→Manager(admin, 4 perms), 1234→Hassan(employee, 3 perms), 5678→Omar(employee, 3 perms). ✓
+- Employees API: 4 staff listed with correct roles; created Karim with custom perms [queue, new_order]. ✓
+- Flavor stock: 43 subtypes; Mazaya Blueberry 150g → 110g after 2-hookah order (40g deducted at the exact flavor level). ✓
+- Order claim: unassigned guest order → POST /assign → assignedToName=Hassan, assignment=assigned, status=preparing. ✓
+- Lint clean. Dev server 200.
+
+Stage Summary:
+- 3 roles with super-admin-managed permissions; tab bar adapts per employee.
+- Employee dashboard is order-receiving focused: incoming guest orders appear in Queue for one-tap confirm/claim.
+- Inventory tracks exact per-flavor stock (43 subtypes) with per-flavor restock + auto-deduction.

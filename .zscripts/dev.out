@@ -1,18 +1,18 @@
 ==========================================
-[2026-10-04 11:48:51] Starting: bun install
+[2026-10-04 12:03:51] Starting: bun install
 ==========================================
 [BUN] Installing dependencies...
 [0.03ms] ".env"
 bun install v1.3.14 (0d9b296a)
 
-Checked 846 installs across 915 packages (no changes) [19.00ms]
+Checked 846 installs across 915 packages (no changes) [20.00ms]
 ==========================================
-[2026-10-04 11:48:51] Completed: bun install
+[2026-10-04 12:03:51] Completed: bun install
 [LOG] Step: bun install | Duration: 0s
 ==========================================
 
 ==========================================
-[2026-10-04 11:48:51] Starting: bun run db:push
+[2026-10-04 12:03:51] Starting: bun run db:push
 ==========================================
 [BUN] Setting up database...
 $ prisma db push --accept-data-loss
@@ -24,25 +24,25 @@ The database is already in sync with the Prisma schema.
 
 Running generate... (Use --skip-generate to skip the generators)
 [2K[1A[2K[GRunning generate... - Prisma Client
-[2K[1A[2K[G✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 111ms
+[2K[1A[2K[G✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 91ms
 
 ==========================================
-[2026-10-04 11:48:52] Completed: bun run db:push
+[2026-10-04 12:03:52] Completed: bun run db:push
 [LOG] Step: bun run db:push | Duration: 1s
 ==========================================
 
 ==========================================
-[2026-10-04 11:48:52] Starting: Starting Next.js dev server
+[2026-10-04 12:03:52] Starting: Starting Next.js dev server
 ==========================================
 [BUN] Starting development server...
 ==========================================
 $ next dev -p 3000 2>&1 | tee dev.log
-[2026-10-04 11:48:52] Completed: Starting Next.js dev server
+[2026-10-04 12:03:52] Completed: Starting Next.js dev server
 [LOG] Step: Starting Next.js dev server | Duration: 0s
 ==========================================
 
 ==========================================
-[2026-10-04 11:48:52] Starting: Waiting for Next.js dev server
+[2026-10-04 12:03:52] Starting: Waiting for Next.js dev server
 ==========================================
 Waiting for Next.js dev server to be ready on localhost:3000...
 Attempt 1/60: Next.js dev server not ready yet, waiting...
@@ -52,47 +52,95 @@ Attempt 1/60: Next.js dev server not ready yet, waiting...
 - Environments: .env
 
 ✓ Starting...
-✓ Ready in 616ms
+✓ Ready in 692ms
 Next.js dev server is ready!
- GET / 200 in 2.8s (compile: 2.6s, render: 152ms)
+ GET / 200 in 2.7s (compile: 2.5s, render: 205ms)
 ==========================================
- GET / 200 in 1320ms (compile: 1112ms, render: 208ms)
-[2026-10-04 11:48:56] Completed: Waiting for Next.js dev server
+[2026-10-04 12:03:56] Completed: Waiting for Next.js dev server
 [LOG] Step: Waiting for Next.js dev server | Duration: 4s
 ==========================================
 
 ==========================================
-[2026-10-04 11:48:56] Starting: Health check
+[2026-10-04 12:03:56] Starting: Health check
 ==========================================
 [BUN] Performing health check...
- GET / 200 in 104ms (compile: 82ms, render: 22ms)
+ GET / 200 in 172ms (compile: 146ms, render: 26ms)
 [BUN] Health check passed
 ==========================================
-[2026-10-04 11:48:56] Completed: Health check
+[2026-10-04 12:03:56] Completed: Health check
 [LOG] Step: Health check | Duration: 0s
 ==========================================
 
 ==========================================
-[2026-10-04 11:48:56] Starting: Starting mini-services
+[2026-10-04 12:03:56] Starting: Starting mini-services
 ==========================================
 Found mini-services directory, scanning for sub-services...
 Mini-services startup completed. Started 0 service(s).
 ==========================================
-[2026-10-04 11:48:56] Completed: Starting mini-services
+[2026-10-04 12:03:56] Completed: Starting mini-services
 [LOG] Step: Starting mini-services | Duration: 0s
 ==========================================
 
-Next.js dev server is running in background (PID: 29221).
-Use 'kill 29221' to stop it.
- GET / 200 in 33ms (compile: 3ms, render: 29ms)
-prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE 1=1 ORDER BY `main`.`SupplyItem`.`name` ASC LIMIT ? OFFSET ?
- GET /api/supplies 200 in 226ms (compile: 140ms, render: 85ms)
- GET / 200 in 30ms (compile: 3ms, render: 27ms)
+Next.js dev server is running in background (PID: 32755).
+Use 'kill 32755' to stop it.
+ GET / 200 in 31ms (compile: 4ms, render: 27ms)
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 163ms (compile: 122ms, render: 41ms)
+ GET /api/flavor-stock 200 in 36ms (compile: 28ms, render: 8ms)
+prisma:query SELECT `main`.`FlavorStock`.`id`, `main`.`FlavorStock`.`brandId`, `main`.`FlavorStock`.`brandIdRaw`, `main`.`FlavorStock`.`brandName`, `main`.`FlavorStock`.`flavorName`, `main`.`FlavorStock`.`stockGrams`, `main`.`FlavorStock`.`lowStockThreshold`, `main`.`FlavorStock`.`updatedAt` FROM `main`.`FlavorStock` WHERE 1=1 ORDER BY `main`.`FlavorStock`.`brandName` ASC, `main`.`FlavorStock`.`flavorName` ASC LIMIT ? OFFSET ?
+ GET / 200 in 336ms (compile: 5ms, render: 331ms)
+prisma:query SELECT 1
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 12ms (compile: 5ms, render: 7ms)
+ GET / 200 in 424ms (compile: 3ms, render: 422ms)
+ GET / 200 in 32ms (compile: 4ms, render: 28ms)
+prisma:query SELECT 1
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 16ms (compile: 7ms, render: 9ms)
+ GET / 200 in 244ms (compile: 4ms, render: 241ms)
+✓ Compiled in 106ms
+ GET / 200 in 389ms (compile: 194ms, render: 196ms)
+ GET / 200 in 81ms (compile: 3ms, render: 78ms)
+ GET / 200 in 412ms (compile: 4ms, render: 408ms)
+ GET / 200 in 28ms (compile: 2ms, render: 25ms)
+ GET / 200 in 101ms (compile: 3ms, render: 98ms)
+ GET / 200 in 38ms (compile: 4ms, render: 34ms)
+ GET / 200 in 31ms (compile: 4ms, render: 27ms)
+ GET / 200 in 545ms (compile: 4ms, render: 542ms)
+ GET / 200 in 40ms (compile: 5ms, render: 35ms)
+prisma:query SELECT 1
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 22ms (compile: 3ms, render: 19ms)
+prisma:query SELECT 1
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 10ms (compile: 3ms, render: 8ms)
+ POST /api/auth/employee 200 in 8ms (compile: 1464µs, render: 6ms)
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 7ms (compile: 1418µs, render: 6ms)
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 8ms (compile: 1453µs, render: 7ms)
+ GET /api/employees 200 in 63ms (compile: 41ms, render: 23ms)
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE 1=1 ORDER BY `main`.`Employee`.`role` ASC, `main`.`Employee`.`name` ASC LIMIT ? OFFSET ?
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query INSERT INTO `main`.`Employee` (`id`, `name`, `pin`, `role`, `permissions`, `active`, `createdAt`) VALUES (?,?,?,?,?,?,?) RETURNING `id` AS `id`, `name` AS `name`, `pin` AS `pin`, `role` AS `role`, `permissions` AS `permissions`, `active` AS `active`, `createdAt` AS `createdAt`
+ POST /api/employees 200 in 21ms (compile: 5ms, render: 17ms)
+prisma:query SELECT `main`.`FlavorStock`.`id`, `main`.`FlavorStock`.`brandId`, `main`.`FlavorStock`.`brandIdRaw`, `main`.`FlavorStock`.`brandName`, `main`.`FlavorStock`.`flavorName`, `main`.`FlavorStock`.`stockGrams`, `main`.`FlavorStock`.`lowStockThreshold`, `main`.`FlavorStock`.`updatedAt` FROM `main`.`FlavorStock` WHERE 1=1 ORDER BY `main`.`FlavorStock`.`brandName` ASC, `main`.`FlavorStock`.`flavorName` ASC LIMIT ? OFFSET ?
+ GET /api/flavor-stock 200 in 6ms (compile: 1525µs, render: 5ms)
+ GET /api/orders 200 in 279ms (compile: 259ms, render: 20ms)
+prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
+prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE (`main`.`Order`.`id` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query UPDATE `main`.`Order` SET `assignment` = ?, `assignedToId` = ?, `assignedToName` = ?, `employeeId` = ?, `orderedByName` = ?, `status` = ? WHERE (`main`.`Order`.`id` = ? AND 1=1) RETURNING `id` AS `id`, `customerName` AS `customerName`, `phone` AS `phone`, `table` AS `table`, `notes` AS `notes`, `itemsJson` AS `itemsJson`, `subtotal` AS `subtotal`, `discount` AS `discount`, `total` AS `total`, `bogo` AS `bogo`, `ownType` AS `ownType`, `itemCount` AS `itemCount`, `status` AS `status`, `source` AS `source`, `orderedByName` AS `orderedByName`, `employeeId` AS `employeeId`, `favoriteMixId` AS `favoriteMixId`, `assignment` AS `assignment`, `assignedToName` AS `assignedToName`, `assignedToId` AS `assignedToId`, `createdAt` AS `createdAt`
+ POST /api/orders/cmutrvcyz002ul96qd9y9jax9/assign 200 in 638ms (compile: 624ms, render: 14ms)
+prisma:query SELECT `main`.`FlavorStock`.`id`, `main`.`FlavorStock`.`brandId`, `main`.`FlavorStock`.`brandIdRaw`, `main`.`FlavorStock`.`brandName`, `main`.`FlavorStock`.`flavorName`, `main`.`FlavorStock`.`stockGrams`, `main`.`FlavorStock`.`lowStockThreshold`, `main`.`FlavorStock`.`updatedAt` FROM `main`.`FlavorStock` WHERE 1=1 ORDER BY `main`.`FlavorStock`.`brandName` ASC, `main`.`FlavorStock`.`flavorName` ASC LIMIT ? OFFSET ?
+ GET /api/flavor-stock 200 in 9ms (compile: 2ms, render: 6ms)
 prisma:query SELECT `main`.`InventoryItem`.`id`, `main`.`InventoryItem`.`brandId`, `main`.`InventoryItem`.`brandName`, `main`.`InventoryItem`.`stockGrams`, `main`.`InventoryItem`.`lowStockThreshold`, `main`.`InventoryItem`.`updatedAt` FROM `main`.`InventoryItem` WHERE `main`.`InventoryItem`.`brandId` IN (?) LIMIT ? OFFSET ?
+prisma:query SELECT `main`.`FlavorStock`.`id`, `main`.`FlavorStock`.`brandId`, `main`.`FlavorStock`.`brandIdRaw`, `main`.`FlavorStock`.`brandName`, `main`.`FlavorStock`.`flavorName`, `main`.`FlavorStock`.`stockGrams`, `main`.`FlavorStock`.`lowStockThreshold`, `main`.`FlavorStock`.`updatedAt` FROM `main`.`FlavorStock` WHERE (`main`.`FlavorStock`.`brandIdRaw` = ? AND `main`.`FlavorStock`.`flavorName` = ?) LIMIT ? OFFSET ?
 prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE `main`.`SupplyItem`.`key` IN (?,?,?) LIMIT ? OFFSET ?
 prisma:query BEGIN IMMEDIATE
-prisma:query INSERT INTO `main`.`Order` (`id`, `customerName`, `phone`, `table`, `notes`, `itemsJson`, `subtotal`, `discount`, `total`, `bogo`, `ownType`, `itemCount`, `status`, `source`, `orderedByName`, `employeeId`, `favoriteMixId`, `createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING `id` AS `id`, `customerName` AS `customerName`, `phone` AS `phone`, `table` AS `table`, `notes` AS `notes`, `itemsJson` AS `itemsJson`, `subtotal` AS `subtotal`, `discount` AS `discount`, `total` AS `total`, `bogo` AS `bogo`, `ownType` AS `ownType`, `itemCount` AS `itemCount`, `status` AS `status`, `source` AS `source`, `orderedByName` AS `orderedByName`, `employeeId` AS `employeeId`, `favoriteMixId` AS `favoriteMixId`, `createdAt` AS `createdAt`
+prisma:query INSERT INTO `main`.`Order` (`id`, `customerName`, `phone`, `table`, `notes`, `itemsJson`, `subtotal`, `discount`, `total`, `bogo`, `ownType`, `itemCount`, `status`, `source`, `orderedByName`, `employeeId`, `favoriteMixId`, `assignment`, `assignedToName`, `assignedToId`, `createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING `id` AS `id`, `customerName` AS `customerName`, `phone` AS `phone`, `table` AS `table`, `notes` AS `notes`, `itemsJson` AS `itemsJson`, `subtotal` AS `subtotal`, `discount` AS `discount`, `total` AS `total`, `bogo` AS `bogo`, `ownType` AS `ownType`, `itemCount` AS `itemCount`, `status` AS `status`, `source` AS `source`, `orderedByName` AS `orderedByName`, `employeeId` AS `employeeId`, `favoriteMixId` AS `favoriteMixId`, `assignment` AS `assignment`, `assignedToName` AS `assignedToName`, `assignedToId` AS `assignedToId`, `createdAt` AS `createdAt`
 prisma:query UPDATE `main`.`InventoryItem` SET `stockGrams` = (`main`.`InventoryItem`.`stockGrams` - ?), `updatedAt` = ? WHERE (`main`.`InventoryItem`.`brandId` = ? AND 1=1) RETURNING `id` AS `id`, `brandId` AS `brandId`, `brandName` AS `brandName`, `stockGrams` AS `stockGrams`, `lowStockThreshold` AS `lowStockThreshold`, `updatedAt` AS `updatedAt`
+prisma:query UPDATE `main`.`FlavorStock` SET `stockGrams` = (`main`.`FlavorStock`.`stockGrams` - ?), `updatedAt` = ? WHERE (`main`.`FlavorStock`.`id` = ? AND 1=1) RETURNING `id` AS `id`, `brandId` AS `brandId`, `brandIdRaw` AS `brandIdRaw`, `brandName` AS `brandName`, `flavorName` AS `flavorName`, `stockGrams` AS `stockGrams`, `lowStockThreshold` AS `lowStockThreshold`, `updatedAt` AS `updatedAt`
 prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) LIMIT ? OFFSET ?
 prisma:query UPDATE `main`.`SupplyItem` SET `stock` = (`main`.`SupplyItem`.`stock` - ?), `updatedAt` = ? WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) RETURNING `id` AS `id`, `key` AS `key`, `name` AS `name`, `unit` AS `unit`, `stock` AS `stock`, `lowStockThreshold` AS `lowStockThreshold`, `cost` AS `cost`, `emoji` AS `emoji`, `updatedAt` AS `updatedAt`
 prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) LIMIT ? OFFSET ?
@@ -100,14 +148,6 @@ prisma:query UPDATE `main`.`SupplyItem` SET `stock` = (`main`.`SupplyItem`.`stoc
 prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) LIMIT ? OFFSET ?
 prisma:query UPDATE `main`.`SupplyItem` SET `stock` = (`main`.`SupplyItem`.`stock` - ?), `updatedAt` = ? WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) RETURNING `id` AS `id`, `key` AS `key`, `name` AS `name`, `unit` AS `unit`, `stock` AS `stock`, `lowStockThreshold` AS `lowStockThreshold`, `cost` AS `cost`, `emoji` AS `emoji`, `updatedAt` AS `updatedAt`
 prisma:query COMMIT
- POST /api/orders 200 in 108ms (compile: 81ms, render: 27ms)
- GET /api/inventory 200 in 38ms (compile: 32ms, render: 6ms)
-prisma:query SELECT `main`.`InventoryItem`.`id`, `main`.`InventoryItem`.`brandId`, `main`.`InventoryItem`.`brandName`, `main`.`InventoryItem`.`stockGrams`, `main`.`InventoryItem`.`lowStockThreshold`, `main`.`InventoryItem`.`updatedAt` FROM `main`.`InventoryItem` WHERE 1=1 ORDER BY `main`.`InventoryItem`.`brandName` ASC LIMIT ? OFFSET ?
- GET / 200 in 204ms (compile: 11ms, render: 193ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
- POST /api/auth/employee 200 in 47ms (compile: 36ms, render: 11ms)
- GET /api/inventory 200 in 17ms (compile: 4ms, render: 13ms)
-prisma:query SELECT `main`.`InventoryItem`.`id`, `main`.`InventoryItem`.`brandId`, `main`.`InventoryItem`.`brandName`, `main`.`InventoryItem`.`stockGrams`, `main`.`InventoryItem`.`lowStockThreshold`, `main`.`InventoryItem`.`updatedAt` FROM `main`.`InventoryItem` WHERE 1=1 ORDER BY `main`.`InventoryItem`.`brandName` ASC LIMIT ? OFFSET ?
-prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE 1=1 ORDER BY `main`.`SupplyItem`.`name` ASC LIMIT ? OFFSET ?
- GET /api/supplies 200 in 17ms (compile: 9ms, render: 8ms)
+ POST /api/orders 200 in 24ms (compile: 1443µs, render: 23ms)
+prisma:query SELECT `main`.`FlavorStock`.`id`, `main`.`FlavorStock`.`brandId`, `main`.`FlavorStock`.`brandIdRaw`, `main`.`FlavorStock`.`brandName`, `main`.`FlavorStock`.`flavorName`, `main`.`FlavorStock`.`stockGrams`, `main`.`FlavorStock`.`lowStockThreshold`, `main`.`FlavorStock`.`updatedAt` FROM `main`.`FlavorStock` WHERE 1=1 ORDER BY `main`.`FlavorStock`.`brandName` ASC, `main`.`FlavorStock`.`flavorName` ASC LIMIT ? OFFSET ?
+ GET /api/flavor-stock 200 in 6ms (compile: 1323µs, render: 4ms)

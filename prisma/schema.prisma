@@ -14,7 +14,10 @@ model Employee {
   id        String   @id @default(cuid())
   name      String
   pin       String   @unique
-  role      String   @default("shisha_man") // shisha_man | admin
+  role      String   @default("employee") // super_admin | admin | employee
+  // Comma-separated permission keys (see src/lib/permissions.ts).
+  // Empty/null => use role defaults.
+  permissions String  @default("")
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 }
@@ -26,6 +29,23 @@ model InventoryItem {
   stockGrams        Float
   lowStockThreshold Float    @default(100)
   updatedAt         DateTime @updatedAt
+
+  flavors FlavorStock[]
+}
+
+// Per-flavor stock subtype (exact grams of each flavor within a brand).
+model FlavorStock {
+  id                String   @id @default(cuid())
+  brand             InventoryItem @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandId           String
+  brandIdRaw        String   // catalog brandId (e.g. "mazaya") for lookups
+  brandName         String
+  flavorName        String
+  stockGrams        Float
+  lowStockThreshold Float    @default(60)
+  updatedAt         DateTime @updatedAt
+
+  @@unique([brandIdRaw, flavorName])
 }
 
 // Consumable supplies (coal, foil, hose, …). Tracked in their own unit, auto-deducted on order.
@@ -79,6 +99,13 @@ model Order {
   orderedByName String?
   employeeId    String?
   favoriteMixId String?
+  // Order-receiving workflow:
+  //  - "unassigned": guest self-order awaiting an employee to confirm
+  //  - "assigned":   an employee has claimed/confirmed it (assignedToName set)
+  //  - null:        employee-created orders are immediately theirs
+  assignment    String?  // unassigned | assigned
+  assignedToName String?
+  assignedToId   String?
   createdAt     DateTime @default(now())
 
   comments OrderComment[]

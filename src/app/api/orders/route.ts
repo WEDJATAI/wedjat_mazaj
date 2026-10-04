@@ -92,10 +92,17 @@ export async function POST(req: NextRequest) {
 
     const totalHookahs = totals.totalQty;
 
-    // --- Molasses deductions (per brand, from server-derived grams) ---
-    const molassesDeductions = new Map<string, number>();
+    // --- Molasses deductions (per brand×flavor subtype) ---
+    // Track exact grams per (brandId, flavorName) so flavor stock is precise.
+    const flavorDeductions = new Map<string, number>(); // key: `${brandId}|${flavorName}`
+    const molassesDeductions = new Map<string, number>(); // brand totals (kept in sync)
     for (const it of sanitizedItems) {
       for (const c of it.components) {
+        const fKey = `${c.brandId}|${c.flavorName}`;
+        flavorDeductions.set(
+          fKey,
+          (flavorDeductions.get(fKey) ?? 0) + c.grams * it.qty
+        );
         molassesDeductions.set(
           c.brandId,
           (molassesDeductions.get(c.brandId) ?? 0) + c.grams * it.qty
@@ -106,7 +113,7 @@ export async function POST(req: NextRequest) {
     // --- Supply deductions (coal + foil, per hookah) ---
     const supplyDeductions = supplyConsumption(totalHookahs); // {key, amount}
 
-    // --- Validate molasses stock ---
+    // --- Validate molasses stock (brand + per-flavor) ---
     const inventoryRows = await db.inventoryItem.findMany({
       where: { brandId: { in: [...molassesDeductions.keys()] } },
     });
@@ -121,12 +128,44 @@ export async function POST(req: NextRequest) {
         });
       }
     }
-    if (short.length > 0) {
+
+    // Per-flavor validation
+    const flavorKeys = [...flavorDeductions.keys()].map((k) => {
+      const [brandIdRaw, flavorName] = k.split("|");
+      return { brandIdRaw, flavorName, key: k };
+    });
+    const flavorRows = await db.flavorStock.findMany({
+      where: {
+        OR: flavorKeys.map((k) => ({
+          brandIdRaw: k.brandIdRaw,
+          flavorName: k.flavorName,
+        })),
+      },
+    });
+    const shortFlavors: { name: string; need: number; have: number }[] = [];
+    for (const k of flavorKeys) {
+      const need = flavorDeductions.get(k.key) ?? 0;
+      const row = flavorRows.find(
+        (r) => r.brandIdRaw === k.brandIdRaw && r.flavorName === k.flavorName
+      );
+      const have = row?.stockGrams ?? 0;
+      if (need > have + 0.001) {
+        const brand = getBrand(k.brandIdRaw);
+        shortFlavors.push({
+          name: `${brand?.name ?? k.brandIdRaw} · ${k.flavorName}`,
+          need: Math.round(need),
+          have: Math.round(have),
+        });
+      }
+    }
+
+    const allShort = [...short, ...shortFlavors];
+    if (allShort.length > 0) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Not enough molasses in stock: ${short
-            .map((s) => `${s.brandName} (need ${s.need}g, have ${s.have}g)`)
+          error: `Not enough molasses: ${allShort
+            .map((s) => `${s.name} (need ${s.need}g, have ${s.have}g)`)
             .join("; ")}`,
         },
         { status: 409 }
@@ -162,6 +201,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Determine assignment: guest self-orders start unassigned; employee
+    // orders are immediately theirs.
+    const isGuestOrder =
+      data.source === "guest_scan" || data.source === "guest_call";
+    const assignment = isGuestOrder ? "unassigned" : null;
+    const assignedToName = isGuestOrder ? null : data.orderedByName ?? null;
+    const assignedToId = isGuestOrder ? null : data.employeeId ?? null;
+
     // --- Create order + deduct everything in a single transaction ---
     const order = await db.$transaction(async (tx) => {
       const created = await tx.order.create({
@@ -179,18 +226,49 @@ export async function POST(req: NextRequest) {
           itemCount: totalHookahs,
           status: "pending",
           source: data.source,
-          orderedByName: data.orderedByName || null,
-          employeeId: data.employeeId || null,
+          orderedByName: isGuestOrder ? null : data.orderedByName || null,
+          employeeId: isGuestOrder ? null : data.employeeId || null,
           favoriteMixId: data.favoriteMixId || null,
+          assignment,
+          assignedToName,
+          assignedToId,
         },
       });
 
-      // deduct molasses
+      // deduct molasses brand totals
       for (const [brandId, grams] of molassesDeductions) {
         await tx.inventoryItem.update({
           where: { brandId },
           data: { stockGrams: { decrement: grams } },
         });
+      }
+
+      // deduct per-flavor subtypes (upsert so missing rows are seeded first)
+      for (const [key, grams] of flavorDeductions) {
+        const [brandIdRaw, flavorName] = key.split("|");
+        const brand = getBrand(brandIdRaw);
+        const invRow = inventoryRows.find((r) => r.brandId === brandIdRaw);
+        const existingFlavor = flavorRows.find(
+          (r) => r.brandIdRaw === brandIdRaw && r.flavorName === flavorName
+        );
+        if (existingFlavor) {
+          await tx.flavorStock.update({
+            where: { id: existingFlavor.id },
+            data: { stockGrams: { decrement: grams } },
+          });
+        } else if (invRow && brand) {
+          // create the flavor subtype row then decrement
+          await tx.flavorStock.create({
+            data: {
+              brandId: invRow.id,
+              brandIdRaw: brandIdRaw,
+              brandName: brand.name,
+              flavorName,
+              stockGrams: 150 - grams,
+              lowStockThreshold: 60,
+            },
+          });
+        }
       }
 
       // deduct supplies (upsert so missing rows are created then decremented)

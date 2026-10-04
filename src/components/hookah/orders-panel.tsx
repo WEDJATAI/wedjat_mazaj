@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSession } from "@/store/session";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +19,8 @@ import {
   Pause,
   Flame,
   Loader2,
+  Hand,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -40,6 +43,8 @@ interface OrderRow {
   status: string;
   source: string;
   orderedByName: string | null;
+  assignment: string | null; // unassigned | assigned | null
+  assignedToName: string | null;
   createdAt: string;
 }
 
@@ -92,6 +97,7 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
 };
 
 export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
+  const employee = useSession((s) => s.employee);
   const [orders, setOrders] = React.useState<OrderRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [commentsFor, setCommentsFor] = React.useState<OrderRow | null>(null);
@@ -112,7 +118,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
 
   React.useEffect(() => {
     load();
-    const id = setInterval(load, 15000);
+    const id = setInterval(load, 10000); // poll faster for incoming orders
     return () => clearInterval(id);
   }, [load]);
 
@@ -134,7 +140,42 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
     }
   };
 
-  const active = orders.filter((o) => o.status !== "done");
+  // Confirm/claim an unassigned guest order → it goes under this employee's name.
+  const claimOrder = async (order: OrderRow) => {
+    if (!employee) return;
+    try {
+      const res = await fetch(`/api/orders/${order.id}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeId: employee.id,
+          employeeName: employee.name,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "Could not claim");
+      toast.success("Order confirmed", {
+        description: `Now preparing for ${order.customerName || "guest"}`,
+      });
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not claim order");
+    }
+  };
+
+  const incoming = orders.filter((o) => o.assignment === "unassigned");
+  const mine = orders.filter(
+    (o) =>
+      o.assignment !== "unassigned" &&
+      o.assignedToName === employee?.name &&
+      o.status !== "done"
+  );
+  const othersActive = orders.filter(
+    (o) =>
+      o.status !== "done" &&
+      o.assignment !== "unassigned" &&
+      o.assignedToName !== employee?.name
+  );
   const done = orders.filter((o) => o.status === "done");
 
   return (
@@ -206,13 +247,37 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
             </div>
           ) : (
             <div className="space-y-6">
-              {active.length > 0 && (
-                <Section title="Active" count={active.length}>
-                  {active.map((o) => (
+              {incoming.length > 0 && (
+                <Section title="Incoming — tap to confirm" count={incoming.length}>
+                  {incoming.map((o) => (
+                    <OrderCard
+                      key={o.id}
+                      order={o}
+                      highlight
+                      onClaim={() => claimOrder(o)}
+                      onComments={() => setCommentsFor(o)}
+                    />
+                  ))}
+                </Section>
+              )}
+              {mine.length > 0 && (
+                <Section title="My orders" count={mine.length}>
+                  {mine.map((o) => (
                     <OrderCard
                       key={o.id}
                       order={o}
                       onStatus={(s) => setStatus(o, s)}
+                      onComments={() => setCommentsFor(o)}
+                    />
+                  ))}
+                </Section>
+              )}
+              {othersActive.length > 0 && (
+                <Section title="Other active" count={othersActive.length} muted>
+                  {othersActive.map((o) => (
+                    <OrderCard
+                      key={o.id}
+                      order={o}
                       onComments={() => setCommentsFor(o)}
                     />
                   ))}
@@ -285,27 +350,37 @@ function OrderCard({
   order,
   onStatus,
   onComments,
+  onClaim,
+  highlight,
 }: {
   order: OrderRow;
   onStatus?: (status: string) => void;
   onComments: () => void;
+  onClaim?: () => void;
+  highlight?: boolean;
 }) {
   const items = parseItems(order.itemsJson);
   const meta = STATUS_META[order.status] ?? STATUS_META.pending;
-  const sourceLabel =
-    order.source === "guest_scan"
-      ? "Guest scan"
-      : order.source === "guest_call"
-      ? "Guest call"
-      : order.source === "employee"
-      ? order.orderedByName ?? "Employee"
-      : order.source;
+  const isUnassigned = order.assignment === "unassigned";
+  const sourceLabel = isUnassigned
+    ? "Guest self-order"
+    : order.assignedToName
+    ? `Assigned: ${order.assignedToName}`
+    : order.source === "guest_scan"
+    ? "Guest scan"
+    : order.source === "guest_call"
+    ? "Guest call"
+    : order.source === "employee"
+    ? order.orderedByName ?? "Employee"
+    : order.source;
 
   return (
     <div
       className={cn(
         "rounded-2xl border bg-card p-4",
-        order.status === "pending"
+        highlight
+          ? "border-primary ring-1 ring-primary/40"
+          : order.status === "pending"
           ? "border-primary/50"
           : order.status === "preparing"
           ? "border-amber-500/40"
@@ -318,9 +393,18 @@ function OrderCard({
             <p className="font-semibold">
               {order.customerName || "Walk-in"}
             </p>
-            <Badge variant="secondary" className={meta.cls}>
-              {meta.label}
-            </Badge>
+            {isUnassigned ? (
+              <Badge
+                variant="secondary"
+                className="border border-primary/30 bg-primary/15 text-primary"
+              >
+                Incoming
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className={meta.cls}>
+                {meta.label}
+              </Badge>
+            )}
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             {order.table && (
@@ -332,7 +416,8 @@ function OrderCard({
               <Clock className="size-3" /> {timeAgo(order.createdAt)}
             </span>
             <span className="flex items-center gap-1">
-              by {sourceLabel}
+              {isUnassigned && <Hand className="size-3 text-primary" />}
+              {sourceLabel}
             </span>
           </div>
         </div>
@@ -356,6 +441,15 @@ function OrderCard({
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
+        {onClaim && (
+          <Button
+            size="sm"
+            className="rounded-xl"
+            onClick={onClaim}
+          >
+            <UserCheck className="size-4" /> Confirm & take
+          </Button>
+        )}
         {onStatus && order.status === "pending" && (
           <Button
             size="sm"

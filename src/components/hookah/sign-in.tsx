@@ -48,7 +48,10 @@ export function SignIn() {
               onClick={() => setTab("guest")}
             />
             <p className="mt-3 text-center text-xs text-muted-foreground">
-              Demo PINs · Hassan <span className="font-mono text-primary">1234</span>{" "}
+              Demo PINs · Boss <span className="font-mono text-primary">1111</span>{" "}
+              · Manager <span className="font-mono text-primary">0000</span>
+              <br />
+              Hassan <span className="font-mono text-primary">1234</span>{" "}
               · Omar <span className="font-mono text-primary">5678</span>
             </p>
           </div>
