@@ -132,3 +132,28 @@ Stage Summary:
 - All 7 requirements implemented & browser-verified.
 - Creative value-adds: Session Timer (coal-refresh prompts), returning-guest recognition (one-tap re-order).
 - Supplies (coal + foil) tracked & auto-deducted alongside molasses. Lint clean, dev server 200.
+
+---
+Task ID: 30-36
+Agent: main (Z.ai Code)
+Task: Verify nothing deleted, backup + harden, add medical hose (20 EGP) to inventory.
+
+Work Log:
+- AUDIT: confirmed all 7 brands, 3→4 supplies, cart migration (v2), all 7 Prisma models, all 15 hookah components, all 9 API routes, hero image intact. Nothing deleted across 4 turns.
+- BACKUP: created scripts/backup-db.sh (SQLite snapshot via sqlite3 .backup + Prisma schema + source tarball; prunes to 10 most recent). Ran it → db/backups/custom-20261004T114429Z.db (72K) + schema + src tarball (188K). Added `bun run backup` script.
+- HARDEN — server-side price recompute (orders API): added serverUnitPrice(), recomputeOrderTotals(), serverComponentGrams() to catalog.ts; orders POST now validates brandIds exist, re-derives component grams server-side (always 20g/hookah split evenly), recomputes subtotal/discount/total from catalog pricing — IGNORES client-sent totals/unitPrice/grams. Tested: tampered order (total:0, unitPrice:0, grams:0.01) → server charged 250 EGP + deducted 40g (not 0.02g).
+- HARDEN — order PATCH status allowlist (pending|preparing|done only).
+- HARDEN — global error boundary (src/app/error.tsx): catches unhandled runtime errors, shows friendly fallback with Try again / Reset & go home (clears corrupt cart state). Added src/app/not-found.tsx for 404s.
+- Moved splitGrams() to catalog.ts (single source of truth); cart.ts re-exports it.
+- MEDICAL HOSE: added to SUPPLIES catalog (key: medical_hose, emoji 🪈, perHookah: 0 = reusable/not auto-deducted, cost: 20 EGP, defaultStock: 50). Added `cost Float` to SupplyItem prisma model + seed. Updated /api/supplies (merge + create include cost). Inventory panel shows "Medical hose · 50 pcs · 20 EGP/pc · ♻️ Reusable — not auto-deducted per order".
+
+Verification (Agent Browser + curl, fresh DB):
+- Supplies API: Regular coal 199, Cubed coal 149, Foil 299, Medical hose 50 pcs @ 20 EGP.
+- Tampered order (total:0) → server recomputed to 250 EGP, deducted 40g Mazaya (not 0.02g).
+- Inventory UI: all 4 supplies render, medical hose shows cost + reusable badge.
+- Lint clean. Dev server 200.
+
+Stage Summary:
+- Nothing removed; all prior features intact + verified.
+- Backup infra in place (bun run backup). Hardened: server-authoritative pricing/grams, error boundary, status allowlist.
+- Medical hose added (reusable, 20 EGP/unit) — tracked but not consumed per order.

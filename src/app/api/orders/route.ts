@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { MOLASSES_GRAMS, supplyConsumption, SUPPLIES } from "@/lib/catalog";
+import {
+  MOLASSES_GRAMS,
+  SUPPLIES,
+  getBrand,
+  recomputeOrderTotals,
+  serverComponentGrams,
+  supplyConsumption,
+} from "@/lib/catalog";
 
 const ComponentSchema = z.object({
   brandId: z.string(),
@@ -22,7 +29,7 @@ const CartItemSchema = z.object({
   components: z.array(ComponentSchema).min(1),
   molassesGrams: z.number().default(MOLASSES_GRAMS),
   unitPrice: z.number().nonnegative(),
-  qty: z.number().int().positive(),
+  qty: z.number().int().positive().max(99),
 });
 
 const CreateOrderSchema = z.object({
@@ -59,11 +66,35 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data;
 
-    const totalHookahs = data.items.reduce((sum, i) => sum + i.qty, 0);
-
-    // --- Molasses deductions (per brand) ---
-    const molassesDeductions = new Map<string, number>();
+    // --- Validate every component brandId exists in the catalog ---
     for (const it of data.items) {
+      for (const c of it.components) {
+        if (!getBrand(c.brandId)) {
+          return NextResponse.json(
+            { ok: false, error: `Unknown molasses brand: ${c.brandId}` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // --- SERVER-SIDE PRICE RECOMPUTE (do NOT trust client totals) ---
+    // Re-derive per-component grams so a client can't tamper with grams to
+    // avoid depleting stock (always 20g per hookah, split evenly).
+    const sanitizedItems = data.items.map((it) => {
+      const grams = serverComponentGrams(it.components.length);
+      return {
+        ...it,
+        components: it.components.map((c, i) => ({ ...c, grams: grams[i] })),
+      };
+    });
+    const totals = recomputeOrderTotals(sanitizedItems, data.ownType ?? null);
+
+    const totalHookahs = totals.totalQty;
+
+    // --- Molasses deductions (per brand, from server-derived grams) ---
+    const molassesDeductions = new Map<string, number>();
+    for (const it of sanitizedItems) {
       for (const c of it.components) {
         molassesDeductions.set(
           c.brandId,
@@ -139,11 +170,11 @@ export async function POST(req: NextRequest) {
           phone: data.phone || null,
           table: data.table || null,
           notes: data.notes || null,
-          itemsJson: JSON.stringify(data.items),
-          subtotal: data.subtotal,
-          discount: data.discount,
-          total: data.total,
-          bogo: data.bogo,
+          itemsJson: JSON.stringify(sanitizedItems),
+          subtotal: totals.subtotal,
+          discount: totals.discount,
+          total: totals.total,
+          bogo: totals.bogo,
           ownType: data.ownType ?? null,
           itemCount: totalHookahs,
           status: "pending",
@@ -183,6 +214,7 @@ export async function POST(req: NextRequest) {
                 emoji: def.emoji,
                 stock: def.defaultStock - d.amount,
                 lowStockThreshold: def.lowThreshold,
+                cost: def.cost,
               },
             });
           }
@@ -219,6 +251,7 @@ export async function GET() {
 }
 
 // PATCH used to update order status (pending -> preparing -> done)
+const ALLOWED_STATUSES = new Set(["pending", "preparing", "done"]);
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -226,6 +259,12 @@ export async function PATCH(req: NextRequest) {
     if (!id || !status) {
       return NextResponse.json(
         { ok: false, error: "id and status required" },
+        { status: 400 }
+      );
+    }
+    if (!ALLOWED_STATUSES.has(status)) {
+      return NextResponse.json(
+        { ok: false, error: `Invalid status. Allowed: ${[...ALLOWED_STATUSES].join(", ")}` },
         { status: 400 }
       );
     }

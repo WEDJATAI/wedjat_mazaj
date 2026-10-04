@@ -259,8 +259,10 @@ export interface SupplyDef {
   name: string;
   unit: string; // "pcs" | "sheets"
   emoji: string;
-  /** how many units are consumed per single hookah in an order */
+  /** how many units are consumed per single hookah in an order (0 = reusable, not auto-deducted) */
   perHookah: number;
+  /** unit cost/price in EGP (for display + valuation) */
+  cost: number;
   defaultStock: number;
   lowThreshold: number;
 }
@@ -272,6 +274,7 @@ export const SUPPLIES: SupplyDef[] = [
     unit: "pcs",
     emoji: "⚫",
     perHookah: 1,
+    cost: 0,
     defaultStock: 200,
     lowThreshold: 30,
   },
@@ -281,6 +284,7 @@ export const SUPPLIES: SupplyDef[] = [
     unit: "pcs",
     emoji: "🟫",
     perHookah: 1,
+    cost: 0,
     defaultStock: 150,
     lowThreshold: 25,
   },
@@ -290,8 +294,19 @@ export const SUPPLIES: SupplyDef[] = [
     unit: "sheets",
     emoji: "📄",
     perHookah: 1,
+    cost: 0,
     defaultStock: 300,
     lowThreshold: 40,
+  },
+  {
+    key: "medical_hose",
+    name: "Medical hose",
+    unit: "pcs",
+    emoji: "🪈",
+    perHookah: 0, // reusable — not auto-consumed per order
+    cost: 20, // EGP per unit
+    defaultStock: 50,
+    lowThreshold: 10,
   },
 ];
 
@@ -301,5 +316,85 @@ export function getSupply(key: string): SupplyDef | undefined {
 
 /** Total supply units consumed for a given number of hookahs (all items). */
 export function supplyConsumption(totalHookahs: number): { key: string; amount: number }[] {
-  return SUPPLIES.map((s) => ({ key: s.key, amount: s.perHookah * totalHookahs }));
+  return SUPPLIES.filter((s) => s.perHookah > 0).map((s) => ({
+    key: s.key,
+    amount: s.perHookah * totalHookahs,
+  }));
+}
+
+/**
+ * Split 20g evenly across `count` components, rounded to 2 decimals.
+ * Pure helper, safe for server + client.
+ */
+export function splitGrams(count: number): number[] {
+  if (count <= 1) return [MOLASSES_GRAMS];
+  const base = Math.floor((MOLASSES_GRAMS / count) * 100) / 100;
+  const arr = Array(count).fill(base);
+  const remainder = Math.round((MOLASSES_GRAMS - base * count) * 100) / 100;
+  arr[0] = Math.round((arr[0] + remainder) * 100) / 100;
+  return arr;
+}
+
+// ---------------------------------------------------------------------------
+// Server-side order pricing (source of truth — NEVER trust client totals).
+// ---------------------------------------------------------------------------
+
+/** Authoritative unit price for a configured hookah, computed from the catalog. */
+export function serverUnitPrice(
+  flavor: FlavorType,
+  components: { brandId: string }[]
+): number {
+  if (components.length === 0) return 0;
+  if (flavor === "fruits") {
+    return getBrand(components[0].brandId)?.pricing.fruits ?? 0;
+  }
+  if (flavor === "flat") {
+    return getBrand(components[0].brandId)?.pricing.flat ?? 0;
+  }
+  // fruits-mix: max mix price across involved brands
+  return mixPrice(components.map((c) => c.brandId));
+}
+
+export interface ServerTotals {
+  totalQty: number;
+  subtotal: number;
+  discount: number;
+  total: number;
+  bogo: boolean;
+}
+
+/**
+ * Recompute order totals entirely from validated items + ownType using catalog
+ * pricing. Used server-side so a malicious/buggy client cannot submit a
+ * tampered `total` of 0.
+ */
+export function recomputeOrderTotals(
+  items: {
+    flavor: FlavorType;
+    components: { brandId: string }[];
+    qty: number;
+  }[],
+  ownType: string | null
+): ServerTotals {
+  const bogo = ownType === "hookah" || ownType === "molasses";
+  let subtotal = 0;
+  let total = 0;
+  let totalQty = 0;
+  for (const it of items) {
+    const unit = serverUnitPrice(it.flavor, it.components);
+    subtotal += unit * it.qty;
+    total += unit * chargeableQty(it.qty, bogo);
+    totalQty += it.qty;
+  }
+  const discount = Math.max(0, subtotal - total);
+  return { totalQty, subtotal, discount, total, bogo };
+}
+
+/**
+ * Re-derive the per-component gram split for an item so the server never
+ * trusts client-supplied grams (which could be tampered to avoid depleting
+ * stock). The total per hookah is always MOLASSES_GRAMS (20g).
+ */
+export function serverComponentGrams(count: number): number[] {
+  return splitGrams(count);
 }

@@ -9,6 +9,7 @@ import {
   mixPrice,
   MOLASSES_GRAMS,
   FLAVOR_LABELS,
+  splitGrams,
 } from "@/lib/catalog";
 
 /** A single flavor component inside a hookah. */
@@ -124,15 +125,8 @@ interface PersistedCart {
   ownType?: OwnType;
 }
 
-/** Split 20g evenly across components, rounded to 2 decimals. */
-export function splitGrams(count: number): number[] {
-  if (count <= 1) return [MOLASSES_GRAMS];
-  const base = Math.floor((MOLASSES_GRAMS / count) * 100) / 100;
-  const arr = Array(count).fill(base);
-  const remainder = Math.round((MOLASSES_GRAMS - base * count) * 100) / 100;
-  arr[0] = Math.round((arr[0] + remainder) * 100) / 100;
-  return arr;
-}
+// splitGrams is now imported from catalog (single source of truth).
+export { splitGrams };
 
 export const useCart = create<CartState>()(
   persist(

@@ -28,15 +28,14 @@ model InventoryItem {
   updatedAt         DateTime @updatedAt
 }
 
-// Consumable supplies (coal, foil, hose, …). Tracked in their own unit, auto-deducted on order.
+// Consumable supplies (coal, foil, …). Tracked in their own unit, auto-deducted on order.
 model SupplyItem {
   id                String   @id @default(cuid())
-  key               String   @unique // regular_coal | cubed_coal | foil | medical_hose | ...
+  key               String   @unique // regular_coal | cubed_coal | foil | ...
   name              String
   unit              String   // pcs | sheets | ...
   stock             Float
   lowStockThreshold Float    @default(20)
-  cost              Float    @default(0) // EGP per unit (for valuation)
   emoji             String   @default("📦")
   updatedAt         DateTime @updatedAt
 }

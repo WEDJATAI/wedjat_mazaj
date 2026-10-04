@@ -33,11 +33,11 @@ async function main() {
   }
   console.log(`Seeded inventory for ${BRANDS.length} brands`);
 
-  // --- Supplies (coal + foil + hose) ---
+  // --- Supplies (coal + foil) ---
   for (const s of SUPPLIES) {
     await db.supplyItem.upsert({
       where: { key: s.key },
-      update: { cost: s.cost },
+      update: {},
       create: {
         key: s.key,
         name: s.name,
@@ -45,7 +45,6 @@ async function main() {
         emoji: s.emoji,
         stock: s.defaultStock,
         lowStockThreshold: s.lowThreshold,
-        cost: s.cost,
       },
     });
   }

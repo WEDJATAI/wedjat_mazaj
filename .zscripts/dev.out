@@ -1,18 +1,18 @@
 ==========================================
-[2026-10-04 11:38:34] Starting: bun install
+[2026-10-04 11:48:51] Starting: bun install
 ==========================================
 [BUN] Installing dependencies...
 [0.03ms] ".env"
 bun install v1.3.14 (0d9b296a)
 
-Checked 846 installs across 915 packages (no changes) [20.00ms]
+Checked 846 installs across 915 packages (no changes) [19.00ms]
 ==========================================
-[2026-10-04 11:38:34] Completed: bun install
+[2026-10-04 11:48:51] Completed: bun install
 [LOG] Step: bun install | Duration: 0s
 ==========================================
 
 ==========================================
-[2026-10-04 11:38:34] Starting: bun run db:push
+[2026-10-04 11:48:51] Starting: bun run db:push
 ==========================================
 [BUN] Setting up database...
 $ prisma db push --accept-data-loss
@@ -24,25 +24,25 @@ The database is already in sync with the Prisma schema.
 
 Running generate... (Use --skip-generate to skip the generators)
 [2K[1A[2K[GRunning generate... - Prisma Client
-[2K[1A[2K[G✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 78ms
+[2K[1A[2K[G✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 111ms
 
 ==========================================
-[2026-10-04 11:38:35] Completed: bun run db:push
+[2026-10-04 11:48:52] Completed: bun run db:push
 [LOG] Step: bun run db:push | Duration: 1s
 ==========================================
 
 ==========================================
-[2026-10-04 11:38:35] Starting: Starting Next.js dev server
+[2026-10-04 11:48:52] Starting: Starting Next.js dev server
 ==========================================
 [BUN] Starting development server...
 ==========================================
-[2026-10-04 11:38:35] Completed: Starting Next.js dev server
 $ next dev -p 3000 2>&1 | tee dev.log
+[2026-10-04 11:48:52] Completed: Starting Next.js dev server
 [LOG] Step: Starting Next.js dev server | Duration: 0s
 ==========================================
 
 ==========================================
-[2026-10-04 11:38:35] Starting: Waiting for Next.js dev server
+[2026-10-04 11:48:52] Starting: Waiting for Next.js dev server
 ==========================================
 Waiting for Next.js dev server to be ready on localhost:3000...
 Attempt 1/60: Next.js dev server not ready yet, waiting...
@@ -52,46 +52,62 @@ Attempt 1/60: Next.js dev server not ready yet, waiting...
 - Environments: .env
 
 ✓ Starting...
-✓ Ready in 620ms
+✓ Ready in 616ms
 Next.js dev server is ready!
- GET / 200 in 2.7s (compile: 2.5s, render: 145ms)
+ GET / 200 in 2.8s (compile: 2.6s, render: 152ms)
 ==========================================
-[2026-10-04 11:38:38] Completed: Waiting for Next.js dev server
-[LOG] Step: Waiting for Next.js dev server | Duration: 3s
+ GET / 200 in 1320ms (compile: 1112ms, render: 208ms)
+[2026-10-04 11:48:56] Completed: Waiting for Next.js dev server
+[LOG] Step: Waiting for Next.js dev server | Duration: 4s
 ==========================================
 
 ==========================================
-[2026-10-04 11:38:38] Starting: Health check
+[2026-10-04 11:48:56] Starting: Health check
 ==========================================
 [BUN] Performing health check...
- GET / 200 in 84ms (compile: 59ms, render: 24ms)
+ GET / 200 in 104ms (compile: 82ms, render: 22ms)
 [BUN] Health check passed
 ==========================================
-[2026-10-04 11:38:38] Completed: Health check
+[2026-10-04 11:48:56] Completed: Health check
 [LOG] Step: Health check | Duration: 0s
 ==========================================
 
 ==========================================
-[2026-10-04 11:38:38] Starting: Starting mini-services
+[2026-10-04 11:48:56] Starting: Starting mini-services
 ==========================================
 Found mini-services directory, scanning for sub-services...
 Mini-services startup completed. Started 0 service(s).
 ==========================================
-[2026-10-04 11:38:38] Completed: Starting mini-services
+[2026-10-04 11:48:56] Completed: Starting mini-services
 [LOG] Step: Starting mini-services | Duration: 0s
 ==========================================
 
-Next.js dev server is running in background (PID: 27741).
-Use 'kill 27741' to stop it.
- GET / 200 in 34ms (compile: 3ms, render: 30ms)
- GET / 200 in 31ms (compile: 3ms, render: 27ms)
-prisma:query SELECT `main`.`FavoriteMix`.`id`, `main`.`FavoriteMix`.`guestName`, `main`.`FavoriteMix`.`label`, `main`.`FavoriteMix`.`componentsJson`, `main`.`FavoriteMix`.`createdAt` FROM `main`.`FavoriteMix` WHERE `main`.`FavoriteMix`.`guestName` = ? ORDER BY `main`.`FavoriteMix`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/favorites?guestName=iman 200 in 208ms (compile: 162ms, render: 46ms)
- GET / 200 in 310ms (compile: 4ms, render: 306ms)
- GET / 200 in 32ms (compile: 5ms, render: 27ms)
- GET / 200 in 29ms (compile: 3ms, render: 27ms)
+Next.js dev server is running in background (PID: 29221).
+Use 'kill 29221' to stop it.
+ GET / 200 in 33ms (compile: 3ms, render: 29ms)
+prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE 1=1 ORDER BY `main`.`SupplyItem`.`name` ASC LIMIT ? OFFSET ?
+ GET /api/supplies 200 in 226ms (compile: 140ms, render: 85ms)
+ GET / 200 in 30ms (compile: 3ms, render: 27ms)
+prisma:query SELECT `main`.`InventoryItem`.`id`, `main`.`InventoryItem`.`brandId`, `main`.`InventoryItem`.`brandName`, `main`.`InventoryItem`.`stockGrams`, `main`.`InventoryItem`.`lowStockThreshold`, `main`.`InventoryItem`.`updatedAt` FROM `main`.`InventoryItem` WHERE `main`.`InventoryItem`.`brandId` IN (?) LIMIT ? OFFSET ?
+prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE `main`.`SupplyItem`.`key` IN (?,?,?) LIMIT ? OFFSET ?
+prisma:query BEGIN IMMEDIATE
+prisma:query INSERT INTO `main`.`Order` (`id`, `customerName`, `phone`, `table`, `notes`, `itemsJson`, `subtotal`, `discount`, `total`, `bogo`, `ownType`, `itemCount`, `status`, `source`, `orderedByName`, `employeeId`, `favoriteMixId`, `createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING `id` AS `id`, `customerName` AS `customerName`, `phone` AS `phone`, `table` AS `table`, `notes` AS `notes`, `itemsJson` AS `itemsJson`, `subtotal` AS `subtotal`, `discount` AS `discount`, `total` AS `total`, `bogo` AS `bogo`, `ownType` AS `ownType`, `itemCount` AS `itemCount`, `status` AS `status`, `source` AS `source`, `orderedByName` AS `orderedByName`, `employeeId` AS `employeeId`, `favoriteMixId` AS `favoriteMixId`, `createdAt` AS `createdAt`
+prisma:query UPDATE `main`.`InventoryItem` SET `stockGrams` = (`main`.`InventoryItem`.`stockGrams` - ?), `updatedAt` = ? WHERE (`main`.`InventoryItem`.`brandId` = ? AND 1=1) RETURNING `id` AS `id`, `brandId` AS `brandId`, `brandName` AS `brandName`, `stockGrams` AS `stockGrams`, `lowStockThreshold` AS `lowStockThreshold`, `updatedAt` AS `updatedAt`
+prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query UPDATE `main`.`SupplyItem` SET `stock` = (`main`.`SupplyItem`.`stock` - ?), `updatedAt` = ? WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) RETURNING `id` AS `id`, `key` AS `key`, `name` AS `name`, `unit` AS `unit`, `stock` AS `stock`, `lowStockThreshold` AS `lowStockThreshold`, `cost` AS `cost`, `emoji` AS `emoji`, `updatedAt` AS `updatedAt`
+prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query UPDATE `main`.`SupplyItem` SET `stock` = (`main`.`SupplyItem`.`stock` - ?), `updatedAt` = ? WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) RETURNING `id` AS `id`, `key` AS `key`, `name` AS `name`, `unit` AS `unit`, `stock` AS `stock`, `lowStockThreshold` AS `lowStockThreshold`, `cost` AS `cost`, `emoji` AS `emoji`, `updatedAt` AS `updatedAt`
+prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) LIMIT ? OFFSET ?
+prisma:query UPDATE `main`.`SupplyItem` SET `stock` = (`main`.`SupplyItem`.`stock` - ?), `updatedAt` = ? WHERE (`main`.`SupplyItem`.`key` = ? AND 1=1) RETURNING `id` AS `id`, `key` AS `key`, `name` AS `name`, `unit` AS `unit`, `stock` AS `stock`, `lowStockThreshold` AS `lowStockThreshold`, `cost` AS `cost`, `emoji` AS `emoji`, `updatedAt` AS `updatedAt`
+prisma:query COMMIT
+ POST /api/orders 200 in 108ms (compile: 81ms, render: 27ms)
+ GET /api/inventory 200 in 38ms (compile: 32ms, render: 6ms)
+prisma:query SELECT `main`.`InventoryItem`.`id`, `main`.`InventoryItem`.`brandId`, `main`.`InventoryItem`.`brandName`, `main`.`InventoryItem`.`stockGrams`, `main`.`InventoryItem`.`lowStockThreshold`, `main`.`InventoryItem`.`updatedAt` FROM `main`.`InventoryItem` WHERE 1=1 ORDER BY `main`.`InventoryItem`.`brandName` ASC LIMIT ? OFFSET ?
+ GET / 200 in 204ms (compile: 11ms, render: 193ms)
 prisma:query SELECT 1
-prisma:query SELECT `main`.`FavoriteMix`.`id`, `main`.`FavoriteMix`.`guestName`, `main`.`FavoriteMix`.`label`, `main`.`FavoriteMix`.`componentsJson`, `main`.`FavoriteMix`.`createdAt` FROM `main`.`FavoriteMix` WHERE `main`.`FavoriteMix`.`guestName` = ? ORDER BY `main`.`FavoriteMix`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/favorites?guestName=iman 200 in 11ms (compile: 2ms, render: 9ms)
- GET / 200 in 144ms (compile: 5ms, render: 139ms)
- GET / 200 in 26ms (compile: 2ms, render: 23ms)
+prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
+ POST /api/auth/employee 200 in 47ms (compile: 36ms, render: 11ms)
+ GET /api/inventory 200 in 17ms (compile: 4ms, render: 13ms)
+prisma:query SELECT `main`.`InventoryItem`.`id`, `main`.`InventoryItem`.`brandId`, `main`.`InventoryItem`.`brandName`, `main`.`InventoryItem`.`stockGrams`, `main`.`InventoryItem`.`lowStockThreshold`, `main`.`InventoryItem`.`updatedAt` FROM `main`.`InventoryItem` WHERE 1=1 ORDER BY `main`.`InventoryItem`.`brandName` ASC LIMIT ? OFFSET ?
+prisma:query SELECT `main`.`SupplyItem`.`id`, `main`.`SupplyItem`.`key`, `main`.`SupplyItem`.`name`, `main`.`SupplyItem`.`unit`, `main`.`SupplyItem`.`stock`, `main`.`SupplyItem`.`lowStockThreshold`, `main`.`SupplyItem`.`cost`, `main`.`SupplyItem`.`emoji`, `main`.`SupplyItem`.`updatedAt` FROM `main`.`SupplyItem` WHERE 1=1 ORDER BY `main`.`SupplyItem`.`name` ASC LIMIT ? OFFSET ?
+ GET /api/supplies 200 in 17ms (compile: 9ms, render: 8ms)

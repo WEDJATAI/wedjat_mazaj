@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { BRANDS, SUPPLIES } from "@/lib/catalog";
+import { BRANDS, SUPPLIES, egp } from "@/lib/catalog";
 
 interface InventoryRow {
   id: string;
@@ -42,6 +42,7 @@ interface SupplyRow {
   unit: string;
   stock: number;
   lowStockThreshold: number;
+  cost: number;
   emoji: string;
   updatedAt: string;
 }
@@ -94,6 +95,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
               unit: s.unit,
               stock: 0,
               lowStockThreshold: s.lowThreshold,
+              cost: s.cost,
               emoji: s.emoji,
               updatedAt: new Date().toISOString(),
             }
@@ -209,6 +211,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                 {supplies.map((s) => {
                   const low = s.stock <= s.lowStockThreshold;
                   const def = SUPPLIES.find((d) => d.key === s.key);
+                  const reusable = (def?.perHookah ?? 0) === 0;
                   const pct = Math.max(
                     4,
                     Math.min(100, (s.stock / (def?.defaultStock ?? 200)) * 100)
@@ -230,6 +233,11 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                             <p className="font-semibold">{s.name}</p>
                             <p className="text-xs text-muted-foreground">
                               {Math.round(s.stock)} {s.unit}
+                              {s.cost > 0 && (
+                                <span className="ml-1 text-primary">
+                                  · {egp(s.cost)}/{s.unit.replace(/s$/, "")}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -249,6 +257,11 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                           </Badge>
                         )}
                       </div>
+                      {reusable && (
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                          ♻️ Reusable — not auto-deducted per order
+                        </p>
+                      )}
                       <div className="mt-3">
                         <div className="mb-1 flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">stock</span>
