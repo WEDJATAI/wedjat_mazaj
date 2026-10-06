@@ -52,3 +52,22 @@ prompt
 server.log
 # Skills directory
 /skills/.env
+
+# Secrets & local DB (never commit)
+.env
+db/custom.db
+db/backups/
+upload/
+
+# Dev server logs
+.zscripts/dev.log
+.zscripts/dev.out
+.zscripts/dev.pid
+.zscripts/mini-service-*.log
+dev.log
+server.log
+diag-dev.log
+verify-dev.log
+verify*.sh
+diag*.sh
+guest-check.sh
