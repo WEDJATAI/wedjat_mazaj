@@ -113,6 +113,11 @@ model Order {
   suppliesCost  Float    @default(0)
   netProfit     Float    @default(0) // total - cogs
   marginPct     Float    @default(0) // netProfit / total * 100
+  // Wedjat RSM sync tracking
+  wedjatOrderId Int?     // the order ID in Wedjat RSM (null = not synced)
+  wedjatSyncStatus String @default("pending") // pending | synced | failed | revoked
+  wedjatRevokedBy String? // name of the Wedjat employee who revoked it
+  wedjatRevokedAt DateTime?
   createdAt     DateTime @default(now())
 
   comments OrderComment[]

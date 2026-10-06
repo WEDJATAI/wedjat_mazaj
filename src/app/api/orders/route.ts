@@ -349,13 +349,14 @@ export async function POST(req: NextRequest) {
       return created;
     });
 
-    // Sync to Wedjat RSM restaurant POS (non-blocking; logged on failure)
+    // Sync to Wedjat RSM restaurant POS (non-blocking; best-effort)
     const wedjatItems = sanitizedItems.map((it) => ({
       name: `${it.primaryBrandName} ${it.flavorLabel}`,
       price: it.unitPrice,
       qty: it.qty,
     }));
     void syncToWedjat({
+      mazajOrderId: order.id,
       table: data.table || null,
       items: wedjatItems,
       total: finalTotal,
@@ -376,8 +377,11 @@ export async function POST(req: NextRequest) {
  * After a Mazaj order is created, push it to the Wedjat RSM restaurant
  * database so it appears in their POS / kitchen queue. Non-blocking —
  * failures are logged but don't fail the Mazaj order.
+ * Uses external_ref for idempotency (mazaj:<orderId>) so duplicate pushes
+ * are safe. Records the Wedjat order ID + sync status back on the Mazaj order.
  */
 async function syncToWedjat(opts: {
+  mazajOrderId: string;
   table: string | null;
   items: { name: string; price: number; qty: number }[];
   total: number;
@@ -386,16 +390,28 @@ async function syncToWedjat(opts: {
   if (!opts.table) return;
   try {
     const result = await pushOrderToWedjat({
+      mazajOrderId: opts.mazajOrderId,
       tableName: opts.table,
       items: opts.items,
       total: opts.total,
       customerName: opts.customerName,
-      source: "mazaj",
     });
     if (!result.ok) {
       console.warn("[wedjat sync] failed:", result.error);
+      // Record failure so it can be retried
+      await db.order.update({
+        where: { id: opts.mazajOrderId },
+        data: { wedjatSyncStatus: "failed" },
+      }).catch(() => {});
     } else {
       console.log("[wedjat sync] order pushed, wedjat id:", result.wedjatOrderId);
+      await db.order.update({
+        where: { id: opts.mazajOrderId },
+        data: {
+          wedjatOrderId: result.wedjatOrderId,
+          wedjatSyncStatus: "synced",
+        },
+      }).catch(() => {});
     }
   } catch (err) {
     console.warn("[wedjat sync] error:", err);

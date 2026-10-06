@@ -342,3 +342,37 @@ Stage Summary:
 - Employees must enter a table number (validated, with Wedjat table picker).
 - Orders sync to Wedjat RSM restaurant POS: creates open order + items + marks table occupied.
 - Wedjat products/tables accessible via API for future menu integration.
+
+---
+Task ID: 110-115
+Agent: main (Z.ai Code)
+Task: Wedjat RSM deep integration (orders, prices, revocations), full Arabic version, professional must-have features.
+
+Work Log:
+- ORDER SYNC: pushOrderToWedjat now uses external_ref ("mazaj:<orderId>") for idempotency. Records wedjatOrderId + wedjatSyncStatus back on the Mazaj order. Creates open order with correct columns (subtotal_amount, total_amount, client_name, external_ref). Inserts order_items with correct columns (quantity, unit_price, status='sent'). Marks table occupied.
+- PRICE SYNC: syncProductPriceToWedjat() updates product prices by name. /api/wedjat/sync-prices POST pushes all 12 shisha prices (brand × flavor type) to Wedjat. Manual sync button in Sync panel.
+- REVOCATION SYNC: fetchWedjatRevocations() queries Wedjat for orders WHERE external_ref LIKE 'mazaj:%' AND status='cancelled'. Joins audit_logs to find user_name who cancelled. /api/wedjat/sync-revocations GET updates Mazaj orders with wedjatSyncStatus='revoked', wedjatRevokedBy=<name>, wedjatRevokedAt. Sync panel polls every 30s.
+- SYNC DASHBOARD: new "Sync" tab (admin+) — shows connection health (connected/disconnected, table/product counts, latency), synced/revoked/failed counts, revoked orders with Wedjat employee attribution, synced orders list. Manual "Check revocations" + "Sync prices" buttons.
+- ARABIC VERSION: full i18n system — src/lib/i18n.ts (180+ translations), src/store/i18n.ts (Zustand persisted), I18nProvider sets dir="rtl"/lang="ar". LangToggle button on sign-in + floating on dashboard. egp() supports Arabic suffix (ج.م). RTL CSS adjustments.
+- PROFESSIONAL MUST-HAVES:
+  1. Idempotency: external_ref prevents duplicate orders on Wedjat
+  2. Non-blocking sync: all Wedjat operations are fire-and-forget (void), Mazaj never blocks on Wedjat
+  3. Sync status tracking: wedjatSyncStatus (pending/synced/failed/revoked) on every order
+  4. Health check: /api/wedjat/health with latency, table/product counts
+  5. Revocation polling: automatic detection of cancelled orders in Wedjat
+  6. Price sync: bidirectional (push Mazaj prices → Wedjat, can fetch Wedjat prices)
+  7. Attribution: shows which Wedjat employee revoked an order
+
+Verification:
+- HTTP 200, zero compile errors.
+- Wedjat health: connected, 54 tables, 261 products ✓
+- Price sync: 12/12 products synced ✓
+- Order sync: creates Wedjat order with external_ref + order_items ✓ (verified order #2191)
+- Revocation check: 0 revoked (none cancelled yet) ✓
+- Lint clean.
+
+Stage Summary:
+- Orders sync to Wedjat RSM with idempotency + correct check items.
+- Price changes push to Wedjat; revocations from Wedjat show on Mazaj with employee attribution.
+- Full Arabic version with RTL support + language toggle.
+- 7 professional must-haves ensure the connection never disrupts Wedjat's main flow.

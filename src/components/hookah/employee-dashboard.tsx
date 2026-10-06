@@ -9,6 +9,8 @@ import { OrdersPanel } from "./orders-panel";
 import { EmployeesPanel } from "./employees-panel";
 import { PurchasesPanel } from "./purchases-panel";
 import { ProfitPanel } from "./profit-panel";
+import { SyncPanel } from "./sync-panel";
+import { LangToggle } from "./lang-toggle";
 import { cn } from "@/lib/utils";
 import {
   hasPermission,
@@ -22,6 +24,7 @@ import {
   Users,
   ShoppingCart,
   TrendingUp,
+  RefreshCw,
 } from "lucide-react";
 
 const TAB_BAR_H = 68;
@@ -88,6 +91,12 @@ export function EmployeeDashboard() {
         icon: <TrendingUp className="size-5" />,
         render: (so) => <ProfitPanel onSignOut={so} />,
       },
+      {
+        key: "sync",
+        label: "Sync",
+        icon: <RefreshCw className="size-5" />,
+        render: (so) => <SyncPanel onSignOut={so} />,
+      },
     ],
     [employee]
   );
@@ -132,6 +141,11 @@ export function EmployeeDashboard() {
   return (
     <div className="relative min-h-screen bg-background">
       {activeTab && activeTab.render(signOut)}
+
+      {/* Floating language toggle */}
+      <div className="fixed left-4 bottom-[72px] z-50">
+        <LangToggle />
+      </div>
 
       {/* Bottom tab bar — only shows tabs this employee can access */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/90 backdrop-blur-xl">

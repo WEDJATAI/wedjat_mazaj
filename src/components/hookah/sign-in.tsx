@@ -19,12 +19,19 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { LangToggle } from "./lang-toggle";
+import { useI18n } from "@/store/i18n";
 
 export function SignIn() {
   const [tab, setTab] = React.useState<"role" | "pin" | "guest">("role");
+  const t = useI18n((s) => s.t);
   return (
     <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
       <div className="ember-glow pointer-events-none absolute inset-0" />
+      {/* Language toggle */}
+      <div className="absolute right-4 top-4 z-10">
+        <LangToggle />
+      </div>
       <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -40,9 +47,9 @@ export function SignIn() {
           >
             <Flame className="size-10" />
           </motion.span>
-          <h1 className="text-4xl font-bold tracking-tight smoke-text">Mazaj</h1>
+          <h1 className="text-4xl font-bold tracking-tight smoke-text">{t("mazaj")}</h1>
           <p className="text-sm text-muted-foreground">
-            Hookah lounge · ordering system
+            {t("hookahLounge")}
           </p>
         </motion.div>
 

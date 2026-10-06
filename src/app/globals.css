@@ -122,6 +122,16 @@
   }
 }
 
+/* RTL support — when dir="rtl", flip horizontal layouts */
+[dir="rtl"] .ml-auto {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] .mr-auto {
+  margin-right: 0;
+  margin-left: auto;
+}
+
 /* Ember glow utilities for the lounge vibe */
 .ember-glow {
   background-image:

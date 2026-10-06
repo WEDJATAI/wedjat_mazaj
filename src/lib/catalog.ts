@@ -415,11 +415,12 @@ export function chargeableQty(qty: number, bogo: boolean): number {
 }
 
 /** Format a price in Egyptian Pounds. */
-export function egp(n: number): string {
+export function egp(n: number, lang: "en" | "ar" = "en"): string {
   const rounded = Math.round(n * 100) / 100;
+  const suffix = lang === "ar" ? "ج.م" : "EGP";
   return `${rounded.toLocaleString("en-US", {
     maximumFractionDigits: rounded % 1 === 0 ? 0 : 2,
-  })} EGP`;
+  })} ${suffix}`;
 }
 
 // ---------------------------------------------------------------------------
