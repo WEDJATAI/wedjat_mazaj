@@ -37,6 +37,15 @@ import {
 } from "@/store/cart";
 import { toast } from "sonner";
 
+/** Flavors marked as popular (⭐) to guide first-time guests. */
+const POPULAR_FLAVORS = new Set([
+  "Double Apple",
+  "Mint",
+  "Grape",
+  "Blueberry",
+  "Watermelon",
+]);
+
 interface ConfigSheetProps {
   brand: Brand | null;
   open: boolean;
@@ -216,19 +225,23 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
               <div className="flex flex-wrap gap-2">
                 {brand.flavors.map((f) => {
                   const active = singleFlavor === f;
+                  const popular = POPULAR_FLAVORS.has(f);
                   return (
                     <button
                       key={f}
                       type="button"
                       onClick={() => setSingleFlavor(f)}
                       className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm transition-all",
+                        "relative rounded-full border px-4 py-2.5 text-sm font-medium transition-all",
                         active
-                          ? "border-primary bg-primary/15 text-primary"
+                          ? "border-primary bg-primary/15 text-primary ring-1 ring-primary/40"
                           : "border-border bg-card hover:border-primary/50"
                       )}
                     >
                       {f}
+                      {popular && (
+                        <span className="absolute -top-1.5 -right-1.5 text-[10px]">⭐</span>
+                      )}
                     </button>
                   );
                 })}
@@ -256,9 +269,9 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
                     type="button"
                     onClick={() => setSingleFlavor(f)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-sm transition-all",
+                      "rounded-full border px-4 py-2.5 text-sm font-medium transition-all",
                       active
-                        ? "border-primary bg-primary/15 text-primary"
+                        ? "border-primary bg-primary/15 text-primary ring-1 ring-primary/40"
                         : "border-border bg-card hover:border-primary/50"
                     )}
                   >
@@ -477,16 +490,22 @@ function FlavorPicker({
         {brand.name} flavors:
       </p>
       <div className="flex flex-wrap gap-2">
-        {brand.flavors.map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => onPick(brand.id, f)}
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-sm transition-all hover:border-primary hover:bg-primary/10 hover:text-primary"
-          >
-            {f}
-          </button>
-        ))}
+        {brand.flavors.map((f) => {
+          const popular = POPULAR_FLAVORS.has(f);
+          return (
+            <button
+              key={f}
+              type="button"
+              onClick={() => onPick(brand.id, f)}
+              className="relative rounded-full border border-border bg-background px-4 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/10 hover:text-primary"
+            >
+              {f}
+              {popular && (
+                <span className="absolute -top-1.5 -right-1.5 text-[10px]">⭐</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <Button

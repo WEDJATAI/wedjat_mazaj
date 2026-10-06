@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BRANDS, Brand, egp } from "@/lib/catalog";
+import { BRANDS, Brand, egp, BOWL_PRESETS, getBrand, MOLASSES_GRAMS } from "@/lib/catalog";
 import { useCart, computeTotals } from "@/store/cart";
 import { BrandCard } from "./brand-card";
 import { ConfigSheet } from "./config-sheet";
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { BarcodeModal } from "./barcode-modal";
 import { SessionTimer } from "./session-timer";
+import { toast } from "sonner";
 
 function useMounted() {
   const [m, setM] = React.useState(false);
@@ -66,6 +67,7 @@ export function OrderScreen({
   const mounted = useMounted();
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
+  const addItem = useCart((s) => s.addItem);
   const totals = computeTotals(items, ownType);
 
   const [selectedBrand, setSelectedBrand] = React.useState<Brand | null>(null);
@@ -219,6 +221,76 @@ export function OrderScreen({
                   body="Cross-brand mixes, one bowl."
                 />
               </div>
+            </div>
+          </section>
+
+          {/* Quick start — popular bowls for one-tap add */}
+          <section className="mt-6">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary">
+                <Sparkles className="size-3.5" />
+              </span>
+              <div>
+                <h2 className="text-sm font-bold">Popular bowls</h2>
+                <p className="text-[11px] text-muted-foreground">
+                  One tap to add a house favourite
+                </p>
+              </div>
+            </div>
+            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+              {BOWL_PRESETS.map((p) => {
+                const unit =
+                  p.components.length > 1
+                    ? Math.max(
+                        ...p.components.map((c) =>
+                          getBrand(c.brandId)?.pricing.fruitsMix ?? 145
+                        )
+                      )
+                    : getBrand(p.components[0]?.brandId)?.pricing.fruits ?? 125;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      const brand = getBrand(p.components[0].brandId);
+                      if (!brand) return;
+                      const comps = p.components.map((c) => {
+                        const b = getBrand(c.brandId)!;
+                        return {
+                          brandId: c.brandId,
+                          brandName: b.name,
+                          flavorName: c.flavorName,
+                          emoji: b.emoji,
+                          grams: MOLASSES_GRAMS,
+                        };
+                      });
+                      addItem({
+                        primaryBrandId: comps[0].brandId,
+                        primaryBrandName: comps[0].brandName,
+                        emoji: comps[0].emoji,
+                        accent: brand.accent,
+                        flavor: "fruits-mix",
+                        flavorLabel: "Fruits Mix",
+                        components: comps,
+                        molassesGrams: MOLASSES_GRAMS,
+                        unitPrice: unit,
+                        qty: 1,
+                      });
+                      toast.success(`${p.emoji} ${p.name} added!`);
+                    }}
+                    className="group flex shrink-0 flex-col items-center gap-1 rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
+                    style={{ minWidth: 96 }}
+                  >
+                    <span className="text-3xl">{p.emoji}</span>
+                    <span className="text-center text-[11px] font-medium leading-tight">
+                      {p.name}
+                    </span>
+                    <span className="text-[10px] font-semibold text-primary">
+                      {egp(unit)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </section>
 

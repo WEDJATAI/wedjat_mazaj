@@ -1,5 +1,5 @@
 ==========================================
-[2026-10-06 07:54:38] Starting: bun install
+[2026-10-06 10:44:55] Starting: bun install
 ==========================================
 [BUN] Installing dependencies...
 [0.02ms] ".env"
@@ -7,12 +7,12 @@ bun install v1.3.14 (0d9b296a)
 
 Checked 846 installs across 915 packages (no changes) [21.00ms]
 ==========================================
-[2026-10-06 07:54:38] Completed: bun install
+[2026-10-06 10:44:55] Completed: bun install
 [LOG] Step: bun install | Duration: 0s
 ==========================================
 
 ==========================================
-[2026-10-06 07:54:38] Starting: bun run db:push
+[2026-10-06 10:44:55] Starting: bun run db:push
 ==========================================
 [BUN] Setting up database...
 $ prisma db push --accept-data-loss
@@ -24,25 +24,25 @@ The database is already in sync with the Prisma schema.
 
 Running generate... (Use --skip-generate to skip the generators)
 [2K[1A[2K[GRunning generate... - Prisma Client
-[2K[1A[2K[G✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 76ms
+[2K[1A[2K[G✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 93ms
 
 ==========================================
-[2026-10-06 07:54:39] Completed: bun run db:push
+[2026-10-06 10:44:56] Completed: bun run db:push
 [LOG] Step: bun run db:push | Duration: 1s
 ==========================================
 
 ==========================================
-[2026-10-06 07:54:39] Starting: Starting Next.js dev server
+[2026-10-06 10:44:56] Starting: Starting Next.js dev server
 ==========================================
 [BUN] Starting development server...
 ==========================================
 $ next dev -p 3000 2>&1 | tee dev.log
-[2026-10-06 07:54:39] Completed: Starting Next.js dev server
+[2026-10-06 10:44:56] Completed: Starting Next.js dev server
 [LOG] Step: Starting Next.js dev server | Duration: 0s
 ==========================================
 
 ==========================================
-[2026-10-06 07:54:39] Starting: Waiting for Next.js dev server
+[2026-10-06 10:44:56] Starting: Waiting for Next.js dev server
 ==========================================
 Waiting for Next.js dev server to be ready on localhost:3000...
 Attempt 1/60: Next.js dev server not ready yet, waiting...
@@ -52,129 +52,40 @@ Attempt 1/60: Next.js dev server not ready yet, waiting...
 - Environments: .env
 
 ✓ Starting...
-✓ Ready in 661ms
-○ Compiling /api/orders ...
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
+✓ Ready in 680ms
+○ Compiling / ...
 Next.js dev server is ready!
- GET / 200 in 3.9s (compile: 3.6s, render: 252ms)
+ GET / 200 in 4.7s (compile: 4.5s, render: 214ms)
 ==========================================
- GET / 200 in 3.5s (compile: 3.5s, render: 55ms)
-[2026-10-06 07:54:44] Completed: Waiting for Next.js dev server
+[2026-10-06 10:45:01] Completed: Waiting for Next.js dev server
 [LOG] Step: Waiting for Next.js dev server | Duration: 5s
 ==========================================
 
 ==========================================
-[2026-10-06 07:54:44] Starting: Health check
+[2026-10-06 10:45:01] Starting: Health check
 ==========================================
 [BUN] Performing health check...
- GET / 200 in 70ms (compile: 45ms, render: 25ms)
+ GET / 200 in 112ms (compile: 86ms, render: 26ms)
 [BUN] Health check passed
 ==========================================
-[2026-10-06 07:54:44] Completed: Health check
-[LOG] Step: Health check | Duration: 0s
+[2026-10-06 10:45:02] Completed: Health check
+[LOG] Step: Health check | Duration: 1s
 ==========================================
 
 ==========================================
-[2026-10-06 07:54:44] Starting: Starting mini-services
+[2026-10-06 10:45:02] Starting: Starting mini-services
 ==========================================
 Found mini-services directory, scanning for sub-services...
 Mini-services startup completed. Started 0 service(s).
 ==========================================
-[2026-10-06 07:54:44] Completed: Starting mini-services
+[2026-10-06 10:45:02] Completed: Starting mini-services
 [LOG] Step: Starting mini-services | Duration: 0s
 ==========================================
 
-Next.js dev server is running in background (PID: 1598).
-Use 'kill 1598' to stop it.
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 13ms (compile: 3ms, render: 10ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 10ms (compile: 3ms, render: 7ms)
- GET / 200 in 33ms (compile: 4ms, render: 29ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 2ms, render: 6ms)
- GET / 200 in 36ms (compile: 4ms, render: 32ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 9ms (compile: 3ms, render: 6ms)
- GET / 200 in 260ms (compile: 33ms, render: 228ms)
- GET / 200 in 37ms (compile: 6ms, render: 32ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 11ms (compile: 3ms, render: 8ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 2ms, render: 6ms)
- GET / 200 in 317ms (compile: 5ms, render: 311ms)
- GET /api/orders 200 in 10ms (compile: 3ms, render: 6ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET / 200 in 43ms (compile: 3ms, render: 40ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 1953µs, render: 6ms)
- POST /api/auth/employee 200 in 56ms (compile: 41ms, render: 15ms)
+Next.js dev server is running in background (PID: 4652).
+Use 'kill 4652' to stop it.
+ GET / 200 in 35ms (compile: 4ms, render: 31ms)
+ GET / 200 in 31ms (compile: 3ms, render: 28ms)
+ GET / 200 in 31ms (compile: 3ms, render: 28ms)
 prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 1846µs, render: 6ms)
- GET /api/orders 200 in 8ms (compile: 1865µs, render: 6ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET / 200 in 39ms (compile: 4ms, render: 36ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 3ms, render: 5ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 2ms, render: 6ms)
- GET / 200 in 493ms (compile: 3ms, render: 490ms)
- GET / 200 in 68ms (compile: 8ms, render: 60ms)
-prisma:query SELECT 1
- GET /api/orders 200 in 8ms (compile: 3ms, render: 6ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET / 200 in 32ms (compile: 3ms, render: 29ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 7ms (compile: 2ms, render: 5ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 7ms (compile: 2ms, render: 5ms)
- GET / 200 in 33ms (compile: 3ms, render: 30ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/profit 200 in 209ms (compile: 191ms, render: 18ms)
-prisma:query SELECT `main`.`Purchase`.`id`, `main`.`Purchase`.`kind`, `main`.`Purchase`.`refId`, `main`.`Purchase`.`name`, `main`.`Purchase`.`gramsOrUnits`, `main`.`Purchase`.`packCount`, `main`.`Purchase`.`unitCost`, `main`.`Purchase`.`totalCost`, `main`.`Purchase`.`buyerName`, `main`.`Purchase`.`createdAt` FROM `main`.`Purchase` WHERE 1=1 LIMIT ? OFFSET ?
- GET / 200 in 33ms (compile: 4ms, render: 29ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 2ms, render: 6ms)
- GET / 200 in 392ms (compile: 3ms, render: 389ms)
- GET / 200 in 41ms (compile: 5ms, render: 36ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 10ms (compile: 2ms, render: 7ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 9ms (compile: 1956µs, render: 7ms)
- GET /api/orders 200 in 10ms (compile: 3ms, render: 7ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET / 200 in 421ms (compile: 3ms, render: 418ms)
- GET / 200 in 39ms (compile: 7ms, render: 32ms)
- GET /api/orders 200 in 12ms (compile: 3ms, render: 8ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 7ms (compile: 2ms, render: 5ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 2ms, render: 6ms)
- GET / 200 in 38ms (compile: 6ms, render: 32ms)
- GET / 200 in 29ms (compile: 3ms, render: 26ms)
- GET / 200 in 137ms (compile: 109ms, render: 28ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Employee`.`id`, `main`.`Employee`.`name`, `main`.`Employee`.`pin`, `main`.`Employee`.`role`, `main`.`Employee`.`permissions`, `main`.`Employee`.`active`, `main`.`Employee`.`createdAt` FROM `main`.`Employee` WHERE (`main`.`Employee`.`pin` = ? AND 1=1) LIMIT ? OFFSET ?
- POST /api/auth/employee 200 in 29ms (compile: 6ms, render: 22ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
-prisma:query SELECT `main`.`Purchase`.`id`, `main`.`Purchase`.`kind`, `main`.`Purchase`.`refId`, `main`.`Purchase`.`name`, `main`.`Purchase`.`gramsOrUnits`, `main`.`Purchase`.`packCount`, `main`.`Purchase`.`unitCost`, `main`.`Purchase`.`totalCost`, `main`.`Purchase`.`buyerName`, `main`.`Purchase`.`createdAt` FROM `main`.`Purchase` WHERE 1=1 LIMIT ? OFFSET ?
- GET /api/profit 200 in 19ms (compile: 1990µs, render: 17ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 8ms (compile: 2ms, render: 6ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 7ms (compile: 2ms, render: 5ms)
-prisma:query SELECT 1
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 9ms (compile: 2ms, render: 7ms)
-prisma:query SELECT `main`.`Order`.`id`, `main`.`Order`.`customerName`, `main`.`Order`.`phone`, `main`.`Order`.`table`, `main`.`Order`.`notes`, `main`.`Order`.`itemsJson`, `main`.`Order`.`subtotal`, `main`.`Order`.`discount`, `main`.`Order`.`total`, `main`.`Order`.`bogo`, `main`.`Order`.`ownType`, `main`.`Order`.`itemCount`, `main`.`Order`.`status`, `main`.`Order`.`source`, `main`.`Order`.`orderedByName`, `main`.`Order`.`employeeId`, `main`.`Order`.`favoriteMixId`, `main`.`Order`.`assignment`, `main`.`Order`.`assignedToName`, `main`.`Order`.`assignedToId`, `main`.`Order`.`cogs`, `main`.`Order`.`molassesCost`, `main`.`Order`.`suppliesCost`, `main`.`Order`.`netProfit`, `main`.`Order`.`marginPct`, `main`.`Order`.`createdAt` FROM `main`.`Order` WHERE 1=1 ORDER BY `main`.`Order`.`createdAt` DESC LIMIT ? OFFSET ?
- GET /api/orders 200 in 7ms (compile: 1966µs, render: 5ms)
+ POST /api/auth/employee 200 in 192ms (compile: 152ms, render: 40ms)

@@ -247,3 +247,25 @@ Verification:
 
 Stage Summary:
 - Employee "New order" is now a standout BowlBuilder with visual bowl, live profit, quick presets, and direct send — no cart/checkout.
+
+---
+Task ID: 80-85
+Agent: main (Z.ai Code)
+Task: Upscale UX to be super easy friendly for both guests and employees.
+
+Work Log:
+- sign-in.tsx: complete redesign with Framer Motion entrance animations; bigger friendlier role cards with gradient accents ("I'm staff" / "I'm a guest"); one-tap "Just browsing — skip sign-in" quick guest option; animated PIN pad with tap-scale feedback + shake-on-error; bigger touch targets (h-16 buttons, size-7 dots); spring-animated logo; slide transitions between panels.
+- brand-card.tsx: each brand card now uses its brand color (brandColor()) for the accent glow, icon background, price text, and "Build" button; bigger icon (size-12); tap-scale animation via Framer Motion; cleaner layout with brand-colored ring on icon.
+- order-screen.tsx: added "Popular bowls" quick-start section (horizontal scroll of BOWL_PRESETS with emoji + name + price — one tap adds to cart); guest can now start ordering with house specials without opening the config sheet.
+- config-sheet.tsx: bigger flavor chips (px-4 py-2.5 instead of px-3 py-1.5); "⭐ popular" badges on common flavors (Double Apple, Mint, Grape, Blueberry, Watermelon) to guide first-time guests; ring feedback on active selection; applied to all three pickers (fruits, flat, mix).
+- All flavor pickers now have 44px+ touch targets (accessibility compliant).
+
+Verification:
+- Lint clean. HTTP 200, zero compile errors.
+- Auth API confirmed working.
+- Page renders cleanly.
+
+Stage Summary:
+- Guests: friendlier sign-in (one-tap skip, animated PIN pad), popular bowls visible upfront for one-tap ordering, bigger flavor chips with popular badges guiding choices.
+- Employees: same brand-colored cards + bowl builder (already standout), bigger touch targets throughout.
+- Both audiences: animated, tactile, accessible (44px+ touch targets), with clear visual guidance.
