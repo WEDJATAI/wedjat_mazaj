@@ -223,6 +223,82 @@ export const FLAVOR_LABELS: Record<FlavorType, string> = {
   flat: "Standard",
 };
 
+/** Stable color per brand for the visual bowl builder (hex). */
+export const BRAND_COLORS: Record<string, string> = {
+  mazaya: "#f43f5e", // rose
+  "al-fakher": "#ef4444", // red
+  dandash: "#f59e0b", // amber
+  nakhla: "#eab308", // yellow
+  amy: "#fbbf24", // gold
+  salom: "#f97316", // orange
+  kass: "#dc2626", // dark red
+};
+
+export function brandColor(brandId: string): string {
+  return BRAND_COLORS[brandId] ?? "#f59e0b";
+}
+
+/** House-special preset bowls for one-tap quick-add. */
+export interface BowlPreset {
+  id: string;
+  name: string;
+  emoji: string;
+  components: { brandId: string; flavorName: string }[];
+  tag: string;
+}
+
+export const BOWL_PRESETS: BowlPreset[] = [
+  {
+    id: "blue-mint",
+    name: "Blue Mint Bliss",
+    emoji: "💙",
+    tag: "House special",
+    components: [
+      { brandId: "mazaya", flavorName: "Blueberry" },
+      { brandId: "al-fakher", flavorName: "Mint" },
+    ],
+  },
+  {
+    id: "double-apple-classic",
+    name: "Double Apple Classic",
+    emoji: "🍎",
+    tag: "Bestseller",
+    components: [
+      { brandId: "nakhla", flavorName: "Double Apple" },
+    ],
+  },
+  {
+    id: "grape-mint-fresh",
+    name: "Grape Mint Fresh",
+    emoji: "🍇",
+    tag: "Refreshing",
+    components: [
+      { brandId: "al-fakher", flavorName: "Grape" },
+      { brandId: "al-fakher", flavorName: "Mint" },
+    ],
+  },
+  {
+    id: "watermelon-peach",
+    name: "Watermelon Peach",
+    emoji: "🍉",
+    tag: "Summer",
+    components: [
+      { brandId: "mazaya", flavorName: "Watermelon" },
+      { brandId: "dandash", flavorName: "Peach" },
+    ],
+  },
+  {
+    id: "amy-premium",
+    name: "Amy Premium Mix",
+    emoji: "👑",
+    tag: "Premium",
+    components: [
+      { brandId: "amy", flavorName: "Blueberry" },
+      { brandId: "amy", flavorName: "Mint" },
+    ],
+  },
+];
+
 export function getBrand(id: string): Brand | undefined {
   return BRANDS.find((b) => b.id === id);
 }

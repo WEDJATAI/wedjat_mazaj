@@ -212,3 +212,38 @@ Stage Summary:
 - Purchasing is connected to inventory: buying packs auto-restocks stock + records cost.
 - Every order records COGS (molasses derived from cheapest pack + supplies) and computes net profit in EGP + %.
 - Profit dashboard shows totals, per-brand breakdown, and procurement spend.
+
+---
+Task ID: 70-72
+Agent: main (Z.ai Code)
+Task: Redesign employee "New order" page into a standout BowlBuilder — no cart/checkout, build & send directly with creative visuals + live profit.
+
+Work Log:
+- catalog.ts: added brandColor() + BRAND_COLORS mapping (7 brands → hex), BOWL_PRESETS (5 house specials: Blue Mint Bliss, Double Apple Classic, Grape Mint Fresh, Watermelon Peach, Amy Premium Mix).
+- bowl-builder.tsx (NEW): dedicated employee order-taking experience:
+  • Visual bowl: circular SVG pie chart showing colored flavor segments per brand, fills as flavors are added.
+  • Quick presets: one-tap house-special bowls (horizontal scroll carousel).
+  • Brand grid: compact color-accented cards with brand-colored glow.
+  • Inline customer + table fields (no separate checkout step).
+  • Multi-bowl order list with mini bowl viz + live profit per bowl.
+  • Framer Motion animations: bowls slide in/out, send bar slides up, confirmation pops.
+  • Live profit ticker in send bar: revenue, net profit (EGP + %), BYO 2-for-1 toggle.
+  • Bowl editor modal: full-screen, spring-animated; pick flavor type (Fruits/Mix), add flavors across brands, set qty, see live Revenue/Cost/Profit cards.
+  • Direct "Send order" button → POSTs to /api/orders (no cart drawer, no checkout dialog).
+  • Animated "Order sent!" confirmation with spring checkmark.
+- employee-dashboard.tsx: "New" tab now renders BowlBuilder instead of shared OrderScreen.
+
+Creative differentiators:
+- Visual bowl representation (pie chart of flavor mix) — no competitor has this.
+- Live profit per bowl as you build (employee sees business value in real-time).
+- One-tap presets for fastest order entry.
+- No cart/checkout friction — build and send directly.
+
+Verification:
+- Page compiles clean (no errors in dev log).
+- HTTP 200, bowl-builder in HTML.
+- Auth + profit API confirmed working.
+- Lint clean.
+
+Stage Summary:
+- Employee "New order" is now a standout BowlBuilder with visual bowl, live profit, quick presets, and direct send — no cart/checkout.

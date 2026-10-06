@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSession, EmployeeSession } from "@/store/session";
-import { OrderScreen } from "./order-screen";
+import { BowlBuilder } from "./bowl-builder";
 import { InventoryPanel } from "./inventory-panel";
 import { RequestsPanel } from "./requests-panel";
 import { OrdersPanel } from "./orders-panel";
@@ -51,15 +51,10 @@ export function EmployeeDashboard() {
         label: "New",
         icon: <PlusCircle className="size-5" />,
         render: (so) => (
-          <OrderScreen
-            title="New order"
-            subtitle={`Employee · ${employee?.name ?? ""}`}
-            source="employee"
+          <BowlBuilder
             orderedByName={employee?.name ?? ""}
-            employeeId={employee?.id}
+            employeeId={employee?.id ?? ""}
             onSignOut={so}
-            bottomInset={TAB_BAR_H}
-            showTimer
           />
         ),
       },
