@@ -14,6 +14,8 @@ import {
   molassesCostPerHookah,
   computeProfit,
   chargeableQty,
+  SHISHA_CATEGORIES,
+  brandsForCategory,
   type FlavorType,
   type Brand,
 } from "@/lib/catalog";
@@ -104,6 +106,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
   const [ownType, setOwnType] = React.useState<"hookah" | "molasses" | null>(null);
   const [sending, setSending] = React.useState(false);
   const [sent, setSent] = React.useState<{ id: string; total: number } | null>(null);
+  const [shishaCat, setShishaCat] = React.useState<string | null>(null);
 
   const bogo = ownType === "hookah" || ownType === "molasses";
 
@@ -393,47 +396,89 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                 </AnimatePresence>
               </section>
 
-              {/* Brand grid */}
+              {/* Shisha category + Brand grid */}
               <section>
-                <p className="mb-2 text-sm font-semibold">Build a bowl</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {BRANDS.map((brand) => (
-                    <button
-                      key={brand.id}
-                      type="button"
-                      onClick={() => startNewBowl(brand)}
-                      className="group relative flex flex-col items-center gap-1.5 overflow-hidden rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/5"
-                    >
-                      <div
-                        className="absolute -top-6 right-0 h-20 w-20 rounded-full opacity-60 blur-xl transition-opacity group-hover:opacity-100"
-                        style={{ backgroundColor: brandColor(brand.id) }}
-                      />
-                      <span
-                        className="relative grid size-12 place-items-center overflow-hidden rounded-xl bg-white/95"
-                        style={{ boxShadow: `0 0 0 1px ${brandColor(brand.id)}40` }}
-                      >
-                        <img
-                          src={brand.logo}
-                          alt={brand.name}
-                          className="h-full w-full object-contain p-1"
-                          loading="lazy"
-                        />
-                      </span>
-                      <p className="relative text-sm font-semibold">{brand.name}</p>
-                      <p className="relative text-[10px] text-muted-foreground">
-                        from {egp(brand.pricing.flat ?? brand.pricing.fruits ?? 0)}
-                      </p>
-                      {brand.badge && (
-                        <Badge
-                          variant="secondary"
-                          className="relative border border-primary/30 bg-primary/15 text-primary"
+                {!shishaCat ? (
+                  <div>
+                    <p className="mb-2 text-sm font-semibold">Choose shisha type</p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {SHISHA_CATEGORIES.map((cat) => (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          onClick={() => setShishaCat(cat.key)}
+                          className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
                         >
-                          {brand.badge}
-                        </Badge>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                          <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/95 ring-1 ring-border">
+                            <img
+                              src={cat.logo}
+                              alt={cat.label}
+                              className="h-full w-full object-contain p-1"
+                              loading="lazy"
+                            />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold">{cat.label}</p>
+                            <p className="text-[11px] text-muted-foreground">{cat.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-semibold">
+                        {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)?.label}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShishaCat(null)}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        ← Change
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                      {brandsForCategory(shishaCat).map((brand) => (
+                        <button
+                          key={brand.id}
+                          type="button"
+                          onClick={() => startNewBowl(brand)}
+                          className="group relative flex flex-col items-center gap-1.5 overflow-hidden rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/5"
+                        >
+                          <div
+                            className="absolute -top-6 right-0 h-20 w-20 rounded-full opacity-60 blur-xl transition-opacity group-hover:opacity-100"
+                            style={{ backgroundColor: brandColor(brand.id) }}
+                          />
+                          <span
+                            className="relative grid size-12 place-items-center overflow-hidden rounded-xl bg-white/95"
+                            style={{ boxShadow: `0 0 0 1px ${brandColor(brand.id)}40` }}
+                          >
+                            <img
+                              src={brand.logo}
+                              alt={brand.name}
+                              className="h-full w-full object-contain p-1"
+                              loading="lazy"
+                            />
+                          </span>
+                          <p className="relative text-sm font-semibold">{brand.name}</p>
+                          <p className="relative text-[10px] text-muted-foreground">
+                            from {egp(brand.pricing.flat ?? brand.pricing.fruits ?? 0)}
+                          </p>
+                          {brand.badge && (
+                            <Badge
+                              variant="secondary"
+                              className="relative border border-primary/30 bg-primary/15 text-primary"
+                            >
+                              {brand.badge}
+                            </Badge>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </section>
             </>
           )}

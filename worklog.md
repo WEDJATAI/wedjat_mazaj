@@ -293,3 +293,27 @@ Stage Summary:
 - Medical hose: 10 EGP cost to business, 20 EGP to client → 10 EGP pure profit per hose.
 - Real brand logos fetched from web and displayed on brand cards + bowl builder.
 - Add-on system is extensible (any supply with sellPrice>0 becomes a sellable add-on).
+
+---
+Task ID: 95
+Agent: main (Z.ai Code)
+Task: Two-step shisha category selection (Regular vs Amy) + upgrade brand logos from user-uploaded files.
+
+Work Log:
+- LOGO UPGRADE: copied user-uploaded files to public/images/brands/ — mazaya.png, al-fakher.jpg, dandash.png, nakhla.jpg, amy.jpg, salom.jpeg, + regular.png (category logo). Updated catalog.ts logo paths to match new file extensions. All 7 logos serve HTTP 200.
+- TWO-STEP CATEGORY SELECTION: added ShishaCategory type + SHISHA_CATEGORIES def to catalog.ts:
+  • "Regular shisha" → Mazaya, Al Fakher, Dandash, Nakhla, Salom, Kass (6 brands)
+  • "Amy shisha" → Amy only (premium line; Amy doesn't serve Kass or Salom)
+  Added brandsForCategory() helper.
+- order-screen.tsx: replaced flat brand grid with two-step flow — first shows 2 category cards (with logos), then expands to show only brands in the chosen category. "← Change category" button to go back.
+- bowl-builder.tsx: same two-step flow — "Choose shisha type" → category cards → brand grid for that category.
+- brand-card.tsx: already uses brand.logo (auto picks up new files).
+
+Verification:
+- All 7 logos serve HTTP 200 (mazaya.png, al-fakher.jpg, dandash.png, nakhla.jpg, amy.jpg, salom.jpeg, regular.png).
+- Page compiles clean, HTTP 200, zero errors.
+- Lint clean.
+
+Stage Summary:
+- Two-step selection: Regular shisha (6 brands) vs Amy shisha (1 brand). Amy doesn't serve Kass or Salom.
+- Real brand logos from user uploads now displayed throughout.

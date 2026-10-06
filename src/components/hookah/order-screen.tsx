@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BRANDS, Brand, egp, BOWL_PRESETS, getBrand, MOLASSES_GRAMS } from "@/lib/catalog";
+import { BRANDS, Brand, egp, BOWL_PRESETS, getBrand, MOLASSES_GRAMS, SHISHA_CATEGORIES, brandsForCategory } from "@/lib/catalog";
 import { useCart, computeTotals } from "@/store/cart";
 import { BrandCard } from "./brand-card";
 import { ConfigSheet } from "./config-sheet";
@@ -75,6 +75,7 @@ export function OrderScreen({
   const [cartOpen, setCartOpen] = React.useState(false);
   const [checkoutOpen, setCheckoutOpen] = React.useState(false);
   const [scanOpen, setScanOpen] = React.useState(false);
+  const [shishaCat, setShishaCat] = React.useState<string | null>(null);
 
   const cartCount = mounted ? totals.totalQty : 0;
 
@@ -302,32 +303,85 @@ export function OrderScreen({
             <LegendCard title="Salom / Kass" price="45 EGP" sub="Everyday flat price" />
           </section>
 
-          {/* Brands */}
+          {/* Shisha category + Brands */}
           <section className="mt-8">
-            <div className="mb-4 flex items-end justify-between">
+            {/* Step 1: choose shisha type */}
+            {!shishaCat && (
               <div>
-                <h2 className="text-xl font-bold tracking-tight">
-                  Choose your molasses
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Tap a brand to set flavor & quantity.
-                </p>
+                <div className="mb-4">
+                  <h2 className="text-xl font-bold tracking-tight">
+                    Choose your shisha
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Select a category to see available brands.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {SHISHA_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setShishaCat(cat.key)}
+                      className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10"
+                    >
+                      <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/95 ring-1 ring-border">
+                        <img
+                          src={cat.logo}
+                          alt={cat.label}
+                          className="h-full w-full object-contain p-1.5"
+                          loading="lazy"
+                        />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-lg font-semibold">{cat.label}</p>
+                        <p className="text-xs text-muted-foreground">{cat.desc}</p>
+                        <p className="mt-1 text-[11px] font-medium text-primary">
+                          {cat.brandIds.length} brand{cat.brandIds.length > 1 ? "s" : ""} →
+                        </p>
+                      </div>
+                      <ArrowRight className="size-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                    </button>
+                  ))}
+                </div>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {BRANDS.length} brands
-              </span>
-            </div>
+            )}
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {BRANDS.map((brand) => (
-                <BrandCard
-                  key={brand.id}
-                  brand={brand}
-                  inCart={mounted ? inCartFor(brand.id) : 0}
-                  onSelect={() => handleSelectBrand(brand)}
-                />
-              ))}
-            </div>
+            {/* Step 2: brands in chosen category */}
+            {shishaCat && (
+              <div>
+                <div className="mb-4 flex items-end justify-between">
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShishaCat(null)}
+                      className="mb-1 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      ← Change category
+                    </button>
+                    <h2 className="text-xl font-bold tracking-tight">
+                      {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)?.label}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Tap a brand to set flavor & quantity.
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {brandsForCategory(shishaCat).length} brands
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {brandsForCategory(shishaCat).map((brand) => (
+                    <BrandCard
+                      key={brand.id}
+                      brand={brand}
+                      inCart={mounted ? inCartFor(brand.id) : 0}
+                      onSelect={() => handleSelectBrand(brand)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </main>
 

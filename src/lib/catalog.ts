@@ -12,6 +12,60 @@
 export type FlavorType = "fruits" | "fruits-mix" | "flat";
 export type BrandCategory = "regular" | "premium" | "special";
 
+/**
+ * Top-level shisha category for the two-step selection flow.
+ *  - "regular": Mazaya, Al Fakher, Dandash, Nakhla, Salom, Kass
+ *  - "amy":     Amy premium line only
+ */
+export type ShishaCategory = "regular" | "amy";
+
+export interface ShishaCategoryDef {
+  key: ShishaCategory;
+  label: string;
+  desc: string;
+  emoji: string;
+  logo: string;
+  brandIds: string[];
+}
+
+export const SHISHA_CATEGORIES: ShishaCategoryDef[] = [
+  {
+    key: "regular",
+    label: "Regular shisha",
+    desc: "Mazaya · Al Fakher · Dandash · Nakhla · Salom · Kass",
+    emoji: "🌿",
+    logo: "/images/brands/regular.png",
+    brandIds: [
+      "mazaya",
+      "al-fakher",
+      "dandash",
+      "nakhla",
+      "salom",
+      "kass",
+    ],
+  },
+  {
+    key: "amy",
+    label: "Amy shisha",
+    desc: "Premium line · fruits & mix 180 EGP",
+    emoji: "👑",
+    logo: "/images/brands/amy.jpg",
+    brandIds: ["amy"],
+  },
+];
+
+export function getShishaCategory(key: string): ShishaCategoryDef | undefined {
+  return SHISHA_CATEGORIES.find((c) => c.key === key);
+}
+
+export function brandsForCategory(key: string): Brand[] {
+  const cat = getShishaCategory(key);
+  if (!cat) return BRANDS;
+  return cat.brandIds
+    .map((id) => getBrand(id))
+    .filter((b): b is Brand => !!b);
+}
+
 export interface BrandPricing {
   fruits?: number; // EGP
   fruitsMix?: number; // EGP
@@ -78,7 +132,7 @@ export const BRANDS: Brand[] = [
       "Peach",
       "Guava",
     ],
-    logo: "/images/brands/mazaya.jpg",
+    logo: "/images/brands/mazaya.png",
     barcode: "MZ-001",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 85 },
@@ -127,7 +181,7 @@ export const BRANDS: Brand[] = [
     blurb: "Local classic with rich, traditional taste.",
     flavorTypes: ["fruits", "fruits-mix"],
     flavors: ["Double Apple", "Grape", "Mint", "Watermelon", "Lemon", "Peach"],
-    logo: "/images/brands/dandash.jpg",
+    logo: "/images/brands/dandash.png",
     barcode: "DN-003",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 70 },
@@ -203,7 +257,7 @@ export const BRANDS: Brand[] = [
     blurb: "Light, budget-friendly sessions — 45 EGP flat.",
     flavorTypes: ["flat"],
     flavors: ["Standard", "Apple", "Grape", "Mint"],
-    logo: "/images/brands/salom.jpg",
+    logo: "/images/brands/salom.jpeg",
     barcode: "SL-006",
     packs: [{ grams: 250, label: "250g pack", costEgp: 35 }],
   },
