@@ -13,6 +13,7 @@ import {
   serverComponentGrams,
   supplyConsumption,
 } from "@/lib/catalog";
+import { pushOrderToWedjat } from "@/lib/wedjat";
 
 const ComponentSchema = z.object({
   brandId: z.string(),
@@ -348,6 +349,19 @@ export async function POST(req: NextRequest) {
       return created;
     });
 
+    // Sync to Wedjat RSM restaurant POS (non-blocking; logged on failure)
+    const wedjatItems = sanitizedItems.map((it) => ({
+      name: `${it.primaryBrandName} ${it.flavorLabel}`,
+      price: it.unitPrice,
+      qty: it.qty,
+    }));
+    void syncToWedjat({
+      table: data.table || null,
+      items: wedjatItems,
+      total: finalTotal,
+      customerName: data.customerName || null,
+    });
+
     return NextResponse.json({ ok: true, order });
   } catch (err) {
     console.error("create order error", err);
@@ -355,6 +369,36 @@ export async function POST(req: NextRequest) {
       { ok: false, error: "Could not place order" },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * After a Mazaj order is created, push it to the Wedjat RSM restaurant
+ * database so it appears in their POS / kitchen queue. Non-blocking —
+ * failures are logged but don't fail the Mazaj order.
+ */
+async function syncToWedjat(opts: {
+  table: string | null;
+  items: { name: string; price: number; qty: number }[];
+  total: number;
+  customerName: string | null;
+}) {
+  if (!opts.table) return;
+  try {
+    const result = await pushOrderToWedjat({
+      tableName: opts.table,
+      items: opts.items,
+      total: opts.total,
+      customerName: opts.customerName,
+      source: "mazaj",
+    });
+    if (!result.ok) {
+      console.warn("[wedjat sync] failed:", result.error);
+    } else {
+      console.log("[wedjat sync] order pushed, wedjat id:", result.wedjatOrderId);
+    }
+  } catch (err) {
+    console.warn("[wedjat sync] error:", err);
   }
 }
 

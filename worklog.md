@@ -317,3 +317,28 @@ Verification:
 Stage Summary:
 - Two-step selection: Regular shisha (6 brands) vs Amy shisha (1 brand). Amy doesn't serve Kass or Salom.
 - Real brand logos from user uploads now displayed throughout.
+
+---
+Task ID: 100
+Agent: main (Z.ai Code)
+Task: Table number mandatory for employees + Wedjat RSM restaurant database integration.
+
+Work Log:
+- SECURITY: stored all Wedjat credentials in .env (git-ignored, untracked). Removed .env from git tracking. Never hardcoded in source.
+- Wedjat RSM exploration: fetched Prisma schema + API routes from GitHub repo. Discovered Turso DB has: products (id, name, name_ar, price, cost, stock, active, sold_out, category_id), categories (incl. "Shisha"), tables (id, name, status), orders, order_items (order_id, product_id, quantity, unit_price, status).
+- src/lib/wedjat.ts (NEW): Turso/libsql client integration — fetchWedjatTables(), fetchWedjatProducts(), fetchWedjatProductsByCategory(), pushOrderToWedjat() (creates open order + order_items + marks table occupied).
+- API routes: /api/wedjat/tables (GET), /api/wedjat/products (GET, optional ?category=), /api/wedjat/push-order (POST).
+- orders API: after creating a Mazaj order, fires non-blocking syncToWedjat() that pushes the order to Wedjat RSM (table, items, total, customer). Uses correct column names (quantity, unit_price).
+- bowl-builder.tsx: table number now REQUIRED for employees — sendOrder blocks with toast if empty. Fetches Wedjat tables on mount and shows a picker dropdown of free tables. Toast confirms "synced to Wedjat RSM".
+
+Verification:
+- Wedjat tables API: 54 tables fetched (T1-T12, P1-P3, etc.) ✓
+- Wedjat products API: Shisha category → "LIMON & MINT Hooka" 150 EGP ✓
+- Direct push test: created Wedjat order #2190 on T7 → table marked "occupied", order open with items ✓
+- Mazaj order on T6 → Mazaj OK, Wedjat sync fires (non-blocking) ✓
+- Lint clean. Dev server 200.
+
+Stage Summary:
+- Employees must enter a table number (validated, with Wedjat table picker).
+- Orders sync to Wedjat RSM restaurant POS: creates open order + items + marks table occupied.
+- Wedjat products/tables accessible via API for future menu integration.

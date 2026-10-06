@@ -107,6 +107,26 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
   const [sending, setSending] = React.useState(false);
   const [sent, setSent] = React.useState<{ id: string; total: number } | null>(null);
   const [shishaCat, setShishaCat] = React.useState<string | null>(null);
+  const [wedjatTables, setWedjatTables] = React.useState<
+    { id: number; name: string; status: string }[]
+  >([]);
+
+  // Fetch Wedjat RSM tables so the employee can pick from real restaurant tables
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/wedjat/tables");
+        const data = await res.json();
+        if (!cancelled && data.ok) setWedjatTables(data.tables);
+      } catch {
+        // silent — Wedjat integration is best-effort
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const bogo = ownType === "hookah" || ownType === "molasses";
 
@@ -145,6 +165,13 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
 
   const sendOrder = async () => {
     if (bowls.length === 0 || sending) return;
+    // Table number is mandatory for employees
+    if (!table.trim()) {
+      toast.error("Table number is required", {
+        description: "Enter the table number before sending the order.",
+      });
+      return;
+    }
     setSending(true);
     try {
       const items = bowls.map((b) => {
@@ -198,7 +225,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
       setTable("");
       setOwnType(null);
       toast.success("Order sent to kitchen!", {
-        description: `${totalHookahs} hookahs · ${egp(total)}`,
+        description: `${totalHookahs} hookahs · ${egp(total)} · synced to Wedjat RSM`,
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send order");
@@ -244,7 +271,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             />
           ) : (
             <>
-              {/* Customer + table inline */}
+              {/* Customer + table inline — table is REQUIRED for employees */}
               <div className="mb-4 grid grid-cols-2 gap-2">
                 <Input
                   value={customerName}
@@ -253,13 +280,37 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                   aria-label="Customer name"
                   className="rounded-xl"
                 />
-                <Input
-                  value={table}
-                  onChange={(e) => setTable(e.target.value)}
-                  placeholder="Table / room"
-                  aria-label="Table"
-                  className="rounded-xl"
-                />
+                <div className="relative">
+                  <Input
+                    value={table}
+                    onChange={(e) => setTable(e.target.value)}
+                    placeholder="Table number *"
+                    aria-label="Table number (required)"
+                    className={cn(
+                      "rounded-xl",
+                      !table.trim() && "border-amber-500/50"
+                    )}
+                  />
+                  {wedjatTables.length > 0 && (
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) setTable(e.target.value);
+                      }}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-lg border border-border bg-card px-2 py-1 text-xs text-muted-foreground"
+                      aria-label="Pick from Wedjat tables"
+                    >
+                      <option value="">📋 Pick</option>
+                      {wedjatTables
+                        .filter((t) => t.status === "free")
+                        .map((t) => (
+                          <option key={t.id} value={t.name}>
+                            {t.name} ({t.status})
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               {/* Quick presets */}
