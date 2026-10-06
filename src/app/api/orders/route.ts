@@ -4,9 +4,11 @@ import { z } from "zod";
 import {
   MOLASSES_GRAMS,
   SUPPLIES,
+  SELLABLE_ADDONS,
   computeOrderCogs,
   computeProfit,
   getBrand,
+  getSupply,
   recomputeOrderTotals,
   serverComponentGrams,
   supplyConsumption,
@@ -49,6 +51,8 @@ const CreateOrderSchema = z.object({
   orderedByName: z.string().trim().max(80).optional().nullable(),
   employeeId: z.string().optional().nullable(),
   favoriteMixId: z.string().optional().nullable(),
+  // Add-ons the client chose (e.g. ["medical_hose"]) — server adds sellPrice to total.
+  addons: z.array(z.string()).default([]),
 });
 
 export async function POST(req: NextRequest) {
@@ -93,6 +97,23 @@ export async function POST(req: NextRequest) {
     const totals = recomputeOrderTotals(sanitizedItems, data.ownType ?? null);
 
     const totalHookahs = totals.totalQty;
+
+    // --- Add-ons (e.g. medical hose): add sell price to revenue, cost to COGS ---
+    const validAddons = data.addons.filter((k) =>
+      SELLABLE_ADDONS.some((s) => s.key === k)
+    );
+    const addonRevenue = validAddons.reduce(
+      (sum, k) => sum + (getSupply(k)?.sellPrice ?? 0),
+      0
+    );
+    const addonCost = validAddons.reduce(
+      (sum, k) => sum + (getSupply(k)?.cost ?? 0),
+      0
+    );
+
+    // Recompute final totals including add-on revenue.
+    const finalTotal = Math.round((totals.total + addonRevenue) * 100) / 100;
+    const finalSubtotal = Math.round((totals.subtotal + addonRevenue) * 100) / 100;
 
     // --- Molasses deductions (per brand×flavor subtype) ---
     // Track exact grams per (brandId, flavorName) so flavor stock is precise.
@@ -213,7 +234,9 @@ export async function POST(req: NextRequest) {
 
     // --- Compute cost-of-goods + profit (server-side, from catalog costs) ---
     const cogs = computeOrderCogs(sanitizedItems);
-    const profit = computeProfit(totals.total, cogs.totalCogs);
+    // Add add-on cost to COGS and add-on revenue to totals for profit.
+    const finalCogs = Math.round((cogs.totalCogs + addonCost) * 100) / 100;
+    const profit = computeProfit(finalTotal, finalCogs);
 
     // --- Create order + deduct everything in a single transaction ---
     const order = await db.$transaction(async (tx) => {
@@ -224,9 +247,9 @@ export async function POST(req: NextRequest) {
           table: data.table || null,
           notes: data.notes || null,
           itemsJson: JSON.stringify(sanitizedItems),
-          subtotal: totals.subtotal,
+          subtotal: finalSubtotal,
           discount: totals.discount,
-          total: totals.total,
+          total: finalTotal,
           bogo: totals.bogo,
           ownType: data.ownType ?? null,
           itemCount: totalHookahs,
@@ -238,13 +261,24 @@ export async function POST(req: NextRequest) {
           assignment,
           assignedToName,
           assignedToId,
-          cogs: cogs.totalCogs,
+          cogs: finalCogs,
           molassesCost: cogs.molassesCost,
-          suppliesCost: cogs.suppliesCost,
+          suppliesCost: Math.round((cogs.suppliesCost + addonCost) * 100) / 100,
           netProfit: profit.netProfit,
           marginPct: profit.marginPct,
         },
       });
+
+      // deduct add-on supply stock (e.g. 1 medical hose per order)
+      for (const k of validAddons) {
+        const existing = await tx.supplyItem.findUnique({ where: { key: k } });
+        if (existing) {
+          await tx.supplyItem.update({
+            where: { key: k },
+            data: { stock: { decrement: 1 } },
+          });
+        }
+      }
 
       // deduct molasses brand totals
       for (const [brandId, grams] of molassesDeductions) {
@@ -304,6 +338,7 @@ export async function POST(req: NextRequest) {
                 stock: def.defaultStock - d.amount,
                 lowStockThreshold: def.lowThreshold,
                 cost: def.cost,
+                sellPrice: def.sellPrice,
               },
             });
           }

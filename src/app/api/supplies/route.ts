@@ -18,6 +18,7 @@ export async function GET() {
           stock: 0,
           lowStockThreshold: s.lowThreshold,
           cost: s.cost,
+          sellPrice: s.sellPrice,
           emoji: s.emoji,
           updatedAt: new Date().toISOString(),
         }
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
           stock: addAmount,
           lowStockThreshold: def.lowThreshold,
           cost: def.cost,
+          sellPrice: def.sellPrice,
         },
       });
       return NextResponse.json({ ok: true, item: created });

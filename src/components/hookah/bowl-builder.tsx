@@ -409,10 +409,15 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                         style={{ backgroundColor: brandColor(brand.id) }}
                       />
                       <span
-                        className="relative grid size-10 place-items-center rounded-xl text-xl"
-                        style={{ backgroundColor: `${brandColor(brand.id)}22` }}
+                        className="relative grid size-12 place-items-center overflow-hidden rounded-xl bg-white/95"
+                        style={{ boxShadow: `0 0 0 1px ${brandColor(brand.id)}40` }}
                       >
-                        {brand.emoji}
+                        <img
+                          src={brand.logo}
+                          alt={brand.name}
+                          className="h-full w-full object-contain p-1"
+                          loading="lazy"
+                        />
                       </span>
                       <p className="relative text-sm font-semibold">{brand.name}</p>
                       <p className="relative text-[10px] text-muted-foreground">

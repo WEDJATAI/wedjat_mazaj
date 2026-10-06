@@ -60,7 +60,7 @@ async function main() {
   for (const s of SUPPLIES) {
     await db.supplyItem.upsert({
       where: { key: s.key },
-      update: { cost: s.cost },
+      update: { cost: s.cost, sellPrice: s.sellPrice },
       create: {
         key: s.key,
         name: s.name,
@@ -69,6 +69,7 @@ async function main() {
         stock: s.defaultStock,
         lowStockThreshold: s.lowThreshold,
         cost: s.cost,
+        sellPrice: s.sellPrice,
       },
     });
   }

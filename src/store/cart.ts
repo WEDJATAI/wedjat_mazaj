@@ -41,11 +41,14 @@ export type OwnType = "hookah" | "molasses" | null;
 interface CartState {
   items: CartItem[];
   ownType: OwnType;
+  /** selected supply add-on keys (e.g. ["medical_hose"]) */
+  addons: string[];
   addItem: (item: Omit<CartItem, "id">) => void;
   removeItem: (id: string) => void;
   setQty: (id: string, qty: number) => void;
   clear: () => void;
   setOwnType: (own: OwnType) => void;
+  toggleAddon: (key: string) => void;
 }
 
 /** Build a stable id from the primary brand, flavor type and the component signature. */
@@ -133,6 +136,7 @@ export const useCart = create<CartState>()(
     (set) => ({
       items: [],
       ownType: null,
+      addons: [],
       addItem: (item) =>
         set((state) => {
           const id = makeId(item.primaryBrandId, item.flavor, item.components);
@@ -154,13 +158,23 @@ export const useCart = create<CartState>()(
             .map((i) => (i.id === id ? { ...i, qty: Math.max(1, qty) } : i))
             .filter((i) => i.qty > 0),
         })),
-      clear: () => set({ items: [], ownType: null }),
+      clear: () => set({ items: [], ownType: null, addons: [] }),
       setOwnType: (own) => set({ ownType: own }),
+      toggleAddon: (key) =>
+        set((state) => ({
+          addons: state.addons.includes(key)
+            ? state.addons.filter((k) => k !== key)
+            : [...state.addons, key],
+        })),
     }),
     {
       name: "mazaj-cart",
       version: 2,
-      partialize: (state) => ({ items: state.items, ownType: state.ownType }),
+      partialize: (state) => ({
+        items: state.items,
+        ownType: state.ownType,
+        addons: state.addons,
+      }),
       // Rehydrate legacy persisted carts (pre-`components` schema) into the
       // current CartItem shape so the UI never sees a missing `components`.
       migrate: (persisted: unknown) => {

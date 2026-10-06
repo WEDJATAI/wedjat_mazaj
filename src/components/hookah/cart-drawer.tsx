@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useCart, computeTotals, OwnType, flavorSummary } from "@/store/cart";
-import { chargeableQty, egp } from "@/lib/catalog";
+import { chargeableQty, egp, SELLABLE_ADDONS, getSupply } from "@/lib/catalog";
 import {
   Sheet,
   SheetContent,
@@ -54,11 +54,18 @@ const OWN_OPTIONS: {
 export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) {
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
+  const addons = useCart((s) => s.addons);
+  const toggleAddon = useCart((s) => s.toggleAddon);
   const setQty = useCart((s) => s.setQty);
   const removeItem = useCart((s) => s.removeItem);
   const setOwnType = useCart((s) => s.setOwnType);
 
+  const addonTotal = addons.reduce(
+    (sum, k) => sum + (getSupply(k)?.sellPrice ?? 0),
+    0
+  );
   const totals = computeTotals(items, ownType);
+  const grandTotal = totals.total + addonTotal;
   const bogo = totals.bogo;
 
   return (
@@ -247,6 +254,51 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
 
             <Separator className="my-3" />
 
+            {/* Add-ons (medical hose etc.) */}
+            {SELLABLE_ADDONS.length > 0 && (
+              <div className="mb-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Add-ons
+                </p>
+                {SELLABLE_ADDONS.map((a) => {
+                  const on = addons.includes(a.key);
+                  return (
+                    <button
+                      key={a.key}
+                      type="button"
+                      onClick={() => toggleAddon(a.key)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all",
+                        on
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                          : "border-border bg-card hover:border-primary/50"
+                      )}
+                    >
+                      <span className="text-xl">{a.emoji}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{a.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Personal hose · +{egp(a.sellPrice)}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "grid size-5 place-items-center rounded-md border text-[10px] transition-colors",
+                          on
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border"
+                        )}
+                      >
+                        {on ? "✓" : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <Separator className="my-3" />
+
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span>
@@ -258,10 +310,16 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                   <span className="tabular-nums">−{egp(totals.discount)}</span>
                 </div>
               )}
+              {addonTotal > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Add-ons</span>
+                  <span className="tabular-nums">+{egp(addonTotal)}</span>
+                </div>
+              )}
               <div className="flex items-baseline justify-between pt-1">
                 <span className="font-semibold">Total</span>
                 <span className="text-xl font-bold tabular-nums">
-                  {egp(totals.total)}
+                  {egp(grandTotal)}
                 </span>
               </div>
             </div>
@@ -271,7 +329,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
               className="mt-4 w-full rounded-xl text-base font-semibold"
               onClick={onCheckout}
             >
-              Checkout · {egp(totals.total)}
+              Checkout · {egp(grandTotal)}
             </Button>
           </div>
         )}

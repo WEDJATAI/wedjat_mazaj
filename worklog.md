@@ -269,3 +269,27 @@ Stage Summary:
 - Guests: friendlier sign-in (one-tap skip, animated PIN pad), popular bowls visible upfront for one-tap ordering, bigger flavor chips with popular badges guiding choices.
 - Employees: same brand-colored cards + bowl builder (already standout), bigger touch targets throughout.
 - Both audiences: animated, tactile, accessible (44px+ touch targets), with clear visual guidance.
+
+---
+Task ID: 90-92
+Agent: main (Z.ai Code)
+Task: Medical hose pricing (cost 10 EGP to us, 20 EGP to client when chosen) + fetch real brand logos from web.
+
+Work Log:
+- BRAND LOGOS: used z-ai image-search to fetch 7 brand logos (Mazaya, Al Fakher, Dandash, Nakhla, Amy, Salom, Kass) from the web → downloaded to public/images/brands/*.jpg. Added `logo` field to Brand interface + all 7 brands. Updated brand-card.tsx + bowl-builder.tsx to render real logo images (on white rounded background with brand-colored ring) instead of emoji.
+- MEDICAL HOSE PRICING: updated SupplyDef with `sellPrice` field. Medical hose: cost=10 EGP (to business), sellPrice=20 EGP (to client when chosen). Added SELLABLE_ADDONS export. Updated Prisma SupplyItem with sellPrice column. Updated seed + supplies API + orders API supply creation to include sellPrice.
+- ADD-ON FLOW: cart store now tracks `addons: string[]` with toggleAddon(). Cart drawer shows a toggle for each sellable add-on (medical hose: "Personal hose · +20 EGP") with checkbox. Add-on revenue added to grand total. Checkout dialog sends `addons` array to orders API. Orders API: validates add-ons against SELLABLE_ADDONS, adds sellPrice to finalTotal, adds cost to finalCogs, deducts 1 unit of supply stock per add-on, records profit correctly.
+- Profit dashboard / orders API: COGS now includes add-on cost; profit reflects the 10 EGP margin per hose sold.
+
+Verification (curl):
+- Supplies API: medical_hose cost=10, sellPrice=20 ✓
+- Order WITH hose: total=145 (125+20), cogs=19.1 (5.6+3.5+10), profit=125.9, margin=86.8% ✓
+- Hose stock: 50→49 (deducted 1) ✓
+- Order WITHOUT hose: total=125, cogs=9.1, profit=115.9, margin=92.7% ✓
+- All 7 logos serve HTTP 200 ✓
+- Lint clean. Dev server 200.
+
+Stage Summary:
+- Medical hose: 10 EGP cost to business, 20 EGP to client → 10 EGP pure profit per hose.
+- Real brand logos fetched from web and displayed on brand cards + bowl builder.
+- Add-on system is extensible (any supply with sellPrice>0 becomes a sellable add-on).

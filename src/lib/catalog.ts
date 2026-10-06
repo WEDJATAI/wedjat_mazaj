@@ -30,6 +30,8 @@ export interface Brand {
   /** subtle ring color class */
   ring: string;
   emoji: string;
+  /** path to the brand logo image (in /public/images/brands/) */
+  logo: string;
   blurb: string;
   flavorTypes: FlavorType[];
   /** flavors available for this brand */
@@ -76,6 +78,7 @@ export const BRANDS: Brand[] = [
       "Peach",
       "Guava",
     ],
+    logo: "/images/brands/mazaya.jpg",
     barcode: "MZ-001",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 85 },
@@ -104,6 +107,7 @@ export const BRANDS: Brand[] = [
       "Peach",
       "Rose",
     ],
+    logo: "/images/brands/al-fakher.jpg",
     barcode: "AF-002",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 90 },
@@ -123,6 +127,7 @@ export const BRANDS: Brand[] = [
     blurb: "Local classic with rich, traditional taste.",
     flavorTypes: ["fruits", "fruits-mix"],
     flavors: ["Double Apple", "Grape", "Mint", "Watermelon", "Lemon", "Peach"],
+    logo: "/images/brands/dandash.jpg",
     barcode: "DN-003",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 70 },
@@ -150,6 +155,7 @@ export const BRANDS: Brand[] = [
       "Watermelon",
       "Rose",
     ],
+    logo: "/images/brands/nakhla.jpg",
     barcode: "NK-004",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 65 },
@@ -176,6 +182,7 @@ export const BRANDS: Brand[] = [
       "Peach",
       "Blueberry",
     ],
+    logo: "/images/brands/amy.jpg",
     barcode: "AM-005",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 110 },
@@ -196,6 +203,7 @@ export const BRANDS: Brand[] = [
     blurb: "Light, budget-friendly sessions — 45 EGP flat.",
     flavorTypes: ["flat"],
     flavors: ["Standard", "Apple", "Grape", "Mint"],
+    logo: "/images/brands/salom.jpg",
     barcode: "SL-006",
     packs: [{ grams: 250, label: "250g pack", costEgp: 35 }],
   },
@@ -212,6 +220,7 @@ export const BRANDS: Brand[] = [
     blurb: "Quick, affordable smoke — 45 EGP flat.",
     flavorTypes: ["flat"],
     flavors: ["Standard", "Apple", "Grape", "Mint"],
+    logo: "/images/brands/kass.jpg",
     barcode: "KS-007",
     packs: [{ grams: 250, label: "250g pack", costEgp: 35 }],
   },
@@ -371,8 +380,10 @@ export interface SupplyDef {
   emoji: string;
   /** how many units are consumed per single hookah in an order (0 = reusable, not auto-deducted) */
   perHookah: number;
-  /** unit cost/price in EGP (for display + valuation) */
+  /** unit cost to the business in EGP (for COGS/profit calc) */
   cost: number;
+  /** selling price to the client in EGP when chosen as an add-on (0 = not sellable) */
+  sellPrice: number;
   defaultStock: number;
   lowThreshold: number;
 }
@@ -385,6 +396,7 @@ export const SUPPLIES: SupplyDef[] = [
     emoji: "⚫",
     perHookah: 1,
     cost: 1.2, // ~120 EGP / 100 pcs box
+    sellPrice: 0, // not sold separately
     defaultStock: 200,
     lowThreshold: 30,
   },
@@ -395,6 +407,7 @@ export const SUPPLIES: SupplyDef[] = [
     emoji: "🟫",
     perHookah: 1,
     cost: 1.8, // ~130 EGP / 72 pcs box
+    sellPrice: 0,
     defaultStock: 150,
     lowThreshold: 25,
   },
@@ -405,6 +418,7 @@ export const SUPPLIES: SupplyDef[] = [
     emoji: "📄",
     perHookah: 1,
     cost: 0.5, // ~50 EGP / 100 sheets roll
+    sellPrice: 0,
     defaultStock: 300,
     lowThreshold: 40,
   },
@@ -413,8 +427,9 @@ export const SUPPLIES: SupplyDef[] = [
     name: "Medical hose",
     unit: "pcs",
     emoji: "🪈",
-    perHookah: 0, // reusable — not auto-consumed per order
-    cost: 20, // EGP per unit
+    perHookah: 0, // not auto-consumed per hookah; chosen as an add-on
+    cost: 10, // cost to the business: 10 EGP per unit
+    sellPrice: 20, // client pays 20 EGP when chosen
     defaultStock: 50,
     lowThreshold: 10,
   },
@@ -423,6 +438,9 @@ export const SUPPLIES: SupplyDef[] = [
 export function getSupply(key: string): SupplyDef | undefined {
   return SUPPLIES.find((s) => s.key === key);
 }
+
+/** Supplies that can be sold to clients as add-ons (sellPrice > 0). */
+export const SELLABLE_ADDONS = SUPPLIES.filter((s) => s.sellPrice > 0);
 
 /** Total supply units consumed for a given number of hookahs (all items). */
 export function supplyConsumption(totalHookahs: number): { key: string; amount: number }[] {

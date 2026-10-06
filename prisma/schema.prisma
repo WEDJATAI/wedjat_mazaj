@@ -56,7 +56,8 @@ model SupplyItem {
   unit              String   // pcs | sheets | ...
   stock             Float
   lowStockThreshold Float    @default(20)
-  cost              Float    @default(0) // EGP per unit (for valuation)
+  cost              Float    @default(0) // EGP per unit (business cost)
+  sellPrice         Float    @default(0) // EGP charged to client when chosen as add-on
   emoji             String   @default("📦")
   updatedAt         DateTime @updatedAt
 }

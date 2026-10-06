@@ -41,10 +41,15 @@ export function BrandCard({ brand, inCart, onSelect }: BrandCardProps) {
       <div className="relative flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span
-            className="grid size-12 place-items-center rounded-2xl text-2xl ring-1"
-            style={{ backgroundColor: `${color}22`, boxShadow: `0 0 0 1px ${color}40` }}
+            className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/95 ring-1"
+            style={{ boxShadow: `0 0 0 1px ${color}40` }}
           >
-            {brand.emoji}
+            <img
+              src={brand.logo}
+              alt={`${brand.name} logo`}
+              className="h-full w-full object-contain p-1"
+              loading="lazy"
+            />
           </span>
           <div>
             <h3 className="font-bold leading-tight">{brand.name}</h3>

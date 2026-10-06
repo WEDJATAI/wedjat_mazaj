@@ -48,6 +48,7 @@ interface PlaceOrderPayload {
   total: number;
   bogo: boolean;
   ownType: string | null;
+  addons: string[];
   source: string;
   orderedByName: string;
   employeeId?: string | null;
@@ -66,6 +67,7 @@ export function CheckoutDialog({
 }: CheckoutDialogProps) {
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
+  const addons = useCart((s) => s.addons);
   const clear = useCart((s) => s.clear);
   const totals = computeTotals(items, ownType);
 
@@ -105,6 +107,7 @@ export function CheckoutDialog({
       total: totals.total,
       bogo: totals.bogo,
       ownType: ownType,
+      addons,
       source,
       orderedByName,
       employeeId: employeeId ?? null,
