@@ -103,12 +103,15 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
   const [editing, setEditing] = React.useState<Bowl | null>(null);
   const [customerName, setCustomerName] = React.useState("");
   const [table, setTable] = React.useState("");
+  // R46: the numeric Wedjat table id — set by the table picker (the
+  // unambiguous check reference), cleared when the name is typed manually.
+  const [tableId, setTableId] = React.useState<number | null>(null);
   const [ownType, setOwnType] = React.useState<"hookah" | "molasses" | null>(null);
   const [sending, setSending] = React.useState(false);
   const [sent, setSent] = React.useState<{ id: string; total: number } | null>(null);
   const [shishaCat, setShishaCat] = React.useState<string | null>(null);
   const [wedjatTables, setWedjatTables] = React.useState<
-    { id: number; name: string; status: string }[]
+    { id: number; name: string; status: string; floor?: string | null }[]
   >([]);
 
   // Fetch Wedjat RSM tables so the employee can pick from real restaurant tables
@@ -206,6 +209,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
         body: JSON.stringify({
           customerName: customerName.trim() || null,
           table: table.trim() || null,
+          tableId: tableId,
           items,
           subtotal,
           discount,
@@ -283,7 +287,10 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                 <div className="relative">
                   <Input
                     value={table}
-                    onChange={(e) => setTable(e.target.value)}
+                    onChange={(e) => {
+                      setTable(e.target.value);
+                      setTableId(null); // manual typing → name-only reference
+                    }}
                     placeholder="Table number *"
                     aria-label="Table number (required)"
                     className={cn(
@@ -295,17 +302,23 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                     <select
                       value=""
                       onChange={(e) => {
-                        if (e.target.value) setTable(e.target.value);
+                        const v = e.target.value;
+                        if (!v) return;
+                        const t = wedjatTables.find((x) => String(x.id) === v);
+                        if (t) {
+                          setTable(t.name);
+                          setTableId(t.id); // the unambiguous check reference
+                        }
                       }}
                       className="absolute right-1 top-1/2 -translate-y-1/2 rounded-lg border border-border bg-card px-2 py-1 text-xs text-muted-foreground"
                       aria-label="Pick from Wedjat tables"
                     >
                       <option value="">📋 Pick</option>
                       {wedjatTables
-                        .filter((t) => t.status === "free")
+                        .filter((t) => t.status === "free" || t.status === "occupied")
                         .map((t) => (
-                          <option key={t.id} value={t.name}>
-                            {t.name} ({t.status})
+                          <option key={t.id} value={String(t.id)}>
+                            {`${t.floor ? `${t.floor} · ` : ""}${t.name} (${t.status})`}
                           </option>
                         ))}
                     </select>

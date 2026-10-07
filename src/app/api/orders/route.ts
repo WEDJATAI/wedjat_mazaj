@@ -13,7 +13,7 @@ import {
   serverComponentGrams,
   supplyConsumption,
 } from "@/lib/catalog";
-import { pushOrderToWedjat } from "@/lib/wedjat";
+import { pushOrderToWedjat, pushAvailabilityToWedjat } from "@/lib/wedjat";
 
 const ComponentSchema = z.object({
   brandId: z.string(),
@@ -41,6 +41,10 @@ const CreateOrderSchema = z.object({
   customerName: z.string().trim().max(80).optional().or(z.literal("")),
   phone: z.string().trim().max(20).optional().or(z.literal("")),
   table: z.string().trim().max(40).optional().or(z.literal("")),
+  // R46: the NUMERIC Wedjat RSM table id — the unambiguous reference for
+  // the check (names repeat across the restaurant's floors). Comes from
+  // the POS "Order Shisha" button URL (?tableId=) or the table picker.
+  tableId: z.number().int().positive().max(1_000_000_000).optional().nullable(),
   notes: z.string().trim().max(400).optional().or(z.literal("")),
   items: z.array(CartItemSchema).min(1, "Add at least one hookah"),
   subtotal: z.number().nonnegative(),
@@ -141,12 +145,12 @@ export async function POST(req: NextRequest) {
     const inventoryRows = await db.inventoryItem.findMany({
       where: { brandId: { in: [...molassesDeductions.keys()] } },
     });
-    const short: { brandName: string; need: number; have: number }[] = [];
+    const short: { name: string; need: number; have: number }[] = [];
     for (const row of inventoryRows) {
       const need = molassesDeductions.get(row.brandId) ?? 0;
       if (need > row.stockGrams + 0.001) {
         short.push({
-          brandName: row.brandName,
+          name: row.brandName,
           need: Math.round(need),
           have: Math.round(row.stockGrams),
         });
@@ -246,8 +250,10 @@ export async function POST(req: NextRequest) {
           customerName: data.customerName || null,
           phone: data.phone || null,
           table: data.table || null,
+          wedjatTableId: data.tableId ?? null,
           notes: data.notes || null,
           itemsJson: JSON.stringify(sanitizedItems),
+          addonsJson: JSON.stringify(validAddons),
           subtotal: finalSubtotal,
           discount: totals.discount,
           total: finalTotal,
@@ -349,19 +355,23 @@ export async function POST(req: NextRequest) {
       return created;
     });
 
-    // Sync to Wedjat RSM restaurant POS (non-blocking; best-effort)
-    const wedjatItems = sanitizedItems.map((it) => ({
-      name: `${it.primaryBrandName} ${it.flavorLabel}`,
-      price: it.unitPrice,
-      qty: it.qty,
-    }));
+    // Sync to Wedjat RSM restaurant POS (non-blocking; best-effort):
+    // the items land on the table's CHECK via the delivery webhook, and
+    // the fresh stock state mirrors onto the POS shisha menu.
     void syncToWedjat({
-      mazajOrderId: order.id,
-      table: data.table || null,
-      items: wedjatItems,
-      total: finalTotal,
-      customerName: data.customerName || null,
+      order: {
+        id: order.id,
+        customerName: order.customerName,
+        phone: order.phone,
+        table: order.table,
+        wedjatTableId: order.wedjatTableId,
+        notes: order.notes,
+        itemsJson: order.itemsJson,
+        bogo: order.bogo,
+        addonsJson: validAddons,
+      },
     });
+    void pushAvailabilityToWedjat().catch(() => {});
 
     return NextResponse.json({ ok: true, order });
   } catch (err) {
@@ -375,46 +385,50 @@ export async function POST(req: NextRequest) {
 
 /**
  * After a Mazaj order is created, push it to the Wedjat RSM restaurant
- * database so it appears in their POS / kitchen queue. Non-blocking —
- * failures are logged but don't fail the Mazaj order.
- * Uses external_ref for idempotency (mazaj:<orderId>) so duplicate pushes
- * are safe. Records the Wedjat order ID + sync status back on the Mazaj order.
+ * POS via the delivery webhook so it appears on the table's check /
+ * kitchen queue. Non-blocking — failures are logged but don't fail the
+ * Mazaj order. Idempotent per mazaj order id (external_ref "mazaj:<id>"
+ * + the RSM seen-ledger), so the Inngest retry job can safely re-push.
+ * Records the Wedjat order ID + sync status back on the Mazaj order.
  */
 async function syncToWedjat(opts: {
-  mazajOrderId: string;
-  table: string | null;
-  items: { name: string; price: number; qty: number }[];
-  total: number;
-  customerName: string | null;
+  order: {
+    id: string;
+    customerName: string | null;
+    phone: string | null;
+    table: string | null;
+    wedjatTableId: number | null;
+    notes: string | null;
+    itemsJson: string;
+    bogo: boolean;
+    addonsJson?: string[];
+  };
 }) {
-  if (!opts.table) return;
   try {
-    const result = await pushOrderToWedjat({
-      mazajOrderId: opts.mazajOrderId,
-      tableName: opts.table,
-      items: opts.items,
-      total: opts.total,
-      customerName: opts.customerName,
-    });
+    const result = await pushOrderToWedjat(opts.order);
     if (!result.ok) {
-      console.warn("[wedjat sync] failed:", result.error);
+      console.warn("[rsm sync] failed:", result.error);
       // Record failure so it can be retried
       await db.order.update({
-        where: { id: opts.mazajOrderId },
+        where: { id: opts.order.id },
         data: { wedjatSyncStatus: "failed" },
       }).catch(() => {});
     } else {
-      console.log("[wedjat sync] order pushed, wedjat id:", result.wedjatOrderId);
+      console.log(
+        "[rsm sync] order pushed, wedjat id:",
+        result.wedjatOrderId,
+        result.duplicate ? "(duplicate — already on the check)" : "",
+      );
       await db.order.update({
-        where: { id: opts.mazajOrderId },
+        where: { id: opts.order.id },
         data: {
-          wedjatOrderId: result.wedjatOrderId,
+          wedjatOrderId: result.wedjatOrderId ?? null,
           wedjatSyncStatus: "synced",
         },
       }).catch(() => {});
     }
   } catch (err) {
-    console.warn("[wedjat sync] error:", err);
+    console.warn("[rsm sync] error:", err);
   }
 }
 

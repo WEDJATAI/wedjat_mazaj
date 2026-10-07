@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { LangToggle } from "./lang-toggle";
 import { useI18n } from "@/store/i18n";
+import { useTableContext } from "@/store/table-context";
 
 export function SignIn() {
   const [tab, setTab] = React.useState<"role" | "pin" | "guest">("role");
@@ -287,8 +288,17 @@ function PinPanel({ onBack }: { onBack: () => void }) {
 
 function GuestPanel({ onBack }: { onBack: () => void }) {
   const signIn = useSession((s) => s.signInGuest);
+  const tableCtx = useTableContext();
   const [name, setName] = React.useState("");
   const [table, setTable] = React.useState("");
+
+  // Prefill the table from the POS link context (the employee opened
+  // mazaj from the table's check) so the order lands on the right check.
+  React.useEffect(() => {
+    if (tableCtx.tableId != null || tableCtx.tableName) {
+      setTable(tableCtx.tableName || (tableCtx.tableId != null ? `Table ${tableCtx.tableId}` : ""));
+    }
+  }, []);
 
   const valid = name.trim().length > 0;
 
@@ -333,6 +343,13 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
             className="h-12 rounded-xl text-base"
             onKeyDown={(e) => e.key === "Enter" && submit()}
           />
+          {tableCtx.fromPosLink && (tableCtx.tableId != null || tableCtx.tableName) && (
+            <p className="flex items-center gap-1.5 text-xs text-primary">
+              <Store className="size-3.5" aria-hidden />
+              Linked to the table&apos;s check from the restaurant POS
+              {tableCtx.tableName ? ` · ${tableCtx.tableName}` : ""}
+            </p>
+          )}
         </div>
 
         <Button

@@ -376,3 +376,22 @@ Stage Summary:
 - Price changes push to Wedjat; revocations from Wedjat show on Mazaj with employee attribution.
 - Full Arabic version with RTL support + language toggle.
 - 7 professional must-haves ensure the connection never disrupts Wedjat's main flow.
+
+---
+
+## R46 — Wedjat RSM integration rebuilt on the sanctioned HTTPS API
+
+Task: retire the direct-Turso Wedjat writes (they landed on a one-way mirror that gets wiped on every restaurant sync — the exact cause of the r44 "phantom orders") and rebuild the whole integration on Wedjat RSM's key-authenticated API, plus capture the POS table context (?tableId=) end to end.
+
+Work Log:
+- src/lib/rsm-mapping.ts (NEW): the shared vocabulary — buildRsmCatalogMatrix() (brand×type price points + sellable add-ons, SKUs in the MAZAJ- namespace), mapOrderItems() (cart item → ONE check line: the price-class product + the exact flavor mix in the notes; mixes map to the DOMINANT brand's mix product — any Amy mix is "Amy Fruits Mix" @180; the BYO 2-for-1 collapses to the CHARGEABLE qty with the served count in the notes), buildAvailabilityItems() (flavor stock ≥ 20g → available; quantity = whole hookahs).
+- src/lib/wedjat.ts REWRITTEN: all Wedjat traffic now goes through the RSM HTTPS API (delivery webhook for orders, /api/integrations/mazaj/catalog for types+prices, /mazaj/inventory for availability, /mazaj/status for tables+menu+check states). Non-blocking, best-effort, 12s timeouts — Mazaj never depends on Wedjat being up.
+- Order model: + wedjatTableId (the NUMERIC table id — names repeat across the restaurant's floors), + addonsJson (exact add-ons re-pushable on retry). POST /api/orders accepts tableId, stores it, pushes the order through the webhook and mirrors availability right after the stock deductions.
+- /api/wedjat/* routes rewired: tables/products/health proxy the status feed; sync-prices = full catalog+availability push; sync-revocations = the id-keyed status poll; push-order = idempotent manual re-push by orderId.
+- Inngest (package was NEVER installed — all jobs were dead code): installed inngest@4, fixed the v4 API (triggers: [{cron}], streaming: true), jobs = revocation poll (2min), failed-sync retry (5min, 24h window), full menu sync (hourly), availability mirror (15min), profit digest (23:00 Cairo).
+- UI: table-context store captures ?tableId=&table= from the POS "Order Shisha" button (params stripped after capture); guest sign-in prefills the table + shows the POS-link badge; checkout threads tableId (dropped if the user edits the table text — their edit wins); employee bowl-builder table picker now picks by ID with the floor shown; order-screen passes it through.
+- E2E (against LIVE Wedjat RSM prod): catalog push created the 13 MAZAJ-* products (Mazaya/Al Fakher/Dandash/Nakhla 125/145, Amy 180/180, Salom/Kass 45, Medical hose 20) with house prices == mazaj prices; availability push matched 13/13 and hid the owner's out-of-inventory manual shisha items; a 3-hookah test order (Mazaya Blueberry fruits + 2× Amy/Al Fakher mix + medical hose, tableId 22) landed as dine-in check #2189 on table "2" Out Door — correct products, quantities, flavor notes, subtotal 505 + 26% tax = 636.30, table flipped occupied, synced to every restaurant terminal; replay = duplicate:true no-op; cloud-side cancellation was detected by the revocation poll (order marked revoked in Mazaj). Zero-residue cleanup: order/items/table restored everywhere, stock deductions reversed exactly.
+- TS strict clean (also fixed pre-existing errors: flavor-stock undefined/null, orders mixed union, missing inngest types), lint 0 errors.
+
+Stage Summary:
+- The hookah platform now rides the SAME sanctioned integration path the restaurant built for delivery platforms: orders land on table checks with house prices, the shisha menu mirrors mazaj's types/prices/availability, revocations flow back, and the POS "Order Shisha" button opens mazaj with the table context. Env: WEDJAT_RSM_URL + WEDJAT_RSM_KEY (Vercel).

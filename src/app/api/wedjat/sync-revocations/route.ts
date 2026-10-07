@@ -3,27 +3,30 @@ import { db } from "@/lib/db";
 import { fetchWedjatRevocations } from "@/lib/wedjat";
 
 // GET /api/wedjat/sync-revocations
-// Polls Wedjat for orders that were pushed from Mazaj and have been cancelled.
-// Updates the Mazaj order status + records who revoked it.
-// This should be called periodically (e.g. every 30s) by the employee dashboard.
+// Polls Wedjat RSM for checks that were pushed from Mazaj and have been
+// cancelled. Updates the Mazaj order status + records who revoked it.
+// Also run every 2 minutes by the Inngest poll job; this endpoint serves
+// the employee dashboard's manual refresh.
 export async function GET() {
   try {
-    // Check revocations since 24h ago (covers any recent cancellations)
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const revocations = await fetchWedjatRevocations(since);
+    const revocations = await fetchWedjatRevocations();
 
     let updated = 0;
+    const applied: {
+      mazajOrderId: string;
+      wedjatOrderId: number;
+      revokedBy: string;
+      revokedAt: string;
+    }[] = [];
     for (const rev of revocations) {
-      if (!rev.mazajOrderId) continue;
-      // Only update if not already marked as revoked
-      const existing = await db.order.findUnique({
-        where: { id: rev.mazajOrderId },
-        select: { wedjatSyncStatus: true },
+      const tracked = await db.order.findFirst({
+        where: { wedjatOrderId: rev.wedjatOrderId, wedjatSyncStatus: { not: "revoked" } },
+        select: { id: true },
       });
-      if (!existing || existing.wedjatSyncStatus === "revoked") continue;
+      if (!tracked) continue;
 
       await db.order.update({
-        where: { id: rev.mazajOrderId },
+        where: { id: tracked.id },
         data: {
           wedjatSyncStatus: "revoked",
           wedjatRevokedBy: rev.revokedBy,
@@ -32,18 +35,19 @@ export async function GET() {
         },
       });
       updated++;
+      applied.push({
+        mazajOrderId: tracked.id,
+        wedjatOrderId: rev.wedjatOrderId,
+        revokedBy: rev.revokedBy,
+        revokedAt: rev.revokedAt,
+      });
     }
 
     return NextResponse.json({
       ok: true,
       checked: revocations.length,
       updated,
-      revocations: revocations.map((r) => ({
-        mazajOrderId: r.mazajOrderId,
-        wedjatOrderId: r.wedjatOrderId,
-        revokedBy: r.revokedBy,
-        revokedAt: r.revokedAt,
-      })),
+      revocations: applied,
     });
   } catch (err) {
     console.error("sync revocations error", err);

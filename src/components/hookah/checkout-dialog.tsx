@@ -33,6 +33,10 @@ interface CheckoutDialogProps {
   employeeId?: string | null;
   defaultCustomer?: string;
   defaultTable?: string;
+  /** R46: numeric Wedjat table id (POS link / table picker) — the
+   * unambiguous check reference. Dropped if the user edits the table
+   * text manually (their edit wins, matched by name server-side). */
+  defaultTableId?: number | null;
   /** id of a saved favorite mix applied to this order (optional) */
   favoriteMixId?: string | null;
 }
@@ -41,6 +45,7 @@ interface PlaceOrderPayload {
   customerName: string;
   phone: string;
   table?: string;
+  tableId?: number | null;
   notes?: string;
   items: CartItem[];
   subtotal: number;
@@ -63,6 +68,7 @@ export function CheckoutDialog({
   employeeId,
   defaultCustomer,
   defaultTable,
+  defaultTableId,
   favoriteMixId,
 }: CheckoutDialogProps) {
   const items = useCart((s) => s.items);
@@ -74,6 +80,7 @@ export function CheckoutDialog({
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [table, setTable] = React.useState("");
+  const [tableTouched, setTableTouched] = React.useState(false);
   const [notes, setNotes] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [done, setDone] = React.useState<{ id: string; total: number } | null>(
@@ -87,6 +94,7 @@ export function CheckoutDialog({
       setSubmitting(false);
       setName(defaultCustomer ?? "");
       setTable(defaultTable ?? "");
+      setTableTouched(false);
     }
   }, [open]);
 
@@ -100,6 +108,7 @@ export function CheckoutDialog({
       customerName: name.trim(),
       phone: phone.trim(),
       table: table.trim(),
+      tableId: tableTouched ? null : (defaultTableId ?? null),
       notes: notes.trim(),
       items,
       subtotal: totals.subtotal,
@@ -209,10 +218,18 @@ export function CheckoutDialog({
               <Field label="Table / room" icon={<Hash className="size-3.5" />}>
                 <Input
                   value={table}
-                  onChange={(e) => setTable(e.target.value)}
+                  onChange={(e) => {
+                    setTable(e.target.value);
+                    setTableTouched(true);
+                  }}
                   placeholder="e.g. Table 7"
                   aria-label="Table"
                 />
+                {!tableTouched && defaultTableId != null && (
+                  <p className="text-xs text-primary">
+                    ✓ linked to check of table {table || defaultTableId} (from the restaurant POS)
+                  </p>
+                )}
               </Field>
               <Field label="Notes (optional)" icon={<StickyNote className="size-3.5" />}>
                 <Textarea

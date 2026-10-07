@@ -31,7 +31,7 @@ export async function PATCH(
       if (brandIdRaw && flavorName) {
         row = await db.flavorStock.findUnique({
           where: { brandIdRaw_flavorName: { brandIdRaw, flavorName } },
-        }) ?? undefined;
+        });
       }
     }
 

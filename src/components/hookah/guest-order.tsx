@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useSession, GuestSession } from "@/store/session";
+import { useTableContext } from "@/store/table-context";
 import { OrderScreen } from "./order-screen";
 import { FavoritesSheet } from "./favorites-sheet";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { egp } from "@/lib/catalog";
 export function GuestOrder() {
   const guest = useSession((s) => s.guest) as GuestSession | null;
   const signOut = useSession((s) => s.signOut);
+  const tableCtx = useTableContext();
   const [callOpen, setCallOpen] = React.useState(false);
   const [coalOpen, setCoalOpen] = React.useState(false);
   const [favOpen, setFavOpen] = React.useState(false);
@@ -81,6 +83,7 @@ export function GuestOrder() {
         orderedByName={guest.name}
         defaultCustomer={guest.name}
         defaultTable={guest.table}
+        defaultTableId={tableCtx.tableId}
         onSignOut={signOut}
         enableScan
         headerExtra={

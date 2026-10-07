@@ -1,321 +1,135 @@
-// Wedjat RSM integration — queries the Wedjat restaurant database (Turso/libsql)
-// directly to fetch tables, products, push orders, sync prices, and detect
-// revocations. All credentials are in .env (never hardcoded).
+// Wedjat RSM integration — R46 HTTPS edition.
 //
-// Design principle: this integration is NON-BLOCKING and BEST-EFFORT.
-// Mazaj never depends on Wedjat being available to function. All Wedjat
-// operations are wrapped in try/catch and logged, never thrown.
+// The platform talks to the restaurant POS EXCLUSIVELY through Wedjat
+// RSM's key-authenticated integration API (the same x-rsm-key family as
+// the delivery webhook). The OLD direct-Turso writes were retired: that
+// database is a one-way Neon→Turso mirror which is wiped and rebuilt on
+// every sync — anything written there is invisible to the POS and gets
+// destroyed (this is exactly how the r44 "phantom orders" happened).
+//
+// Endpoints used (base URL = WEDJAT_RSM_URL):
+//   POST /api/integrations/delivery/webhook  — orders → table checks
+//   POST /api/integrations/mazaj/catalog     — types + prices matrix
+//   POST /api/integrations/mazaj/inventory   — availability mirror
+//   GET  /api/integrations/mazaj/status      — tables + menu + check statuses
+//
+// Design principle (unchanged): NON-BLOCKING and BEST-EFFORT. Mazaj never
+// depends on Wedjat being available to function. Every call is wrapped in
+// try/catch, logged, never thrown. Failures mark orders wedjatSyncStatus
+// "failed" and the Inngest retry job re-pushes them.
 
-import { createClient, type Client } from "@libsql/client";
+import { db } from "@/lib/db";
+import {
+  buildAvailabilityItems,
+  buildRsmCatalogMatrix,
+  mapOrderItems,
+  type OrderItemJson,
+} from "@/lib/rsm-mapping";
 
-let _client: Client | null = null;
+const TIMEOUT_MS = 12_000;
 
-function getClient(): Client {
-  if (_client) return _client;
-  const url = process.env.WEDJAT_TURSO_URL;
-  const token = process.env.WEDJAT_TURSO_TOKEN;
-  if (!url || !token) {
-    throw new Error("Wedjat Turso credentials not configured");
-  }
-  _client = createClient({ url, authToken: token });
-  return _client;
+export function rsmConfigured(): boolean {
+  return Boolean(process.env.WEDJAT_RSM_URL && process.env.WEDJAT_RSM_KEY);
 }
+
+function rsmBaseUrl(): string {
+  return (process.env.WEDJAT_RSM_URL ?? "").replace(/\/+$/, "");
+}
+
+async function rsmFetch(
+  path: string,
+  init: RequestInit & { body?: string },
+): Promise<{ status: number; json: any }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(rsmBaseUrl() + path, {
+      ...init,
+      headers: {
+        "content-type": "application/json",
+        "x-rsm-key": process.env.WEDJAT_RSM_KEY ?? "",
+        ...(init.headers ?? {}),
+      },
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    const json = await res.json().catch(() => ({}));
+    return { status: res.status, json };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ── types (kept stable for the UI) ────────────────────────────────────
 
 export interface WedjatTable {
   id: number;
   name: string;
   status: string;
+  floor?: string | null;
 }
 
 export interface WedjatProduct {
   id: number;
+  sku: string | null;
   name: string;
   nameAr: string | null;
   price: number;
-  cost: number;
-  categoryId: number | null;
-  categoryName: string | null;
-  imageUrl: string | null;
-  description: string | null;
   active: boolean;
-  soldOut: boolean;
-  stock: number;
 }
-
-export interface WedjatCategory {
-  id: number;
-  name: string;
-  nameAr: string | null;
-  displayOrder: number;
-}
-
-// --- READ: tables, products, categories ---
-
-export async function fetchWedjatTables(): Promise<WedjatTable[]> {
-  const client = getClient();
-  const result = await client.execute(
-    "SELECT id, name, status FROM tables ORDER BY id"
-  );
-  return result.rows.map((row) => ({
-    id: row.id as number,
-    name: row.name as string,
-    status: row.status as string,
-  }));
-}
-
-export async function fetchWedjatCategories(): Promise<WedjatCategory[]> {
-  const client = getClient();
-  const result = await client.execute(
-    "SELECT id, name, name_ar, display_order FROM categories ORDER BY display_order"
-  );
-  return result.rows.map((row) => ({
-    id: row.id as number,
-    name: row.name as string,
-    nameAr: (row.name_ar as string) || null,
-    displayOrder: row.display_order as number,
-  }));
-}
-
-export async function fetchWedjatProducts(): Promise<WedjatProduct[]> {
-  const client = getClient();
-  const result = await client.execute(`
-    SELECT p.id, p.name, p.name_ar, p.price, p.cost, p.category_id,
-           p.image_url, p.description, p.active, p.sold_out, p.stock,
-           c.name as category_name
-    FROM products p
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.active = 1 AND p.sold_out = 0
-    ORDER BY c.display_order, p.name
-  `);
-  return result.rows.map((row) => ({
-    id: row.id as number,
-    name: row.name as string,
-    nameAr: (row.name_ar as string) || null,
-    price: row.price as number,
-    cost: row.cost as number,
-    categoryId: (row.category_id as number) || null,
-    categoryName: (row.category_name as string) || null,
-    imageUrl: (row.image_url as string) || null,
-    description: (row.description as string) || null,
-    active: Boolean(row.active),
-    soldOut: Boolean(row.sold_out),
-    stock: row.stock as number,
-  }));
-}
-
-export async function fetchWedjatProductsByCategory(
-  categoryName: string
-): Promise<WedjatProduct[]> {
-  const client = getClient();
-  const result = await client.execute({
-    sql: `SELECT p.id, p.name, p.name_ar, p.price, p.cost, p.category_id,
-                 p.image_url, p.description, p.active, p.sold_out, p.stock,
-                 c.name as category_name
-          FROM products p
-          LEFT JOIN categories c ON p.category_id = c.id
-          WHERE c.name = ? AND p.active = 1 AND p.sold_out = 0
-          ORDER BY p.name`,
-    args: [categoryName],
-  });
-  return result.rows.map((row) => ({
-    id: row.id as number,
-    name: row.name as string,
-    nameAr: (row.name_ar as string) || null,
-    price: row.price as number,
-    cost: row.cost as number,
-    categoryId: (row.category_id as number) || null,
-    categoryName: (row.category_name as string) || null,
-    imageUrl: (row.image_url as string) || null,
-    description: (row.description as string) || null,
-    active: Boolean(row.active),
-    soldOut: Boolean(row.sold_out),
-    stock: row.stock as number,
-  }));
-}
-
-// --- WRITE: push order to Wedjat (with idempotency) ---
-
-export interface PushOrderResult {
-  ok: boolean;
-  wedjatOrderId?: number;
-  error?: string;
-  alreadySynced?: boolean;
-}
-
-/**
- * Push a Mazaj order to Wedjat RSM. Uses external_ref for idempotency:
- * if the same Mazaj order ID is pushed twice, the second call is a no-op.
- */
-export async function pushOrderToWedjat(opts: {
-  mazajOrderId: string; // used as external_ref for idempotency
-  tableName: string;
-  items: { name: string; price: number; qty: number }[];
-  total: number;
-  customerName?: string | null;
-}): Promise<PushOrderResult> {
-  const client = getClient();
-  const externalRef = `mazaj:${opts.mazajOrderId}`;
-
-  try {
-    // Idempotency check: if an order with this external_ref already exists, skip
-    const existing = await client.execute({
-      sql: "SELECT id FROM orders WHERE external_ref = ? LIMIT 1",
-      args: [externalRef],
-    });
-    if (existing.rows.length > 0) {
-      return {
-        ok: true,
-        wedjatOrderId: existing.rows[0].id as number,
-        alreadySynced: true,
-      };
-    }
-
-    // Find the table by name
-    const tableResult = await client.execute({
-      sql: "SELECT id FROM tables WHERE name = ? LIMIT 1",
-      args: [opts.tableName],
-    });
-    if (tableResult.rows.length === 0) {
-      return { ok: false, error: `Table "${opts.tableName}" not found in Wedjat RSM` };
-    }
-    const tableId = tableResult.rows[0].id as number;
-
-    // Create the order with external_ref for idempotency
-    const orderResult = await client.execute({
-      sql: `INSERT INTO orders (table_id, status, order_type, subtotal_amount, total_amount, client_name, external_ref, created_at)
-            VALUES (?, 'open', 'dinein', ?, ?, ?, ?, datetime('now'))`,
-      args: [tableId, opts.total, opts.total, opts.customerName || null, externalRef],
-    });
-    const wedjatOrderId = Number(orderResult.lastInsertRowid);
-
-    // Insert order items — match product by name, update unit_price
-    for (const item of opts.items) {
-      const prodResult = await client.execute({
-        sql: "SELECT id FROM products WHERE name = ? AND active = 1 LIMIT 1",
-        args: [item.name],
-      });
-      const productId =
-        prodResult.rows.length > 0
-          ? (prodResult.rows[0].id as number)
-          : null;
-
-      await client.execute({
-        sql: `INSERT INTO order_items (order_id, product_id, quantity, unit_price, status, created_at)
-              VALUES (?, ?, ?, ?, 'sent', datetime('now'))`,
-        args: [wedjatOrderId, productId, item.qty, item.price],
-      });
-    }
-
-    // Mark the table as occupied
-    await client.execute({
-      sql: "UPDATE tables SET status = 'occupied' WHERE id = ?",
-      args: [tableId],
-    });
-
-    return { ok: true, wedjatOrderId };
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Could not push to Wedjat",
-    };
-  }
-}
-
-// --- PRICE SYNC: update Wedjat product prices when Mazaj prices change ---
-
-/**
- * Update a product's price in Wedjat RSM (matched by product name).
- * Used when shisha prices change on the Mazaj side.
- */
-export async function syncProductPriceToWedjat(
-  productName: string,
-  newPrice: number
-): Promise<{ ok: boolean; updated: number; error?: string }> {
-  const client = getClient();
-  try {
-    const result = await client.execute({
-      sql: "UPDATE products SET price = ? WHERE name = ? AND active = 1",
-      args: [newPrice, productName],
-    });
-    return { ok: true, updated: result.rowsAffected };
-  } catch (err) {
-    return {
-      ok: false,
-      updated: 0,
-      error: err instanceof Error ? err.message : "Price sync failed",
-    };
-  }
-}
-
-/**
- * Fetch the current price of a product from Wedjat (to detect if Wedjat
- * changed it).
- */
-export async function fetchWedjatProductPrice(
-  productName: string
-): Promise<{ price: number | null; error?: string }> {
-  const client = getClient();
-  try {
-    const result = await client.execute({
-      sql: "SELECT price FROM products WHERE name = ? AND active = 1 LIMIT 1",
-      args: [productName],
-    });
-    if (result.rows.length === 0) return { price: null };
-    return { price: result.rows[0].price as number };
-  } catch (err) {
-    return {
-      price: null,
-      error: err instanceof Error ? err.message : "Fetch failed",
-    };
-  }
-}
-
-// --- REVOCATION SYNC: detect cancelled orders in Wedjat ---
 
 export interface WedjatRevocation {
   wedjatOrderId: number;
-  mazajOrderId: string;
-  revokedBy: string; // Wedjat user_name
+  status: string;
+  revokedBy: string;
   revokedAt: string;
 }
 
-/**
- * Check Wedjat for orders that were pushed from Mazaj (external_ref LIKE 'mazaj:%')
- * and have been cancelled/revoked. Returns the ones that are newly revoked.
- */
-export async function fetchWedjatRevocations(
-  since: Date
-): Promise<WedjatRevocation[]> {
-  const client = getClient();
+// ── READ: status (tables, menu, tracked check states) ────────────────
+
+export interface RsmStatusFeed {
+  ok: boolean;
+  now: string;
+  tables: WedjatTable[];
+  menu: WedjatProduct[];
+  orders: {
+    id: number;
+    externalRef: string | null;
+    status: string;
+    tableId: number | null;
+    totalAmount: number;
+    createdAt: string;
+    updatedAt: string;
+    closedAt: string | null;
+  }[];
+}
+
+export async function fetchRsmStatus(ids?: number[]): Promise<RsmStatusFeed | null> {
+  if (!rsmConfigured()) return null;
   try {
-    const result = await client.execute({
-      sql: `SELECT o.id as wedjat_order_id, o.external_ref, o.status,
-                   o.updated_at, o.closed_at,
-                   (SELECT al.user_name FROM audit_logs al
-                    WHERE al.entity = 'order' AND al.entity_id = o.id
-                      AND al.action LIKE '%cancel%'
-                    ORDER BY al.id DESC LIMIT 1) as revoked_by
-            FROM orders o
-            WHERE o.external_ref LIKE 'mazaj:%'
-              AND o.status = 'cancelled'
-              AND (o.updated_at > ? OR o.closed_at > ?)`,
-      args: [since.toISOString(), since.toISOString()],
+    const qs = ids && ids.length ? `?ids=${encodeURIComponent(ids.join(","))}` : "";
+    const { status, json } = await rsmFetch(`/api/integrations/mazaj/status${qs}`, {
+      method: "GET",
     });
-    return result.rows.map((row) => ({
-      wedjatOrderId: row.wedjat_order_id as number,
-      mazajOrderId: ((row.external_ref as string) || "").replace("mazaj:", ""),
-      revokedBy: (row.revoked_by as string) || "Unknown",
-      revokedAt: (row.updated_at as string) || (row.closed_at as string) || new Date().toISOString(),
-    }));
+    if (status !== 200 || !json?.ok) return null;
+    return json as RsmStatusFeed;
   } catch (err) {
-    console.error("[wedjat] fetchRevocations error:", err);
-    return [];
+    console.warn("[rsm] status fetch failed:", err);
+    return null;
   }
 }
 
-// --- HEALTH CHECK ---
+/** Compatibility surface for the sync dashboard. */
+export async function fetchWedjatTables(): Promise<WedjatTable[]> {
+  const feed = await fetchRsmStatus();
+  return feed?.tables ?? [];
+}
 
-/** Quick connectivity check for the sync status dashboard. */
+export async function fetchWedjatProducts(): Promise<WedjatProduct[]> {
+  const feed = await fetchRsmStatus();
+  return feed?.menu ?? [];
+}
+
 export async function checkWedjatHealth(): Promise<{
   connected: boolean;
   tableCount: number;
@@ -324,16 +138,222 @@ export async function checkWedjatHealth(): Promise<{
 }> {
   const start = Date.now();
   try {
-    const client = getClient();
-    const tables = await client.execute("SELECT COUNT(*) as c FROM tables");
-    const products = await client.execute("SELECT COUNT(*) as c FROM products WHERE active = 1");
+    const feed = await fetchRsmStatus();
+    if (!feed) return { connected: false, tableCount: 0, productCount: 0, latencyMs: 0 };
     return {
       connected: true,
-      tableCount: tables.rows[0].c as number,
-      productCount: products.rows[0].c as number,
+      tableCount: feed.tables.length,
+      productCount: feed.menu.length,
       latencyMs: Date.now() - start,
     };
   } catch {
     return { connected: false, tableCount: 0, productCount: 0, latencyMs: 0 };
   }
+}
+
+// ── WRITE: push an order to the table's check ─────────────────────────
+
+export interface PushOrderResult {
+  ok: boolean;
+  wedjatOrderId?: number;
+  addedToCheck?: boolean;
+  duplicate?: boolean;
+  unmatched?: string[];
+  error?: string;
+  alreadySynced?: boolean;
+}
+
+/**
+ * Push a Mazaj order onto its table's check in Wedjat RSM. Idempotent per
+ * mazaj order id (external_ref "mazaj:<id>" for NEW checks + the RSM-side
+ * seen-ledger for add-to-check deliveries) — replays are safe no-ops.
+ */
+export async function pushOrderToWedjat(order: {
+  id: string;
+  customerName: string | null;
+  phone: string | null;
+  table: string | null;
+  wedjatTableId: number | null;
+  notes: string | null;
+  itemsJson: string;
+  bogo: boolean;
+  addonsJson?: string[];
+}): Promise<PushOrderResult> {
+  if (!rsmConfigured()) return { ok: false, error: "Wedjat RSM not configured" };
+
+  let items: OrderItemJson[] = [];
+  try {
+    items = JSON.parse(order.itemsJson) as OrderItemJson[];
+  } catch {
+    return { ok: false, error: "Corrupt itemsJson on the order" };
+  }
+  const addons = Array.isArray(order.addonsJson) ? order.addonsJson : [];
+  const webhookItems = mapOrderItems(items, order.bogo, addons);
+  if (webhookItems.length === 0) {
+    return { ok: false, error: "Order has no mappable items" };
+  }
+
+  const payload: Record<string, unknown> = {
+    provider: "mazaj",
+    externalId: order.id,
+    customerName: (order.customerName || "Mazaj guest").slice(0, 60),
+    notes: [order.notes ? order.notes.slice(0, 260) : null, "mazaj order"]
+      .filter(Boolean)
+      .join(" · ")
+      .slice(0, 300),
+    items: webhookItems,
+  };
+  if (order.phone) payload.customerPhone = order.phone.slice(0, 20);
+  // the numeric table id is the ONLY unambiguous reference (names repeat
+  // across floors) — send it whenever we have it, fall back to the name
+  if (order.wedjatTableId != null) payload.tableId = order.wedjatTableId;
+  else if (order.table) payload.table = order.table;
+
+  try {
+    const { status, json } = await rsmFetch("/api/integrations/delivery/webhook", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (status === 201 || (status === 200 && json?.order)) {
+      return {
+        ok: true,
+        wedjatOrderId: json?.order?.id,
+        addedToCheck: Boolean(json?.addedToCheck),
+        duplicate: Boolean(json?.duplicate),
+        unmatched: json?.unmatched ?? [],
+      };
+    }
+    if (json?.error) return { ok: false, error: String(json.error).slice(0, 300) };
+    return { ok: false, error: `RSM webhook responded ${status}` };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not push to Wedjat",
+    };
+  }
+}
+
+// ── WRITE: catalog (types + prices) and availability mirrors ─────────
+
+export interface CatalogPushResult {
+  ok: boolean;
+  pushed?: number;
+  created?: number;
+  updated?: number;
+  unchanged?: number;
+  deactivated?: number;
+  error?: string;
+}
+
+export async function pushCatalogToWedjat(): Promise<CatalogPushResult> {
+  if (!rsmConfigured()) return { ok: false, error: "Wedjat RSM not configured" };
+  const products = buildRsmCatalogMatrix();
+  try {
+    const { status, json } = await rsmFetch("/api/integrations/mazaj/catalog", {
+      method: "POST",
+      body: JSON.stringify({ products }),
+    });
+    if (status === 200 && json?.ok) {
+      return {
+        ok: true,
+        pushed: json.pushed,
+        created: json.created,
+        updated: json.updated,
+        unchanged: json.unchanged,
+        deactivated: json.deactivated,
+      };
+    }
+    return { ok: false, error: json?.error ?? `RSM catalog responded ${status}` };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Catalog push failed" };
+  }
+}
+
+export interface AvailabilityPushResult {
+  ok: boolean;
+  matched?: number;
+  shown?: number;
+  hidden?: number;
+  unmatched?: string[];
+  error?: string;
+}
+
+/** Snapshot the live stock and mirror availability onto the RSM menu. */
+export async function pushAvailabilityToWedjat(): Promise<AvailabilityPushResult> {
+  if (!rsmConfigured()) return { ok: false, error: "Wedjat RSM not configured" };
+  try {
+    const [brands, flavors, supplies] = await Promise.all([
+      db.inventoryItem.findMany(),
+      db.flavorStock.findMany(),
+      db.supplyItem.findMany(),
+    ]);
+    const items = buildAvailabilityItems({
+      brandTotals: new Map(brands.map((b) => [b.brandId, b.stockGrams])),
+      flavorStock: flavors.map((f) => ({
+        brandIdRaw: f.brandIdRaw,
+        flavorName: f.flavorName,
+        stockGrams: f.stockGrams,
+      })),
+      supplies: new Map(supplies.map((s) => [s.key, s.stock])),
+    });
+    const { status, json } = await rsmFetch("/api/integrations/mazaj/inventory", {
+      method: "POST",
+      body: JSON.stringify({ mode: "full", items }),
+    });
+    if (status === 200 && json?.ok) {
+      return {
+        ok: true,
+        matched: json.matched,
+        shown: json.shown,
+        hidden: json.hidden,
+        unmatched: json.unmatched ?? [],
+      };
+    }
+    return { ok: false, error: json?.error ?? `RSM inventory responded ${status}` };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Availability push failed" };
+  }
+}
+
+/** Catalog + availability in one shot (the hourly self-heal job). */
+export async function fullMenuSyncToWedjat(): Promise<{
+  catalog: CatalogPushResult;
+  availability: AvailabilityPushResult;
+}> {
+  const catalog = await pushCatalogToWedjat();
+  const availability = await pushAvailabilityToWedjat();
+  return { catalog, availability };
+}
+
+// ── REVOCATIONS: detect checks cancelled inside the restaurant POS ────
+
+/**
+ * Check the tracked RSM checks for cancellations. A mazaj order whose RSM
+ * check was cancelled/revoked by the restaurant is marked revoked here so
+ * it leaves the active queue (the shisha man sees it as pulled).
+ */
+export async function fetchWedjatRevocations(): Promise<WedjatRevocation[]> {
+  const tracked = await db.order.findMany({
+    where: { wedjatOrderId: { not: null }, wedjatSyncStatus: { in: ["synced", "failed", "pending"] } },
+    select: { id: true, wedjatOrderId: true },
+    take: 200,
+    orderBy: { createdAt: "desc" },
+  });
+  if (tracked.length === 0) return [];
+  const ids = tracked.map((t) => t.wedjatOrderId!);
+  const feed = await fetchRsmStatus(ids);
+  if (!feed) return [];
+  const byId = new Map(tracked.map((t) => [t.wedjatOrderId!, t.id]));
+  const revoked: WedjatRevocation[] = [];
+  for (const o of feed.orders) {
+    if (o.status !== "cancelled") continue;
+    if (!byId.has(o.id)) continue;
+    revoked.push({
+      wedjatOrderId: o.id,
+      status: o.status,
+      revokedBy: "Wedjat POS",
+      revokedAt: o.updatedAt ?? o.closedAt ?? new Date().toISOString(),
+    });
+  }
+  return revoked;
 }

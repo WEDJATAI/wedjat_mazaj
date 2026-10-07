@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { fetchWedjatProducts, fetchWedjatProductsByCategory } from "@/lib/wedjat";
+import { NextResponse } from "next/server";
+import { fetchWedjatProducts } from "@/lib/wedjat";
 
-export async function GET(req: NextRequest) {
+// GET /api/wedjat/products — the restaurant's shisha menu mirror (what
+// the R46 catalog sync has materialized on the POS side), for the sync
+// dashboard display.
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
-    const products = category
-      ? await fetchWedjatProductsByCategory(category)
-      : await fetchWedjatProducts();
+    const products = await fetchWedjatProducts();
     return NextResponse.json({ ok: true, products });
   } catch (err) {
     console.error("wedjat products error", err);

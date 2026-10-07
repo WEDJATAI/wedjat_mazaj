@@ -113,11 +113,20 @@ model Order {
   suppliesCost  Float    @default(0)
   netProfit     Float    @default(0) // total - cogs
   marginPct     Float    @default(0) // netProfit / total * 100
+  // R46: sellable add-ons chosen with the order (JSON string array, e.g.
+  // ["medical_hose"]) — needed to re-push the exact check lines on retry.
+  addonsJson    String?
   // Wedjat RSM sync tracking
   wedjatOrderId Int?     // the order ID in Wedjat RSM (null = not synced)
   wedjatSyncStatus String @default("pending") // pending | synced | failed | revoked
   wedjatRevokedBy String? // name of the Wedjat employee who revoked it
   wedjatRevokedAt DateTime?
+  // R46: the NUMERIC Wedjat RSM table id (table NAMES repeat across the
+  // restaurant's floors, so the id is the only unambiguous reference).
+  // Captured from the POS "Order Shisha" button URL (?tableId=) or the
+  // employee table picker, stored on the order and echoed to the RSM
+  // webhook so items land on the RIGHT table's check.
+  wedjatTableId Int?
   createdAt     DateTime @default(now())
 
   comments OrderComment[]
