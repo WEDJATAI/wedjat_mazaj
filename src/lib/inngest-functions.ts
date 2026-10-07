@@ -59,6 +59,13 @@ export const pollRevocations = inngest.createFunction(
  * Job 2: Retry failed order syncs to Wedjat every 5 minutes.
  * Only orders from the last 24h are retried — older failures stay failed
  * for manual review (a permanently-wrong table reference will never heal).
+ *
+ * r47: also re-drives orders stuck in "pending" for >5 minutes. The order
+ * POST fire-and-forget (void syncToWedjat) can be suspended by the serverless
+ * runtime after the HTTP response is sent — the webhook may have DELIVERED
+ * (check created on the restaurant side) while the status write-back was
+ * lost. The webhook's external_ref idempotency makes the re-push a safe
+ * no-op (duplicate:true) — the retry just heals the local status stamp.
  */
 export const retryFailedSyncs = inngest.createFunction(
   {
@@ -69,8 +76,14 @@ export const retryFailedSyncs = inngest.createFunction(
   async ({ step }) => {
     return await step.run("retry-syncs", async () => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const stuckPendingBefore = new Date(Date.now() - 5 * 60 * 1000);
       const failed = await db.order.findMany({
-        where: { wedjatSyncStatus: "failed", createdAt: { gte: since } },
+        where: {
+          OR: [
+            { wedjatSyncStatus: "failed", createdAt: { gte: since } },
+            { wedjatSyncStatus: "pending", createdAt: { lte: stuckPendingBefore } },
+          ],
+        },
         take: 20,
       });
 
