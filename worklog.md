@@ -395,3 +395,19 @@ Work Log:
 
 Stage Summary:
 - The hookah platform now rides the SAME sanctioned integration path the restaurant built for delivery platforms: orders land on table checks with house prices, the shisha menu mirrors mazaj's types/prices/availability, revocations flow back, and the POS "Order Shisha" button opens mazaj with the table context. Env: WEDJAT_RSM_URL + WEDJAT_RSM_KEY (Vercel).
+
+---
+Task ID: r47
+Agent: main (Z.ai Code — on behalf of the RSM platform session)
+Task: 12th-sandbox-recycle recovery verification + Inngest registration + live E2E of the full mazaj→RSM loop + self-healing hardening.
+
+Work Log:
+- RECOVERY CONTEXT: the restaurant-side sandbox recycled again (local repo restored to an old snapshot); the mazaj platform was untouched (7552bb7 live on Vercel, Neon intact, Inngest firing).
+- INNGEST REGISTRATION (the r46 leftover owner action — now automated): synced the app via the v2 Cloud REST API (POST api.inngest.com/v2/apps/mazaj-hookah/syncs, Bearer signing key) — first sync status "success", re-sync "duplicate" (idempotent). AUDIT PROOF the scheduled jobs fire: availability-mirror pushes landed 11:30:40 + 11:45:08 UTC (pre-registration — the jobs were already active), hourly menu sync 12:02:01 (catalog 13 unchanged + inventory 13 matched), */15 mirror 12:15:16 — all visible in the RSM audit trail (integration.mazajInventory rows).
+- LIVE E2E (both platforms PROD, through the real UIs): POS "Order Shisha" on table "1" (id 37) → mazaj guest sign-in with table prefilled + POS-link badge → Mazaya Blueberry fruits hookah → checkout "✓ linked to check of table 1" → ORDER PLACED (125 EGP) → RSM dine-in check #2190 created via webhook (Mazaya Fruits @ house price 125, flavor in notes, external_ref mazaj:<id>, +26% tax = 157.50, table 37 occupied) → synced to the restaurant's local terminal via the engine pull within ~60s (KDS-ready item status "new").
+- BUG FOUND + FIXED (b7bd67b): the order-POST fire-and-forget push can be suspended by the serverless runtime after the response — the webhook DELIVERED (check created, re-push returned duplicate:true) but the mazaj-side wedjatSyncStatus stayed "pending" forever. Fix: the retry-failed-syncs Inngest job (*/5) now ALSO re-drives orders stuck in "pending" >5 min; the webhook's external_ref idempotency makes the re-push a safe no-op that just heals the status stamp. Deployed READY.
+- ZERO-RESIDUE CLEANUP (r46 discipline): RSM — stream events for the test order cleaned BEFORE delete-event emission, order 2190 + item 2516 hard-deleted, table 37 → free at rev 9 (above watermark), audit 4803 removed; local terminal converged via the delete events (orders back to the launch baseline of 2). mazaj — test order deleted, stock deductions reversed exactly (Mazaya +20g, Blueberry +20g, coal +1 → 199, foil +1 → 299).
+
+Stage Summary:
+- The mazaj↔RSM loop verified LIVE end-to-end today: POS button → table context → mazaj order → webhook → table check with house prices → KDS → engine sync to every terminal; Inngest registration complete (no owner action left); the pending-status self-healing gap closed and deployed.
+- mazaj prod: b7bd67b READY. 13 MAZAJ-* products mirrored with availability (13/13 matched).
