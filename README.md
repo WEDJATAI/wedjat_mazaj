@@ -45,8 +45,6 @@ A production-grade hookah ordering system for Egyptian lounges, integrated with 
 | Service | Purpose | Why |
 |---------|---------|-----|
 | **Neon PostgreSQL** | Primary database | Serverless, pooled connections, branching |
-| **Turso (Wedjat)** | Restaurant POS integration | Direct libsql access to Wedjat RSM |
-| **Turso (Mazaj)** | Edge replica | Low-latency reads (future) |
 | **Inngest** | Background jobs | Cron schedules, retries, durability |
 | **Vercel** | Hosting | Serverless, edge, auto-deploy from GitHub |
 | **GitHub** | Source control | CI/CD trigger for Vercel |
@@ -58,7 +56,7 @@ A production-grade hookah ordering system for Egyptian lounges, integrated with 
 - **Guest ordering**: Barcode scan, favorites, coal requests, call shisha man
 - **Inventory**: Per-flavor stock subtypes, supplies (coal/foil/hose), auto-deduction
 - **Procurement**: Buy molasses packs, cost tracking, profit dashboard (EGP + %)
-- **Wedjat RSM sync**: Idempotent order push, price sync, revocation polling
+- **Wedjat RSM sync**: Idempotent order push onto table CHECKS (house prices), catalog + availability mirror, revocation polling — all through the restaurant's key-authenticated integration API (never its databases directly)
 - **Full Arabic version**: RTL layout, 180+ translations, language toggle
 - **Server-side hardening**: Price recompute, status allowlist, error boundary
 
@@ -76,7 +74,7 @@ A production-grade hookah ordering system for Egyptian lounges, integrated with 
 1. Import the GitHub repo on Vercel
 2. Set all environment variables (see `.env.example`)
 3. Deploy — Vercel auto-builds with `prisma generate && next build`
-4. Connect Inngest dashboard to `https://wmajaj.vercel.app/api/inngest`
+4. Connect Inngest dashboard to `https://wmajaj.vercel.app/api/inngest` (one-time: Inngest → Apps → Add app — powers the scheduled retry/revocation/menu-sync jobs; orders sync inline without it)
 
 ## Demo PINs
 
