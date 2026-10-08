@@ -519,3 +519,25 @@ Work Log:
 
 Stage Summary:
 - PRODUCTION LIVE at wmazaj.vercel.app: the full Mazaj platform is now an installable iOS/Android app with QR-code direct download, native install prompts, offline order queue with automatic two-way sync, and offline app-shell + last-known-data caching. One system, every device, always in sync.
+
+---
+Task ID: r51
+Agent: main (Z.ai Code)
+Task: Sandbox re-onboarding (13th recycle) — pull WEDJAT_MAZAJ from GitHub and save on local, restore the running platform (concurrent with the r50 PWA session — integrated and re-verified).
+
+Work Log:
+- Cloned WEDJATAI/wedjat_mazaj with the provided token → /home/z/wedjat_mazaj (pristine copy, initially at f0fda1a r49-deploy; advanced to afbc935 r50-deploy after the concurrent PWA session pushed).
+- Saved ALL provided credentials to .env.local (authoritative — the sandbox watchdog rewrites .env on session resume) + .env (restore copy) in BOTH the pristine clone and the working copy: Neon PostgreSQL pooled+unpooled (DATABASE_URL / DATABASE_URL_UNPOOLED + PG*/POSTGRES_* reference vars), INNGEST_EVENT_KEY + INNGEST_SIGNING_KEY, WEDJAT_MAZAJ_VERCEL_URL + TOKEN, Mazaj Turso edge-replica URL + token (reserved for future use — NOT the RSM DB), GitHub token (also embedded in the git remote). WEDJAT_RSM_KEY left empty locally (not provided this round — lives in Vercel prod env; Sync panel degrades gracefully to "disconnected" by design). All env files confirmed gitignored (.env*).
+- Restored the app into /home/z/my-project (THE working copy): full rsync incl. .git (push access), bun install, prisma generate (v6.19.2).
+- Verified Neon live via the project's Prisma client: 4 employees, 5 orders, 7 inventory items, 0 loyalty members — production data intact.
+- INTEGRATION: the concurrent r50 PWA session (822c05f + afbc935) pushed mid-restore — pulled via rebase, worklog conflict resolved (both histories kept), bun install refreshed for the new qrcode dependency.
+- SANDBOX BEHAVIOR (critical for future sessions): this recycle's manager kills ALL tool-call-spawned processes immediately after each Bash call — even setsid/nohup/disowned/dev.pid-registered ones (verified with a dummy loop process). Only manager-booted processes (.zscripts/dev.sh at sandbox wake) persist. Consequences: (a) the dev server can only live inside a single Bash call — start it, verify, done; (b) the user preview is served by the manager's NEXT dev.sh run at the next sandbox wake, which sources DATABASE_URL from .env.local → Neon → app works; (c) Agent Browser steps must be chained within one command per flow (page state also resets between calls).
+- Dev server verified within-session: Next 16.1.3 Turbopack, .env.local + .env loaded, Ready ~650ms, GET / 200 (compile 12.4s), all API routes 200 (/api/orders, /api/analytics, /api/inventory/forecast, /api/loyalty).
+- AGENT BROWSER E2E (mobile 412×915, live Neon, pre-PWA code f0fda1a): sign-in renders (title "Mazaj · Hookah Ordering", staff/guest/skip roles, demo PIN hints) → staff → PIN 0000 → "Welcome" + Manager dashboard with all 10 tabs (Queue 4 / New / Inventory / Requests 3 / Buy / Profit / Stats / Mazaj+ / Sync) → live order queue (3 incoming, 1 active, real guest orders with EGP totals + SLA "Late" badges) → Bowl Builder (5 quick presets, Regular/Amy two-step flow) → Regular brands all correct (Mazaya/Al Fakher/Dandash/Nakhla from 125 EGP, Salom/Kass from 45 EGP) → Stats panel live (today 510 EGP revenue, 450.7 EGP profit, 3 orders — matches r49 records) → Sync panel graceful "Disconnected" (2 synced, 0 revoked/failed) → desktop 1280×900 layout captured. ZERO page/console errors across all flows. Screenshots: download/r50-restored-verify/-new-order/-brands/-stats/-desktop.png.
+- POST-INTEGRATION RE-VERIFY (afbc935 PWA code): bun install picked up qrcode; dev server compiles clean; PWA surface verified (manifest.webmanifest + sw.js + offline.html + icons all 200; sign-in shows the new "Get the app — iOS & Android" button; SW registers in dev pass-through mode); core golden path re-checked (PIN 0000 → dashboard → live queue from Neon). Re-onboarding E2E screenshots: download/r51-*.png.
+- Committed r51 worklog + verification screenshots; pushed to GitHub on top of the PWA commits.
+
+Stage Summary:
+- WEDJAT_MAZAJ fully restored on local INCLUDING the concurrent r50 PWA work: pristine clone (/home/z/wedjat_mazaj) + credentials (.env.local, gitignored) + working copy (/home/z/my-project) verified against the intact production Neon database.
+- OWNER ARCHITECTURE NOTE (recorded for all future work): "the brain and authentication are used as AI and authentication for the superapp, not apps in the super app" — the WEDJAT superapp's AI brain and authentication are PLATFORM-LEVEL (superapp) services, NOT embedded inside individual apps like mazaj. Future superapp/app work must treat brain + auth as shared platform services that apps consume.
+- Prod untouched by this session: wmazaj.vercel.app live (now with the r50 PWA), Inngest keys saved, all R49 features verified working locally.
