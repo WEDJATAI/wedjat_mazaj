@@ -541,3 +541,26 @@ Stage Summary:
 - WEDJAT_MAZAJ fully restored on local INCLUDING the concurrent r50 PWA work: pristine clone (/home/z/wedjat_mazaj) + credentials (.env.local, gitignored) + working copy (/home/z/my-project) verified against the intact production Neon database.
 - OWNER ARCHITECTURE NOTE (recorded for all future work): "the brain and authentication are used as AI and authentication for the superapp, not apps in the super app" — the WEDJAT superapp's AI brain and authentication are PLATFORM-LEVEL (superapp) services, NOT embedded inside individual apps like mazaj. Future superapp/app work must treat brain + auth as shared platform services that apps consume.
 - Prod untouched by this session: wmazaj.vercel.app live (now with the r50 PWA), Inngest keys saved, all R49 features verified working locally.
+
+---
+Task ID: r52
+Agent: main (Z.ai Code)
+Task: Fix the QR download experience — scanning opened the plain page instead of downloading. Rework the QR landing into a full-screen, app-store-style install page with a direct download action.
+
+Work Log:
+- ROOT CAUSE: the QR pointed to /?install=1 which just opened the regular app with a small bottom banner — on a phone this reads as "just a page", nothing asks to download.
+- NEW install-landing.tsx: full-screen overlay (z-80, lounge gradient, body scroll lock) that takes over when ?install=1 is present: app-store hero (glowing app icon, Mazaj wordmark, tagline, ★★★★★ "Free · ~2 MB · installs in seconds") + platform-aware install card:
+  - ANDROID: big pulsing "Install — Free" button. State machine: "Preparing download…" (waiting) → ready the moment Chrome fires beforeinstallprompt → tap → native OS sheet → phone downloads the WebAPK → success panel "Mazaj is installing ✓" (appinstalled) → auto-close after ~3.2s. If the prompt never arrives (9s) → "One more step" browser-menu fallback card with Retry.
+  - IPHONE: Apple only installs web apps from Safari → full-screen 3-step guide (Share → Add to Home Screen → open from home screen) with big icons. Detects in-app browsers (Instagram/FB/Messenger/TikTok/Line — common QR-scan contexts) and shows "Open in Safari first" instead, keeping ?install=1 in the URL so Safari inherits the landing.
+  - DESKTOP: the QR itself (scan with your phone) + install URL.
+  - Already-installed devices: landing silently skipped; app just opens.
+- Wiring: pwa store += installLandingOpen state; QR (?install=1) now opens the landing (banner's old param effect removed); install-banner stays quiet for the rest of the session after a QR landing (sessionStorage flag) and hides while the landing is open; pwa-manager mounts the landing. GetAppSheet + landing share the extracted QrCodeSvg component (qr-code.tsx); sheet hint updated ("opens a full install screen").
+- Dev-only test hooks (never in prod): ?simulate=ios|android overrides platform detection (setPlatformOverride consulted by detectPlatform) and simulate=android injects a mock beforeinstallprompt that resolves accepted → the whole Android state machine is E2E-testable on desktop.
+- i18n: +20 keys × EN/AR (landingTagline, installMeta, installFree, preparingDownload, installAndroidIntro, installIosTitle/Intro, iosInstallNote, openInSafari*, installSuccess*, startUsing, continueInBrowser, scanWithPhone, retry…); scanHint reworded in both languages.
+- LOCAL E2E (agent-browser, live Neon): ?install=1 desktop → full-screen landing, URL param stripped, QR crisp on white card, "Continue in browser" closes it; iPhone 14 emulation → guided 3-step card; simulate=android → waiting → "Install — Free" → click → prompting → "Mazaj is installing ✓" success + auto-close ✓; banner suppressed 7s+ after QR landing session; GetAppSheet QR showcase intact; Arabic RTL verified (clean, VLM-checked); tsc (src) + eslint 0/0; zero page/console errors.
+- DEPLOY: rebased over the concurrent r51 re-onboarding commit (8933eb2), pushed 9598cd4 → Vercel deployment READY.
+- PRODUCTION E2E (wmazaj.vercel.app): iPhone emulation → full-screen guided install; Galaxy S25 emulation → "Install — Free" button READY (beforeinstallprompt genuinely fired on prod) + tap opens the OS flow; fresh desktop session → QR branch rendered; VLM-verified all screenshots clean (no overlap/clipping). Evidence: download/r52-prod-ios-landing.png, r52-prod-android-landing.png, r52-prod-desktop-landing.png, r51-landing-*.png.
+
+Stage Summary:
+- Scanning the QR no longer "just opens the page": it lands on a dedicated full-screen install page. Android gets a one-tap native download (Chrome downloads & installs the app with progress), iPhone gets Apple's official install path with clear visual steps (plus the in-app-browser → Safari rescue flow), desktop shows the QR. After install, the app opens into the same two-way-synced Mazaj platform (orders, points, queue — one system, every device).
+- Prod live at 9598cd4. Two-way sync itself unchanged (r50 offline queue + live polling) — this round fixed the acquisition/download experience.
