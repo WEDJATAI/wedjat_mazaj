@@ -503,3 +503,19 @@ Work Log:
 Stage Summary:
 - Mazaj is now a full installable app on iOS & Android: scan the QR (or visit + banner) → install → the SAME full platform (menu, ordering, tracking, loyalty, staff tools) runs standalone on the phone, two-way synced with the lounge in real time, and keeps taking orders offline with automatic replay on reconnect.
 - The installed app and the web platform are one system — every order/status/point flows both ways through the same live Neon-backed APIs.
+
+---
+Task ID: r50-deploy
+Agent: main (Z.ai Code)
+Task: R50 production deployment + live PWA verification.
+
+Work Log:
+- Committed 822c05f, pushed to GitHub main → Vercel auto-deploy dpl_CM2sGTyZdnTp9gVwHFuJfBh8MBnR → READY.
+- PROD ASSETS: /manifest.webmanifest (application/manifest+json), /sw.js, /offline.html, all 6 icons → 200 with correct content types; manifest link in the HTML head.
+- PROD SW: registered as sw.js?mode=prod (full caching strategies active). Verified interception live: fetch('/api/orders?take=5') + favorites landed in mazaj-v1-api cache.
+- PROD OFFLINE (the real test): set offline → sync chip "Offline"; GET /api/orders served FROM CACHE while offline (ok:true, 5 orders = last-known data); full page RELOAD while offline → the complete app shell loaded from the SW cache (real title/content, not the fallback page) — the installed app opens and works offline.
+- ?install=1 on prod → instant install banner. Zero page errors, zero console errors.
+- Evidence: download/r50-prod-install-banner.png, download/r50-prod-offline-app.png, download/r50-getapp-qr-mobile.png, download/r50-offline-queue-sync.png.
+
+Stage Summary:
+- PRODUCTION LIVE at wmazaj.vercel.app: the full Mazaj platform is now an installable iOS/Android app with QR-code direct download, native install prompts, offline order queue with automatic two-way sync, and offline app-shell + last-known-data caching. One system, every device, always in sync.
