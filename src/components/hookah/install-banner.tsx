@@ -6,15 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Download, X, Loader2 } from "lucide-react";
 import { installPromptRef, usePwa } from "@/store/pwa";
 import { useI18n } from "@/store/i18n";
+import { INSTALL_LANDING_SESSION_KEY } from "./install-landing";
 
 const DISMISS_KEY = "mazaj:install-dismissed-at";
 const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**
- * Floating "install the app" banner. Appears a few seconds after landing
- * (or immediately when arriving via ?install=1) on devices where the app
- * isn't installed yet. Native install on Android/desktop Chrome; on iOS
- * it deep-links to the Get-App sheet with the step-by-step guide.
+ * Floating "install the app" banner for organic visits (a few seconds
+ * after landing). QR arrivals (?install=1) are handled by the full-screen
+ * InstallLanding instead — this banner stays quiet for that session.
  */
 export function InstallBanner() {
   const t = useI18n((s) => s.t);
@@ -23,6 +23,7 @@ export function InstallBanner() {
   const platform = usePwa((s) => s.platform);
   const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
   const getAppOpen = usePwa((s) => s.getAppOpen);
+  const landingOpen = usePwa((s) => s.installLandingOpen);
 
   const [visible, setVisible] = React.useState(false);
   const [installing, setInstalling] = React.useState(false);
@@ -30,31 +31,20 @@ export function InstallBanner() {
   React.useEffect(() => {
     if (standalone) return;
     let dismissedRecently = false;
+    let landingServed = false;
     try {
       const at = Number(window.localStorage.getItem(DISMISS_KEY) ?? 0);
       dismissedRecently = Date.now() - at < DISMISS_COOLDOWN_MS;
+      // the QR landing already did this banner's job this session
+      landingServed =
+        window.sessionStorage.getItem(INSTALL_LANDING_SESSION_KEY) === "1";
     } catch {
       dismissedRecently = false;
     }
-    if (dismissedRecently) return;
+    if (dismissedRecently || landingServed) return;
     const timer = setTimeout(() => setVisible(true), 6000);
     return () => clearTimeout(timer);
   }, [standalone]);
-
-  // Arriving via the QR code (?install=1) → show instantly.
-  React.useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("install") === "1" && !detectInstalled()) {
-        setVisible(true);
-        const url = new URL(window.location.href);
-        url.searchParams.delete("install");
-        window.history.replaceState({}, "", url.pathname + (url.search || ""));
-      }
-    } catch {
-      // non-fatal
-    }
-  }, []);
 
   const dismiss = () => {
     setVisible(false);
@@ -89,7 +79,7 @@ export function InstallBanner() {
     }
   };
 
-  if (standalone || getAppOpen) return null;
+  if (standalone || getAppOpen || landingOpen) return null;
 
   return (
     <AnimatePresence>
@@ -140,14 +130,5 @@ export function InstallBanner() {
         </motion.div>
       )}
     </AnimatePresence>
-  );
-}
-
-function detectInstalled(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia?.("(display-mode: standalone)").matches ||
-    (window.navigator as unknown as { standalone?: boolean }).standalone ===
-      true
   );
 }

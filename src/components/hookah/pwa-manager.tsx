@@ -14,6 +14,7 @@ import {
 } from "@/lib/offline-queue";
 import { GetAppSheet } from "./get-app-sheet";
 import { InstallBanner } from "./install-banner";
+import { InstallLanding } from "./install-landing";
 import { SyncStatus } from "./sync-status";
 import { toast } from "sonner";
 
@@ -150,6 +151,7 @@ export function PwaManager() {
 
   return (
     <>
+      <InstallLanding />
       <GetAppSheet />
       <InstallBanner />
       <SyncStatus />

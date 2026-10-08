@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import QRCode from "qrcode";
 import Image from "next/image";
 import {
   Dialog,
@@ -28,56 +27,8 @@ import {
 } from "lucide-react";
 import { installPromptRef, usePwa } from "@/store/pwa";
 import { useI18n } from "@/store/i18n";
+import { QrCodeSvg } from "./qr-code";
 import { toast } from "sonner";
-
-/** Renders a crisp QR code (SVG) for the given text. */
-function QrCanvas({ text }: { text: string }) {
-  const [svg, setSvg] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let alive = true;
-    QRCode.toString(text, {
-      type: "svg",
-      margin: 0,
-      width: 232,
-      errorCorrectionLevel: "M",
-      color: { dark: "#1c1917", light: "#ffffff" },
-    })
-      .then((s) => {
-        if (alive) setSvg(s);
-      })
-      .catch(() => {
-        if (alive) setSvg("");
-      });
-    return () => {
-      alive = false;
-    };
-  }, [text]);
-
-  if (svg === null) {
-    return (
-      <div className="grid size-[232px] place-items-center rounded-2xl bg-white/90">
-        <Loader2 className="size-6 animate-spin text-stone-400" />
-      </div>
-    );
-  }
-  if (svg === "") {
-    return (
-      <div className="grid size-[232px] place-items-center rounded-2xl bg-white/90 text-center text-xs text-stone-500">
-        QR unavailable
-      </div>
-    );
-  }
-  return (
-    <div
-      className="size-[232px] [&_svg]:size-full"
-      // SVG generated locally from a URL string — safe markup
-      dangerouslySetInnerHTML={{ __html: svg }}
-      role="img"
-      aria-label="QR code to install Mazaj"
-    />
-  );
-}
 
 export function GetAppSheet() {
   const open = usePwa((s) => s.getAppOpen);
@@ -152,7 +103,7 @@ export function GetAppSheet() {
               {t("scanToInstall")}
             </p>
             <div className="rounded-2xl bg-white p-4 shadow-inner">
-              <QrCanvas text={installUrl} />
+              <QrCodeSvg text={installUrl} />
             </div>
             <p className="text-center text-xs text-muted-foreground">
               {t("scanHint")}

@@ -256,6 +256,25 @@ export interface Translations {
   scanHint: string;
   installNow: string;
   installing: string;
+  landingTagline: string;
+  installMeta: string;
+  installFree: string;
+  preparingDownload: string;
+  preparingHint: string;
+  installAndroidIntro: string;
+  installFallbackTitle: string;
+  retry: string;
+  installIosTitle: string;
+  installIosIntro: string;
+  iosInstallNote: string;
+  openInSafariTitle: string;
+  openInSafariDesc: string;
+  openInSafariStep: string;
+  installSuccessTitle: string;
+  installSuccessDesc: string;
+  startUsing: string;
+  continueInBrowser: string;
+  scanWithPhone: string;
   howTo: string;
   youHaveApp: string;
   iosStep1: string;
@@ -284,9 +303,33 @@ export const translations: Record<Lang, Partial<Translations>> = {
       "The full Mazaj platform on your phone — install in seconds, no app store needed.",
     scanToInstall: "Scan to install",
     scanHint:
-      "Point any phone camera at the code — it opens Mazaj with one-tap install. Works on iPhone & Android.",
+      "Point any phone camera at the code — it opens a full install screen. Works on iPhone & Android.",
     installNow: "Install now",
     installing: "Installing…",
+    landingTagline: "The full lounge in your pocket — order, track, earn.",
+    installMeta: "Free · ~2 MB · installs in seconds",
+    installFree: "Install — Free",
+    preparingDownload: "Preparing download…",
+    preparingHint: "One moment — getting Mazaj ready for your phone.",
+    installAndroidIntro:
+      "Tap Install and your phone downloads Mazaj instantly — it lands on your home screen.",
+    installFallbackTitle: "One more step",
+    retry: "Try again",
+    installIosTitle: "Install on iPhone",
+    installIosIntro:
+      "Apple installs full-screen apps from Safari — it takes 5 seconds:",
+    iosInstallNote:
+      "Mazaj then works like any app — full screen, offline, on your home screen.",
+    openInSafariTitle: "Open in Safari to install",
+    openInSafariDesc:
+      "You're viewing this inside another app, which can't install apps. Open it in Safari and the install guide appears.",
+    openInSafariStep: "Tap the Share icon, then choose “Open in Safari”",
+    installSuccessTitle: "Mazaj is installing ✓",
+    installSuccessDesc:
+      "The download is on its way — Mazaj will appear on your home screen in a moment.",
+    startUsing: "Start using Mazaj",
+    continueInBrowser: "Continue in browser",
+    scanWithPhone: "Scan with your phone",
     howTo: "How to",
     youHaveApp: "You're using the installed app",
     iosStep1: "Open Mazaj in Safari, then tap the Share button",
@@ -547,9 +590,32 @@ export const translations: Record<Lang, Partial<Translations>> = {
       "منصة مزاج كاملة على موبايلك — حمّلها في ثوانٍ بدون متجر تطبيقات.",
     scanToInstall: "امسح للتحميل",
     scanHint:
-      "وجّه كاميرا أي موبايل للكود — سيفتح مزاج مع تحميل بضغطة واحدة. يعمل على الآيفون والأندرويد.",
+      "وجّه كاميرا أي موبايل للكود — ستفتح شاشة تثبيت كاملة. يعمل على الآيفون والأندرويد.",
     installNow: "حمّل الآن",
     installing: "جارٍ التحميل…",
+    landingTagline: "الصالة كاملة في جيبك — اطلب، تابع، واكسب النقاط.",
+    installMeta: "مجاني · ~٢ ميجا · يثبّت في ثوانٍ",
+    installFree: "تحميل — مجاني",
+    preparingDownload: "جارٍ تجهيز التحميل…",
+    preparingHint: "لحظة واحدة — نجهّز مزاج لموبايلك.",
+    installAndroidIntro:
+      "اضغط «تحميل» وسيتنزّل مزاج فوراً — ستجده على شاشتك الرئيسية.",
+    installFallbackTitle: "خطوة أخيرة",
+    retry: "أعد المحاولة",
+    installIosTitle: "ثبّت على الآيفون",
+    installIosIntro: "آبل تثبّت التطبيقات من سفاري — الأمر يستغرق ٥ ثوانٍ فقط:",
+    iosInstallNote:
+      "بعدها يعمل مزاج كأي تطبيق — ملء الشاشة، أوفلاين، على شاشتك الرئيسية.",
+    openInSafariTitle: "افتح في سفاري للتثبيت",
+    openInSafariDesc:
+      "أنت تشاهد هذه الصفحة داخل تطبيق آخر لا يستطيع تثبيت التطبيقات. افتحها في سفاري وسيظهر دليل التثبيت.",
+    openInSafariStep: "اضغط أيقونة المشاركة ثم اختر «فتح في سفاري»",
+    installSuccessTitle: "مزاج يثبّت الآن ✓",
+    installSuccessDesc:
+      "جارٍ التحميل — ستظهر أيقونة مزاج على شاشتك الرئيسية بعد لحظات.",
+    startUsing: "ابدأ استخدام مزاج",
+    continueInBrowser: "المتابعة في المتصفح",
+    scanWithPhone: "امسحها بموبايلك",
     howTo: "الطريقة",
     youHaveApp: "أنت تستخدم التطبيق المثبّت",
     iosStep1: "افتح مزاج في سفاري ثم اضغط زر المشاركة",

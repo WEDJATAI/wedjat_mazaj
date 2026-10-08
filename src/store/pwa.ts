@@ -15,6 +15,8 @@ interface PwaState {
   canInstall: boolean;
   /** the Get-App sheet (QR + install) open state */
   getAppOpen: boolean;
+  /** the full-screen install landing (QR / ?install=1) open state */
+  installLandingOpen: boolean;
   /** offline orders waiting to sync */
   queuedCount: number;
   /** queue flush in progress */
@@ -25,6 +27,7 @@ interface PwaState {
   setPlatform: (p: InstallPlatform) => void;
   setCanInstall: (v: boolean) => void;
   setGetAppOpen: (v: boolean) => void;
+  setInstallLandingOpen: (v: boolean) => void;
   setQueuedCount: (n: number) => void;
   setSyncing: (v: boolean) => void;
 }
@@ -35,6 +38,7 @@ export const usePwa = create<PwaState>()((set) => ({
   platform: "other",
   canInstall: false,
   getAppOpen: false,
+  installLandingOpen: false,
   queuedCount: 0,
   syncing: false,
   setOnline: (online) => set({ online }),
@@ -42,11 +46,22 @@ export const usePwa = create<PwaState>()((set) => ({
   setPlatform: (platform) => set({ platform }),
   setCanInstall: (canInstall) => set({ canInstall }),
   setGetAppOpen: (getAppOpen) => set({ getAppOpen }),
+  setInstallLandingOpen: (installLandingOpen) => set({ installLandingOpen }),
   setQueuedCount: (queuedCount) => set({ queuedCount }),
   setSyncing: (syncing) => set({ syncing }),
 }));
 
+/** Dev-only platform override — lets the install landing be previewed
+ * for iOS/Android on a desktop machine (see ?simulate=…). detectPlatform()
+ * consults it so every consumer stays consistent. */
+let platformOverride: InstallPlatform | null = null;
+
+export function setPlatformOverride(p: InstallPlatform | null) {
+  platformOverride = p;
+}
+
 export function detectPlatform(): InstallPlatform {
+  if (platformOverride) return platformOverride;
   if (typeof navigator === "undefined") return "other";
   const ua = navigator.userAgent;
   const isIOS =
