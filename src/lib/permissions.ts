@@ -35,6 +35,8 @@ export const ALL_PERMISSIONS = [
   "purchases", // buy molasses packs / supply boxes (procurement)
   "profit", // profit dashboard (revenue, COGS, net profit)
   "sync", // Wedjat RSM sync status (admin+)
+  "analytics", // R49 analytics dashboard (trends, peaks, staff, feedback)
+  "loyalty", // R49 loyalty program members (admin+)
 ] as const;
 
 export type Permission = (typeof ALL_PERMISSIONS)[number];
@@ -51,12 +53,24 @@ export const PERMISSION_META: Record<
   purchases: { label: "Purchases", desc: "Buy molasses packs & supplies" },
   profit: { label: "Profit", desc: "Revenue, COGS & net profit" },
   sync: { label: "Sync", desc: "Wedjat RSM connection & sync status" },
+  analytics: { label: "Analytics", desc: "Trends, peak hours, staff & feedback" },
+  loyalty: { label: "Loyalty", desc: "Rewards members, points & tiers" },
 };
 
 // Default permission set per role.
 export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
   super_admin: [...ALL_PERMISSIONS],
-  admin: ["queue", "new_order", "inventory", "requests", "purchases", "profit", "sync"],
+  admin: [
+    "queue",
+    "new_order",
+    "inventory",
+    "requests",
+    "purchases",
+    "profit",
+    "sync",
+    "analytics",
+    "loyalty",
+  ],
   employee: ["queue", "new_order", "requests"],
 };
 

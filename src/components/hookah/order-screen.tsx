@@ -50,6 +50,9 @@ interface OrderScreenProps {
   returningBanner?: React.ReactNode;
   /** pixels to lift the floating cart bar (e.g. above a bottom tab bar) */
   bottomInset?: number;
+  /** R49: called with the placed order id — lets the guest flow open
+   * the live tracking view straight from checkout. */
+  onOrderPlaced?: (orderId: string) => void;
 }
 
 export function OrderScreen({
@@ -67,6 +70,7 @@ export function OrderScreen({
   showTimer = false,
   returningBanner,
   bottomInset = 0,
+  onOrderPlaced,
 }: OrderScreenProps) {
   const mounted = useMounted();
   const items = useCart((s) => s.items);
@@ -450,6 +454,7 @@ export function OrderScreen({
         defaultCustomer={defaultCustomer}
         defaultTable={defaultTable}
         defaultTableId={defaultTableId}
+        onOrderPlaced={onOrderPlaced}
       />
 
       {enableScan && (

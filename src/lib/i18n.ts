@@ -33,6 +33,9 @@ export interface Translations {
   buy: string;
   profit: string;
   sync: string;
+  analytics: string;
+  loyalty: string;
+  track: string;
   noAccess: string;
   signOut: string;
 
@@ -277,6 +280,9 @@ export const translations: Record<Lang, Partial<Translations>> = {
     buy: "شراء",
     profit: "الأرباح",
     sync: "المزامنة",
+    analytics: "الإحصائيات",
+    loyalty: "مزاج+",
+    track: "تتبع",
     noAccess: "لا يوجد وصول",
     signOut: "تسجيل الخروج",
 

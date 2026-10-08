@@ -21,6 +21,9 @@ import {
   RefreshCw,
   Flame,
   LogOut,
+  TrendingDown,
+  ShoppingCart,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -458,6 +461,9 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
             </div>
           )}
           </section>
+
+          {/* R49 forecast — burn rates, days until empty, shopping list */}
+          <ForecastSection />
         </main>
 
         <footer className="relative mt-auto border-t border-border bg-background/60 py-6">
@@ -810,5 +816,226 @@ function RestockFlavorSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// R49 — Forecast section: burn rates, days until empty, suggested shopping list
+// ---------------------------------------------------------------------------
+
+interface ForecastData {
+  windowDays: number;
+  hookahsPerDay: number;
+  brands: {
+    brandId: string;
+    brandName: string;
+    emoji: string;
+    stockGrams: number;
+    gramsPerDay: number;
+    daysLeft: number | null;
+    hookahsLeft: number;
+    lowStock: boolean;
+    suggestedPacks: number;
+    packLabel: string;
+    packCost: number;
+    suggestedCost: number;
+  }[];
+  flavors: {
+    brandId: string;
+    brandName: string;
+    flavorName: string;
+    stockGrams: number;
+    daysLeft: number | null;
+    critical: boolean;
+  }[];
+  supplies: {
+    key: string;
+    name: string;
+    emoji: string;
+    unit: string;
+    stock: number;
+    perDay: number;
+    daysLeft: number | null;
+    lowStock: boolean;
+    suggestedBoxes: number;
+    boxCost: number;
+  }[];
+  shoppingList: {
+    kind: "molasses" | "supply";
+    refId: string;
+    name: string;
+    cost: number;
+  }[];
+  shoppingTotal: number;
+}
+
+function daysLeftColor(days: number | null): string {
+  if (days == null) return "text-muted-foreground";
+  if (days <= 3) return "text-destructive";
+  if (days <= 7) return "text-amber-500";
+  return "text-emerald-500";
+}
+
+function ForecastSection() {
+  const [data, setData] = React.useState<ForecastData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/inventory/forecast");
+      const json = await res.json();
+      if (json.ok) setData(json);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading && !data) {
+    return (
+      <section className="mt-6">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight">
+          <TrendingDown className="size-5 text-primary" /> Forecast
+        </h2>
+        <Skeleton className="h-40 rounded-2xl" />
+      </section>
+    );
+  }
+  if (!data) return null;
+
+  return (
+    <section className="mt-6">
+      <div className="mb-3 flex items-end justify-between">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            <TrendingDown className="size-5 text-primary" /> Forecast
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Burn rate from the last {data.windowDays} days · ~
+            {data.hookahsPerDay} hookahs/day
+          </p>
+        </div>
+      </div>
+
+      {/* days-until-empty per brand */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {data.brands.map((b) => (
+          <div
+            key={b.brandId}
+            className={cn(
+              "flex items-center gap-3 rounded-2xl border bg-card p-3",
+              b.daysLeft != null && b.daysLeft <= 3
+                ? "border-destructive/40"
+                : "border-border"
+            )}
+          >
+            <span className="text-xl">{b.emoji}</span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{b.brandName}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {b.stockGrams}g · {b.hookahsLeft} hookahs · {b.gramsPerDay}g/day
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p
+                className={cn(
+                  "flex items-center gap-1 text-sm font-bold",
+                  daysLeftColor(b.daysLeft)
+                )}
+              >
+                <CalendarClock className="size-3.5" />
+                {b.daysLeft != null ? `${b.daysLeft}d` : "—"}
+              </p>
+              {b.suggestedPacks > 0 && (
+                <p className="text-[10px] text-muted-foreground">
+                  buy {b.suggestedPacks}× {b.packLabel}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* critical flavors */}
+      {data.flavors.length > 0 && (
+        <div className="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-amber-500">
+            <AlertTriangle className="size-4" /> Flavors running dry
+          </p>
+          <ul className="space-y-1">
+            {data.flavors.map((f) => (
+              <li
+                key={`${f.brandId}-${f.flavorName}`}
+                className="flex items-center justify-between text-xs"
+              >
+                <span>
+                  {f.brandName} · {f.flavorName}
+                </span>
+                <span className="text-amber-500">
+                  {f.stockGrams}g
+                  {f.daysLeft != null ? ` · ${f.daysLeft}d left` : " · low"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* supplies days left */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {data.supplies.map((s) => (
+          <div
+            key={s.key}
+            className={cn(
+              "flex items-center gap-2 rounded-xl border bg-card px-3 py-2 text-xs",
+              s.lowStock ? "border-amber-500/40" : "border-border"
+            )}
+          >
+            <span>{s.emoji}</span>
+            <span className="font-medium">{s.name}</span>
+            <span className={daysLeftColor(s.daysLeft)}>
+              {s.daysLeft != null ? `${s.daysLeft}d` : `${s.stock} ${s.unit}`}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* suggested shopping list */}
+      {data.shoppingList.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <ShoppingCart className="size-4 text-primary" /> Suggested
+              shopping list
+            </p>
+            <span className="text-xs text-muted-foreground">
+              30-day cover ·{" "}
+              <b className="text-primary">{egp(data.shoppingTotal)}</b>
+            </span>
+          </div>
+          <ul className="space-y-1">
+            {data.shoppingList.map((item) => (
+              <li
+                key={`${item.kind}-${item.refId}`}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="text-muted-foreground">{item.name}</span>
+                <span className="tabular-nums">{egp(item.cost)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Head to the <b>Buy</b> tab to purchase these packs — stock is
+            restocked automatically.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }

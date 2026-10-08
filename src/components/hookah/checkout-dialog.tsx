@@ -4,6 +4,13 @@ import * as React from "react";
 import { useCart, computeTotals, CartItem } from "@/store/cart";
 import { egp } from "@/lib/catalog";
 import {
+  redeemOptions,
+  redeemDiscount,
+  tierDef,
+  REDEEM_BLOCK_EGP,
+  REDEEM_BLOCK,
+} from "@/lib/loyalty";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -22,8 +29,11 @@ import {
   User,
   Hash,
   StickyNote,
+  Gift,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -33,12 +43,15 @@ interface CheckoutDialogProps {
   employeeId?: string | null;
   defaultCustomer?: string;
   defaultTable?: string;
-  /** R46: numeric Wedjat table id (POS link / table picker) — the
+  /** R46: numeric Wedjat table id (POS link / picker) — the
    * unambiguous check reference. Dropped if the user edits the table
    * text manually (their edit wins, matched by name server-side). */
   defaultTableId?: number | null;
   /** id of a saved favorite mix applied to this order (optional) */
   favoriteMixId?: string | null;
+  /** R49: called with the placed order id — lets the guest flow open
+   * the live tracking view straight from the confirmation. */
+  onOrderPlaced?: (orderId: string) => void;
 }
 
 interface PlaceOrderPayload {
@@ -58,6 +71,26 @@ interface PlaceOrderPayload {
   orderedByName: string;
   employeeId?: string | null;
   favoriteMixId?: string | null;
+  loyaltyPhone?: string;
+  redeemPoints?: number | null;
+}
+
+interface LoyaltyLookup {
+  id: string;
+  name: string;
+  points: number;
+  lifetimePoints: number;
+  tier: string;
+}
+
+interface LoyaltySummary {
+  memberName: string;
+  tier: string;
+  pointsEarned: number;
+  pointsRedeemed: number;
+  discount: number;
+  balanceAfter: number;
+  isNew: boolean;
 }
 
 export function CheckoutDialog({
@@ -70,6 +103,7 @@ export function CheckoutDialog({
   defaultTable,
   defaultTableId,
   favoriteMixId,
+  onOrderPlaced,
 }: CheckoutDialogProps) {
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
@@ -83,9 +117,17 @@ export function CheckoutDialog({
   const [tableTouched, setTableTouched] = React.useState(false);
   const [notes, setNotes] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
-  const [done, setDone] = React.useState<{ id: string; total: number } | null>(
-    null
-  );
+  const [done, setDone] = React.useState<{
+    id: string;
+    total: number;
+    loyalty: LoyaltySummary | null;
+  } | null>(null);
+
+  // R49 loyalty state
+  const [member, setMember] = React.useState<LoyaltyLookup | null>(null);
+  const [isNewMember, setIsNewMember] = React.useState(false);
+  const [lookingUp, setLookingUp] = React.useState(false);
+  const [redeem, setRedeem] = React.useState(0);
 
   // Prefill / reset whenever the dialog opens.
   React.useEffect(() => {
@@ -95,8 +137,51 @@ export function CheckoutDialog({
       setName(defaultCustomer ?? "");
       setTable(defaultTable ?? "");
       setTableTouched(false);
+      setMember(null);
+      setIsNewMember(false);
+      setRedeem(0);
     }
   }, [open]);
+
+  // Debounced loyalty lookup whenever the phone is long enough.
+  React.useEffect(() => {
+    const digits = phone.trim();
+    if (digits.length < 5) {
+      setMember(null);
+      setIsNewMember(false);
+      setRedeem(0);
+      return;
+    }
+    setLookingUp(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/loyalty?phone=${encodeURIComponent(digits)}`
+        );
+        const data = await res.json();
+        if (data.ok && data.member) {
+          setMember(data.member);
+          setIsNewMember(false);
+        } else {
+          setMember(null);
+          setIsNewMember(true);
+        }
+      } catch {
+        setMember(null);
+        setIsNewMember(false);
+      } finally {
+        setLookingUp(false);
+      }
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [phone]);
+
+  // Reset redemption if the balance/total no longer allows it.
+  const loyaltyDiscount = redeem > 0 ? redeemDiscount(redeem) : 0;
+  const finalTotal = Math.max(0, totals.total - loyaltyDiscount);
+  const redeemOpts = member
+    ? redeemOptions(member.points, totals.total)
+    : [];
 
   // Customer name is now optional — the order can be placed with just a table.
   const valid = true;
@@ -121,6 +206,11 @@ export function CheckoutDialog({
       orderedByName,
       employeeId: employeeId ?? null,
       favoriteMixId: favoriteMixId ?? null,
+      loyaltyPhone:
+        phone.trim().length >= 5 && (member || isNewMember)
+          ? phone.trim()
+          : undefined,
+      redeemPoints: redeem > 0 ? redeem : null,
     };
     try {
       const res = await fetch("/api/orders", {
@@ -132,11 +222,16 @@ export function CheckoutDialog({
       if (!res.ok || !data.ok) {
         throw new Error(data.error ?? "Could not place order");
       }
-      setDone({ id: data.order.id, total: totals.total });
+      setDone({
+        id: data.order.id,
+        total: data.order.total ?? finalTotal,
+        loyalty: data.loyalty ?? null,
+      });
       clear();
       toast.success("Order placed!", {
         description: "Session added to the queue.",
       });
+      onOrderPlaced?.(data.order.id);
     } catch (err) {
       toast.error("Could not place order", {
         description: err instanceof Error ? err.message : undefined,
@@ -147,6 +242,12 @@ export function CheckoutDialog({
   };
 
   const close = () => onOpenChange(false);
+
+  const earnPreview = member
+    ? Math.floor(finalTotal * (tierDef(member.tier).multiplier ?? 1))
+    : isNewMember
+    ? Math.floor(finalTotal) + 50
+    : 0;
 
   return (
     <Dialog
@@ -181,6 +282,27 @@ export function CheckoutDialog({
                   {egp(done.total)}
                 </span>
               </div>
+              {done.loyalty && (
+                <>
+                  <Separator className="my-2" />
+                  <div className="flex items-center gap-2 rounded-xl bg-primary/10 p-2 text-left">
+                    <span className="text-lg">{tierDef(done.loyalty.tier).emoji}</span>
+                    <div className="min-w-0 flex-1 text-xs">
+                      <p className="font-semibold">
+                        {done.loyalty.isNew ? "Welcome to Mazaj+!" : `${done.loyalty.memberName} · ${tierDef(done.loyalty.tier).label}`}
+                      </p>
+                      <p className="text-muted-foreground">
+                        +{done.loyalty.pointsEarned} pts earned
+                        {done.loyalty.pointsRedeemed > 0 &&
+                          ` · −${done.loyalty.pointsRedeemed} pts redeemed (−${egp(done.loyalty.discount)})`}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-lg bg-primary/15 px-2 py-1 text-xs font-bold text-primary">
+                      {done.loyalty.balanceAfter} pts
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
             <Button className="w-full rounded-xl" onClick={close}>
               Done
@@ -207,13 +329,80 @@ export function CheckoutDialog({
                   aria-label="Customer name"
                 />
               </Field>
-              <Field label="Phone (optional)" icon={<Phone className="size-3.5" />}>
+              <Field
+                label="Phone (loyalty)"
+                icon={<Phone className="size-3.5" />}
+              >
                 <Input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="01xxxxxxxxx"
+                  placeholder="01xxxxxxxxx — earn & redeem points"
                   inputMode="tel"
+                  aria-label="Phone for loyalty points"
                 />
+                {/* Loyalty lookup result */}
+                {lookingUp && (
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Loader2 className="size-3 animate-spin" /> Checking Mazaj+…
+                  </p>
+                )}
+                {member && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{tierDef(member.tier).emoji}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">
+                          {member.name}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {tierDef(member.tier).label} member · ×
+                          {tierDef(member.tier).multiplier} earn rate
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-lg bg-primary/15 px-2 py-1 text-xs font-bold text-primary">
+                        {member.points} pts
+                      </span>
+                    </div>
+                    {redeemOpts.length > 0 && (
+                      <div className="mt-2 border-t border-primary/20 pt-2">
+                        <p className="mb-1.5 flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                          <Gift className="size-3" /> Redeem points (
+                          {REDEEM_BLOCK} pts = {egp(REDEEM_BLOCK_EGP)} off)
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {redeemOpts.map((pts) => (
+                            <button
+                              key={pts}
+                              type="button"
+                              onClick={() =>
+                                setRedeem(redeem === pts ? 0 : pts)
+                              }
+                              className={cn(
+                                "rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors",
+                                redeem === pts
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border bg-card hover:border-primary/50"
+                              )}
+                              aria-pressed={redeem === pts}
+                            >
+                              −{egp(redeemDiscount(pts))} · {pts} pts
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!lookingUp && isNewMember && (
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+                    <Sparkles className="size-4 shrink-0 text-amber-500" />
+                    <p className="text-xs text-muted-foreground">
+                      New here? This phone joins <b>Mazaj+</b> automatically —
+                      50 bonus pts + {Math.floor(finalTotal)} pts on this
+                      order.
+                    </p>
+                  </div>
+                )}
               </Field>
               <Field label="Table / room" icon={<Hash className="size-3.5" />}>
                 <Input
@@ -254,13 +443,28 @@ export function CheckoutDialog({
                     </span>
                   </div>
                 )}
+                {loyaltyDiscount > 0 && (
+                  <div className="flex justify-between font-medium text-primary">
+                    <span className="flex items-center gap-1">
+                      <Gift className="size-3.5" /> Mazaj+ points
+                    </span>
+                    <span className="tabular-nums">
+                      −{egp(loyaltyDiscount)}
+                    </span>
+                  </div>
+                )}
                 <Separator className="my-2" />
                 <div className="flex items-baseline justify-between">
                   <span className="font-semibold">Total</span>
                   <span className="text-lg font-bold tabular-nums">
-                    {egp(totals.total)}
+                    {egp(finalTotal)}
                   </span>
                 </div>
+                {(member || isNewMember) && earnPreview > 0 && (
+                  <p className="mt-1 text-right text-[11px] text-muted-foreground">
+                    +{earnPreview} pts on this order
+                  </p>
+                )}
               </div>
             </div>
 
@@ -276,7 +480,7 @@ export function CheckoutDialog({
                     <Loader2 className="size-4 animate-spin" /> Placing order…
                   </>
                 ) : (
-                  `Place order · ${egp(totals.total)}`
+                  `Place order · ${egp(finalTotal)}`
                 )}
               </Button>
             </div>

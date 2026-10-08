@@ -10,12 +10,18 @@ import { EmployeesPanel } from "./employees-panel";
 import { PurchasesPanel } from "./purchases-panel";
 import { ProfitPanel } from "./profit-panel";
 import { SyncPanel } from "./sync-panel";
+import { AnalyticsPanel } from "./analytics-panel";
+import { LoyaltyPanel } from "./loyalty-panel";
 import { LangToggle } from "./lang-toggle";
 import { cn } from "@/lib/utils";
 import {
   hasPermission,
   type Permission,
 } from "@/lib/permissions";
+import {
+  useSmartAlerts,
+  primeNotifications,
+} from "@/hooks/use-smart-alerts";
 import {
   PlusCircle,
   Boxes,
@@ -25,9 +31,11 @@ import {
   ShoppingCart,
   TrendingUp,
   RefreshCw,
+  BarChart3,
+  Crown,
+  Bell,
+  BellOff,
 } from "lucide-react";
-
-const TAB_BAR_H = 68;
 
 interface TabDef {
   key: Permission;
@@ -40,6 +48,16 @@ export function EmployeeDashboard() {
   const employee = useSession((s) => s.employee) as EmployeeSession | null;
   const signOut = useSession((s) => s.signOut);
   const perms = employee?.permissions ?? [];
+
+  // R49 smart alerts: chime + notification + badge for new orders/requests.
+  const alerts = useSmartAlerts();
+
+  // Ask for notification permission once, on first interaction.
+  React.useEffect(() => {
+    const handler = () => primeNotifications();
+    window.addEventListener("pointerdown", handler, { once: true });
+    return () => window.removeEventListener("pointerdown", handler);
+  }, []);
 
   const tabs: TabDef[] = React.useMemo(
     () => [
@@ -92,6 +110,18 @@ export function EmployeeDashboard() {
         render: (so) => <ProfitPanel onSignOut={so} />,
       },
       {
+        key: "analytics",
+        label: "Stats",
+        icon: <BarChart3 className="size-5" />,
+        render: (so) => <AnalyticsPanel onSignOut={so} />,
+      },
+      {
+        key: "loyalty",
+        label: "Mazaj+",
+        icon: <Crown className="size-5" />,
+        render: (so) => <LoyaltyPanel onSignOut={so} />,
+      },
+      {
         key: "sync",
         label: "Sync",
         icon: <RefreshCw className="size-5" />,
@@ -108,6 +138,17 @@ export function EmployeeDashboard() {
   const defaultTab = visibleTabs.find((t) => t.key === "queue") ?? visibleTabs[0];
   const [tab, setTab] = React.useState<Permission | null>(
     defaultTab?.key ?? null
+  );
+
+  // Switching to the queue/requests tab acknowledges unseen alerts.
+  const selectTab = React.useCallback(
+    (key: Permission) => {
+      setTab(key);
+      if (key === "queue" || key === "requests") {
+        alerts.acknowledge();
+      }
+    },
+    [alerts]
   );
 
   // If the current tab is no longer visible (permissions changed), reset.
@@ -142,8 +183,26 @@ export function EmployeeDashboard() {
     <div className="relative min-h-screen bg-background">
       {activeTab && activeTab.render(signOut)}
 
-      {/* Floating language toggle */}
-      <div className="fixed left-4 bottom-[72px] z-50">
+      {/* Floating language toggle + alerts mute toggle */}
+      <div className="fixed left-4 bottom-[72px] z-50 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={alerts.toggleMuted}
+          aria-label={alerts.muted ? "Unmute alerts" : "Mute alerts"}
+          title={alerts.muted ? "Unmute alerts" : "Mute alerts"}
+          className={cn(
+            "grid size-9 place-items-center rounded-full border shadow-lg backdrop-blur-xl transition-colors",
+            alerts.muted
+              ? "border-border bg-card/90 text-muted-foreground"
+              : "border-primary/40 bg-primary/15 text-primary"
+          )}
+        >
+          {alerts.muted ? (
+            <BellOff className="size-4" />
+          ) : (
+            <Bell className="size-4" />
+          )}
+        </button>
         <LangToggle />
       </div>
 
@@ -157,9 +216,16 @@ export function EmployeeDashboard() {
             <TabButton
               key={t.key}
               active={activeTab?.key === t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => selectTab(t.key)}
               icon={t.icon}
               label={t.label}
+              badge={
+                t.key === "queue"
+                  ? alerts.pendingOrders
+                  : t.key === "requests"
+                  ? alerts.pendingRequests
+                  : 0
+              }
             />
           ))}
         </div>
@@ -173,22 +239,31 @@ function TabButton({
   onClick,
   icon,
   label,
+  badge = 0,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  badge?: number;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-1 flex-col items-center gap-0.5 py-3 text-[11px] font-medium transition-colors",
+        "relative flex flex-1 flex-col items-center gap-0.5 py-3 text-[11px] font-medium transition-colors",
         active ? "text-primary" : "text-muted-foreground hover:text-foreground"
       )}
     >
-      {icon}
+      <span className="relative">
+        {icon}
+        {badge > 0 && (
+          <span className="absolute -top-1.5 -right-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+            {badge > 9 ? "9+" : badge}
+          </span>
+        )}
+      </span>
       {label}
     </button>
   );

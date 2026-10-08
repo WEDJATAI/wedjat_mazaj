@@ -14,6 +14,13 @@ import {
   supplyConsumption,
 } from "@/lib/catalog";
 import { pushOrderToWedjat, pushAvailabilityToWedjat } from "@/lib/wedjat";
+import {
+  pointsEarnedOn,
+  redeemDiscount,
+  maxRedeemable,
+  tierForLifetime,
+  SIGNUP_BONUS,
+} from "@/lib/loyalty";
 
 const ComponentSchema = z.object({
   brandId: z.string(),
@@ -58,6 +65,10 @@ const CreateOrderSchema = z.object({
   favoriteMixId: z.string().optional().nullable(),
   // Add-ons the client chose (e.g. ["medical_hose"]) — server adds sellPrice to total.
   addons: z.array(z.string()).default([]),
+  // R49 loyalty: member phone to earn/redeem points for. Redemption is
+  // validated + applied SERVER-SIDE (client totals are never trusted).
+  loyaltyPhone: z.string().trim().max(20).optional().or(z.literal("")),
+  redeemPoints: z.number().int().nonnegative().max(100000).optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
@@ -119,6 +130,57 @@ export async function POST(req: NextRequest) {
     // Recompute final totals including add-on revenue.
     const finalTotal = Math.round((totals.total + addonRevenue) * 100) / 100;
     const finalSubtotal = Math.round((totals.subtotal + addonRevenue) * 100) / 100;
+
+    // --- R49 loyalty resolution (server-authoritative) ---
+    // Lookup the member by phone (read-only here). Auto-enrollment happens
+    // INSIDE the transaction below so a failed order never creates an
+    // orphan member. Redemption is validated against the real balance.
+    let loyaltyMember: {
+      id: string;
+      name: string;
+      phone: string;
+      points: number;
+      lifetimePoints: number;
+      tier: string;
+    } | null = null;
+    let loyaltyWasNew = false;
+    if (data.loyaltyPhone && data.loyaltyPhone.trim().length >= 5) {
+      const phone = data.loyaltyPhone.trim();
+      const found = await db.loyaltyMember.findUnique({ where: { phone } });
+      if (found) {
+        loyaltyMember = found;
+      } else {
+        // will be created in the transaction; earns the signup bonus
+        loyaltyWasNew = true;
+      }
+    }
+
+    let pointsRedeemed = 0;
+    let loyaltyDiscount = 0;
+    if (loyaltyMember && data.redeemPoints && data.redeemPoints > 0) {
+      const requested = data.redeemPoints;
+      const allowed = maxRedeemable(loyaltyMember.points, finalTotal);
+      if (requested > allowed) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `Can redeem at most ${allowed} points on this order (balance ${loyaltyMember.points} pts, order ${finalTotal} EGP)`,
+          },
+          { status: 409 }
+        );
+      }
+      pointsRedeemed = requested;
+      loyaltyDiscount = redeemDiscount(requested);
+    }
+
+    // Apply the loyalty discount AFTER all price recompute — the final,
+    // authoritative total.
+    const grandTotal = Math.round((finalTotal - loyaltyDiscount) * 100) / 100;
+    const earnTier = loyaltyMember?.tier ?? "bronze";
+    const pointsEarned =
+      loyaltyMember || loyaltyWasNew
+        ? pointsEarnedOn(grandTotal, earnTier)
+        : 0;
 
     // --- Molasses deductions (per brand×flavor subtype) ---
     // Track exact grams per (brandId, flavorName) so flavor stock is precise.
@@ -241,9 +303,20 @@ export async function POST(req: NextRequest) {
     const cogs = computeOrderCogs(sanitizedItems);
     // Add add-on cost to COGS and add-on revenue to totals for profit.
     const finalCogs = Math.round((cogs.totalCogs + addonCost) * 100) / 100;
-    const profit = computeProfit(finalTotal, finalCogs);
+    const profit = computeProfit(grandTotal, finalCogs);
 
     // --- Create order + deduct everything in a single transaction ---
+    // R49 loyalty summary — populated inside the transaction and returned
+    // to the confirmation UI.
+    let loyaltySummary: {
+      memberName: string;
+      tier: string;
+      pointsEarned: number;
+      pointsRedeemed: number;
+      discount: number;
+      balanceAfter: number;
+      isNew: boolean;
+    } | null = null;
     const order = await db.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
@@ -255,8 +328,8 @@ export async function POST(req: NextRequest) {
           itemsJson: JSON.stringify(sanitizedItems),
           addonsJson: JSON.stringify(validAddons),
           subtotal: finalSubtotal,
-          discount: totals.discount,
-          total: finalTotal,
+          discount: totals.discount + loyaltyDiscount,
+          total: grandTotal,
           bogo: totals.bogo,
           ownType: data.ownType ?? null,
           itemCount: totalHookahs,
@@ -273,8 +346,96 @@ export async function POST(req: NextRequest) {
           suppliesCost: Math.round((cogs.suppliesCost + addonCost) * 100) / 100,
           netProfit: profit.netProfit,
           marginPct: profit.marginPct,
+          loyaltyMemberId: loyaltyMember?.id ?? null,
+          pointsEarned,
+          pointsRedeemed,
+          loyaltyDiscount,
         },
       });
+
+      // R49 loyalty ledger + member upsert: signup bonus for fresh members,
+      // redemption debit, and the earn credit — all in the same transaction.
+      let memberBalanceAfter = 0;
+      let memberLifetimeAfter = 0;
+      let memberTierAfter = "bronze";
+      let memberNameForSummary: string | null = null;
+      if (loyaltyMember || loyaltyWasNew) {
+        let memberId: string;
+        let basePoints: number;
+        let baseLifetime: number;
+        if (loyaltyMember) {
+          memberId = loyaltyMember.id;
+          basePoints = loyaltyMember.points;
+          baseLifetime = loyaltyMember.lifetimePoints;
+          memberNameForSummary = loyaltyMember.name;
+        } else {
+          // auto-enroll now (inside the transaction)
+          const createdMember = await tx.loyaltyMember.create({
+            data: {
+              phone: data.loyaltyPhone!.trim(),
+              name: data.customerName?.trim() || "Guest",
+              points: SIGNUP_BONUS,
+              lifetimePoints: SIGNUP_BONUS,
+              tier: tierForLifetime(SIGNUP_BONUS).key,
+            },
+          });
+          memberId = createdMember.id;
+          basePoints = SIGNUP_BONUS;
+          baseLifetime = SIGNUP_BONUS;
+          memberNameForSummary = createdMember.name;
+          await tx.pointsLedger.create({
+            data: {
+              memberId,
+              delta: SIGNUP_BONUS,
+              reason: "signup_bonus",
+            },
+          });
+          await tx.order.update({
+            where: { id: created.id },
+            data: { loyaltyMemberId: memberId },
+          });
+        }
+        if (pointsRedeemed > 0) {
+          await tx.pointsLedger.create({
+            data: {
+              memberId,
+              orderId: created.id,
+              delta: -pointsRedeemed,
+              reason: "redeem",
+            },
+          });
+        }
+        if (pointsEarned > 0) {
+          await tx.pointsLedger.create({
+            data: {
+              memberId,
+              orderId: created.id,
+              delta: pointsEarned,
+              reason: "order_earn",
+            },
+          });
+        }
+        memberBalanceAfter = basePoints - pointsRedeemed + pointsEarned;
+        memberLifetimeAfter = baseLifetime + pointsEarned;
+        memberTierAfter = tierForLifetime(memberLifetimeAfter).key;
+        await tx.loyaltyMember.update({
+          where: { id: memberId },
+          data: {
+            points: memberBalanceAfter,
+            lifetimePoints: memberLifetimeAfter,
+            tier: memberTierAfter,
+          },
+        });
+        loyaltySummary = {
+          memberName: memberNameForSummary ?? "Member",
+          tier: memberTierAfter,
+          pointsEarned,
+          pointsRedeemed,
+          discount: loyaltyDiscount,
+          balanceAfter: memberBalanceAfter,
+          isNew: loyaltyWasNew,
+        };
+      }
 
       // deduct add-on supply stock (e.g. 1 medical hose per order)
       for (const k of validAddons) {
@@ -373,7 +534,13 @@ export async function POST(req: NextRequest) {
     });
     void pushAvailabilityToWedjat().catch(() => {});
 
-    return NextResponse.json({ ok: true, order });
+    // R49 loyalty summary for the confirmation UI (recomputed from the
+    // transaction's outcome captured in the closure above).
+    const loyalty = (loyaltyMember || loyaltyWasNew) && loyaltySummary
+      ? loyaltySummary
+      : null;
+
+    return NextResponse.json({ ok: true, order, loyalty });
   } catch (err) {
     console.error("create order error", err);
     return NextResponse.json(

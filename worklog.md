@@ -432,3 +432,38 @@ Stage Summary:
 - WEDJAT_MAZAJ fully restored on local: code + git push access + all credentials saved in .env, running on port 3000 against the intact production Neon database (orders, employees, inventory all present).
 - Only WEDJAT_RSM_KEY is absent locally (not provided) — Wedjat sync shows disconnected locally, prod on Vercel unaffected.
 - Local working state: main @ fc41daf + package.json dev-script sandbox fix (uncommitted, intentional).
+
+---
+Task ID: r49
+Agent: main (Z.ai Code)
+Task: Top-of-the-line upgrade package — features that add value for customers, employees, and the manager.
+
+Work Log:
+- SANDBOX FIX (pre-work): discovered the sandbox watchdog rewrites `.env` to the template default (`DATABASE_URL=file:...`) on session resume — moved all credentials to `.env.local` (Next.js loads it with higher priority; watchdog doesn't touch it), keep `.env` as a restore copy, and fixed the dev script to source DATABASE_URL from `.env.local` first. Also fixed a shell-precedence bug in the dev script (`||` short-circuited before `cut`, so DATABASE_URL kept the full `KEY=value` line and Prisma rejected it).
+- SCHEMA (Neon, live push): + LoyaltyMember (phone-unique, points, lifetimePoints, tier), + PointsLedger (audit trail: order_earn / redeem / signup_bonus / adjustment), Order + loyaltyMemberId/pointsEarned/pointsRedeemed/loyaltyDiscount/rating/ratingComment/ratedAt.
+- src/lib/loyalty.ts: rules engine — 1 pt/EGP × tier multiplier (bronze ×1, silver ×1.1 @300, gold ×1.25 @1000, platinum ×1.5 @2500 lifetime), redemption 100 pts = 25 EGP in 100-pt multiples (server-validated: never > balance, never > order total), 50-pt signup bonus, next-tier progress helpers.
+- APIs: /api/loyalty (GET list+stats / GET ?phone= lookup / POST enroll idempotent); /api/orders/[id] (guest-safe tracking feed + queueAhead count); /api/orders/[id]/rate (1–5 stars + comment, once, only after done); /api/analytics (today KPIs, 14-day revenue trend, top brands with catalog-recomputed unit prices, peak-hours histogram, staff leaderboard from assignedTo/orderedBy attribution, loyalty snapshot, recent feedback); /api/inventory/forecast (14-day burn rates per brand/flavor/supply, days-until-empty, critical flavor warnings, 30-day-cover shopping list with costs).
+- ORDERS API: loyaltyPhone + redeemPoints accepted; member lookup read-only before the transaction, auto-enroll INSIDE the transaction (failed orders never orphan members); redemption validated against the real balance; grandTotal = finalTotal − loyaltyDiscount; points earned on the discounted total; member points/lifetime/tier updated + ledger rows written atomically with the order; loyalty summary returned for the confirmation UI.
+- CHECKOUT: phone field is now the loyalty ID — debounced member lookup chip (tier emoji, name, balance, ×N earn rate), redemption chips (−25/−50/−75 EGP for 100/200/300 pts, respecting maxRedeemable), live total with the points line, post-order confirmation shows points earned + balance + tier. BowlBuilder (employee flow): loyalty phone attach input with the same lookup chip; toast reports "+N pts for <name>".
+- GUEST TRACKING: GuestTrackingSheet — live stepper (Placed → Preparing → Served) polling every 10s, queue position, ~min estimate (7 + 4/hookah), per-order item chips, "preparing right now" pulse, points-earned note, and the 1–5 star rating UI with optional comment that appears once served (already-rated state shows the stars). "Track" button in the guest header; auto-opens after checkout.
+- MANAGER PANELS: AnalyticsPanel (recharts: 14-day revenue LineChart, top-brands horizontal BarChart, peak-hours BarChart with busiest-hour callout, staff leaderboard, feedback feed with ≤2★ follow-up flags, Mazaj+ member KPI) and LoyaltyPanel (program stats incl. "≈ EGP given back", tier legend, searchable member cards with next-tier progress bars, enroll dialog).
+- SMART ALERTS: useSmartAlerts hook — polls orders+requests every 20s (skips hidden tabs), first-load baseline (no alert storm), two-tone WebAudio chime (rising = order, falling = request), browser Notifications (permission primed on first pointerdown), mute toggle (persisted), live badge counts on the Queue/Requests tab buttons.
+- QUEUE SLA: pending >15m amber "Waiting Xm", >30m red pulsing "Late Xm" + destructive ring; preparing escalates at 25m/45m.
+- PERMISSIONS: + analytics + loyalty keys (super_admin all; admin defaults include both; employees unchanged). i18n: + analytics/loyalty/track keys (EN default, AR translations).
+- BUGS FOUND + FIXED: bowlUnitPrice ignored the "flat" flavor type (Salom/Kass showed 0 EGP client-side and 0 in brand analytics) → fixed + analytics now recomputes unit prices from the catalog so legacy orders count correctly; flavorLabel said "Fruits Mix" for flat bowls → "Standard".
+
+E2E VERIFICATION (live Neon, real flows):
+- Boss PIN 1111 → 10 tabs incl. new Stats + Mazaj+; alerts badges (4 Queue / 3 Requests) live.
+- Analytics: today 510 EGP / 450.7 profit (live restaurant data), charts render, staff leaderboard + feedback feed.
+- Mazaj+ enroll "Tarek Test" 01098765432 → 50-pt bonus + ledger row.
+- Employee order (Salom, table 99) with loyalty attach → member chip (🥉 bronze · 95 pts) → order placed → DB: 50 signup + 45 earn = 95 pts, order.pointsEarned=45 ✓.
+- Rating guard: rejected before done ("rate after served") ✓ → after done: 5★ + comment saved, appears in analytics feedback with avg 5.0 ✓.
+- Redemption E2E: top-up adjustment → guest order with redeemPoints=100 → total 45→20 EGP, discount 25, earned 20 (on discounted total), balance 150−100+20=70 ✓; over-redemption 400 pts → rejected with the exact max message ✓.
+- Guest UI: Track button → tracking sheet shows both test orders with live stepper + "~11 min" queue estimate + star rating card (VLM-verified screenshots).
+- ZERO-RESIDUE CLEANUP: both test orders deleted, stock exactly reversed (Salom +40g, coal/cubed/foil +2 each → 1000g restored), test member + ledger cascade-deleted; the live restaurant's 5 real orders untouched.
+- tsc clean (src), eslint clean, zero page/console errors, mobile 412px + desktop 1280px VLM-verified layouts.
+
+Stage Summary:
+- R49 "Mazaj+ Premium" shipped: loyalty & rewards (earn/tiers/redeem/ledger/panel), guest live tracking + star ratings, manager analytics dashboard, inventory forecasting + auto shopping list, smart alerts (chime/notification/badges), and queue SLA timers.
+- All money math server-authoritative (price recompute + loyalty redemption validation); loyalty writes atomic with the order transaction.
+- Local dev state: main + R49 commits (to be pushed); dev server on :3000 via .env.local DATABASE_URL.

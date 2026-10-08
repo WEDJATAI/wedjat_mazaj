@@ -21,6 +21,7 @@ import {
   Loader2,
   Hand,
   UserCheck,
+  AlarmClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -95,6 +96,20 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
     cls: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-500",
   },
 };
+
+/** R49 prep SLA: pending >15m warns, >30m escalates; preparing >25m warns. */
+function slaState(
+  createdAt: string,
+  status: string
+): { level: "warn" | "late"; minutes: number } | null {
+  if (status === "done") return null;
+  const min = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
+  const warnAt = status === "preparing" ? 25 : 15;
+  const lateAt = status === "preparing" ? 45 : 30;
+  if (min >= lateAt) return { level: "late", minutes: min };
+  if (min >= warnAt) return { level: "warn", minutes: min };
+  return null;
+}
 
 export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
   const employee = useSession((s) => s.employee);
@@ -382,6 +397,8 @@ function OrderCard({
     ? order.orderedByName ?? "Employee"
     : order.source;
 
+  const sla = slaState(order.createdAt, order.status);
+
   return (
     <div
       className={cn(
@@ -392,7 +409,8 @@ function OrderCard({
           ? "border-primary/50"
           : order.status === "preparing"
           ? "border-amber-500/40"
-          : "border-border opacity-80"
+          : "border-border opacity-80",
+        sla?.level === "late" && "ring-2 ring-destructive/50"
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -411,6 +429,20 @@ function OrderCard({
             ) : (
               <Badge variant="secondary" className={meta.cls}>
                 {meta.label}
+              </Badge>
+            )}
+            {sla && (
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "gap-1",
+                  sla.level === "warn"
+                    ? "border border-amber-500/40 bg-amber-500/15 text-amber-500"
+                    : "animate-pulse border border-destructive/40 bg-destructive/15 text-destructive"
+                )}
+              >
+                <AlarmClock className="size-3" />
+                {sla.level === "warn" ? "Waiting" : "Late"} {sla.minutes}m
               </Badge>
             )}
           </div>

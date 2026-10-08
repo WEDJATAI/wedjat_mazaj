@@ -52,13 +52,18 @@ A production-grade hookah ordering system for Egyptian lounges, integrated with 
 ## Features
 
 - **Employee POS**: PIN sign-in, 3 roles (super_admin/admin/employee), permission management
-- **Bowl Builder**: Visual pie-chart bowl, live profit, quick presets, direct send
+- **Bowl Builder**: Visual pie-chart bowl, live profit, quick presets, direct send, loyalty phone attach
 - **Guest ordering**: Barcode scan, favorites, coal requests, call shisha man
+- **Live order tracking**: Guests watch their session move Placed → Preparing → Served with queue estimates, then rate it 1–5 stars
+- **Mazaj+ Loyalty** (R49): phone-based rewards — 1 pt/EGP, tiers Bronze→Platinum (×1–×1.5 earn), 100 pts = 25 EGP off at checkout, 50-pt welcome bonus, full points ledger, manager members panel
+- **Analytics dashboard** (R49): today revenue/profit KPIs, 14-day revenue trend, top brands, peak hours, staff leaderboard, guest feedback feed with low-rating flags
+- **Inventory forecasting** (R49): burn rate per brand/flavor/supply from the last 14 days, days-until-empty, critical flavor warnings, auto-generated 30-day shopping list with costs
+- **Smart alerts** (R49): chime + browser notification + tab badges when new orders or guest requests arrive, mute toggle, prep SLA timers in the queue (amber >15m, red >30m)
 - **Inventory**: Per-flavor stock subtypes, supplies (coal/foil/hose), auto-deduction
 - **Procurement**: Buy molasses packs, cost tracking, profit dashboard (EGP + %)
 - **Wedjat RSM sync**: Idempotent order push onto table CHECKS (house prices), catalog + availability mirror, revocation polling — all through the restaurant's key-authenticated integration API (never its databases directly)
 - **Full Arabic version**: RTL layout, 180+ translations, language toggle
-- **Server-side hardening**: Price recompute, status allowlist, error boundary
+- **Server-side hardening**: Price recompute, loyalty redemption validation, status allowlist, error boundary
 
 ## Setup
 

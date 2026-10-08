@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { tierDef } from "@/lib/loyalty";
 
 // --- types ---
 
@@ -71,6 +72,9 @@ const FLAVOR_TYPES: { key: FlavorType; label: string; icon: React.ReactNode }[] 
 function bowlUnitPrice(b: Bowl): number {
   if (b.flavor === "fruits") {
     return getBrand(b.primaryBrandId)?.pricing.fruits ?? 0;
+  }
+  if (b.flavor === "flat") {
+    return getBrand(b.primaryBrandId)?.pricing.flat ?? 0;
   }
   return mixPrice(b.components.map((c) => c.brandId));
 }
@@ -103,6 +107,10 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
   const [editing, setEditing] = React.useState<Bowl | null>(null);
   const [customerName, setCustomerName] = React.useState("");
   const [table, setTable] = React.useState("");
+  const [loyaltyPhone, setLoyaltyPhone] = React.useState("");
+  const [loyaltyChip, setLoyaltyChip] = React.useState<
+    { name: string; tier: string; points: number } | null | "new"
+  >(null);
   // R46: the numeric Wedjat table id — set by the table picker (the
   // unambiguous check reference), cleared when the name is typed manually.
   const [tableId, setTableId] = React.useState<number | null>(null);
@@ -132,6 +140,35 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
   }, []);
 
   const bogo = ownType === "hookah" || ownType === "molasses";
+
+  // R49: debounced loyalty lookup for the employee-side attach chip.
+  React.useEffect(() => {
+    const digits = loyaltyPhone.trim();
+    if (digits.length < 5) {
+      setLoyaltyChip(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/loyalty?phone=${encodeURIComponent(digits)}`
+        );
+        const data = await res.json();
+        setLoyaltyChip(
+          data.ok && data.member
+            ? {
+                name: data.member.name,
+                tier: data.member.tier,
+                points: data.member.points,
+              }
+            : "new"
+        );
+      } catch {
+        setLoyaltyChip(null);
+      }
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [loyaltyPhone]);
 
   // revenue / cost / profit across all bowls
   const revenue = bowls.reduce((s, b) => {
@@ -186,7 +223,12 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
           emoji: brand.emoji,
           accent: brand.accent,
           flavor: b.flavor,
-          flavorLabel: b.flavor === "fruits" ? "Fruits" : "Fruits Mix",
+          flavorLabel:
+            b.flavor === "fruits"
+              ? "Fruits"
+              : b.flavor === "flat"
+              ? "Standard"
+              : "Fruits Mix",
           components: b.components.map((c) => ({
             brandId: c.brandId,
             brandName: c.brandName,
@@ -208,6 +250,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: customerName.trim() || null,
+          phone: loyaltyPhone.trim() || null,
           table: table.trim() || null,
           tableId: tableId,
           items,
@@ -219,6 +262,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
           source: "employee",
           orderedByName,
           employeeId,
+          loyaltyPhone: loyaltyPhone.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -227,9 +271,14 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
       setBowls([]);
       setCustomerName("");
       setTable("");
+      setLoyaltyPhone("");
+      setLoyaltyChip(null);
       setOwnType(null);
       toast.success("Order sent to kitchen!", {
-        description: `${totalHookahs} hookahs · ${egp(total)} · synced to Wedjat RSM`,
+        description:
+          data.loyalty && data.loyalty.pointsEarned > 0
+            ? `${totalHookahs} hookahs · ${egp(total)} · +${data.loyalty.pointsEarned} pts for ${data.loyalty.memberName}`
+            : `${totalHookahs} hookahs · ${egp(total)} · synced to Wedjat RSM`,
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send order");
@@ -322,6 +371,32 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                           </option>
                         ))}
                     </select>
+                  )}
+                </div>
+                {/* R49: loyalty phone attach — employees can link the order to a member */}
+                <div className="col-span-2">
+                  <Input
+                    value={loyaltyPhone}
+                    onChange={(e) => setLoyaltyPhone(e.target.value)}
+                    placeholder="📱 Loyalty phone (optional — earn points for the customer)"
+                    inputMode="tel"
+                    aria-label="Loyalty phone (optional)"
+                    className={cn(
+                      "rounded-xl",
+                      loyaltyChip && loyaltyChip !== "new" &&
+                        "border-primary/50 bg-primary/5"
+                    )}
+                  />
+                  {loyaltyChip === "new" && (
+                    <p className="mt-1 text-[11px] text-amber-500">
+                      New member — joins Mazaj+ automatically (50 bonus pts)
+                    </p>
+                  )}
+                  {loyaltyChip && loyaltyChip !== "new" && (
+                    <p className="mt-1 flex items-center gap-1.5 text-[11px] text-primary">
+                      {tierDef(loyaltyChip.tier).emoji} {loyaltyChip.name} ·{" "}
+                      {tierDef(loyaltyChip.tier).label} · {loyaltyChip.points} pts
+                    </p>
                   )}
                 </div>
               </div>

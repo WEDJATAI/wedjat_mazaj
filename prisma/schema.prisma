@@ -97,6 +97,18 @@ model Order {
   itemCount     Int      @default(0)
   status        String   @default("pending") // pending | preparing | done
   source        String   @default("employee") // employee | guest_scan | guest_call
+  // R49 loyalty: the member this order earned/redeemed points for, and the
+  // discount applied from redeemed points (server-validated, never trusted
+  // from the client).
+  loyaltyMemberId String?
+  pointsEarned    Int      @default(0)
+  pointsRedeemed  Int      @default(0)
+  loyaltyDiscount Float    @default(0)
+  // R49 guest feedback: 1–5 stars + optional comment, submitted by the
+  // guest from the live tracking view once the order is done.
+  rating          Int?
+  ratingComment   String?
+  ratedAt         DateTime?
   orderedByName String?
   employeeId    String?
   favoriteMixId String?
@@ -138,6 +150,34 @@ model OrderComment {
   orderId   String
   author    String
   body      String
+  createdAt DateTime @default(now())
+}
+
+// R49 loyalty program — a rewards member identified by phone number.
+// Points: 1 pt per 1 EGP of final total × tier multiplier.
+// Tiers (lifetime points): bronze 0, silver 300, gold 1000, platinum 2500.
+// Redemption: 100 pts = 25 EGP off, in 100-pt multiples, server-validated.
+model LoyaltyMember {
+  id             String   @id @default(cuid())
+  phone          String   @unique
+  name           String
+  points         Int      @default(0)
+  lifetimePoints Int      @default(0)
+  tier           String   @default("bronze") // bronze | silver | gold | platinum
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  ledger PointsLedger[]
+}
+
+// Audit trail for every points movement (earn / redeem / bonus / adjustment).
+model PointsLedger {
+  id        String   @id @default(cuid())
+  member    LoyaltyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId  String
+  orderId   String?
+  delta     Int
+  reason    String   // order_earn | redeem | signup_bonus | adjustment
   createdAt DateTime @default(now())
 }
 

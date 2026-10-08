@@ -5,8 +5,9 @@ import { useSession, GuestSession } from "@/store/session";
 import { useTableContext } from "@/store/table-context";
 import { OrderScreen } from "./order-screen";
 import { FavoritesSheet } from "./favorites-sheet";
+import { GuestTrackingSheet } from "./guest-tracking";
 import { Button } from "@/components/ui/button";
-import { HandHelping, Loader2, Heart, Flame, Sparkles } from "lucide-react";
+import { HandHelping, Loader2, Heart, Flame, Sparkles, Radar } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,8 @@ export function GuestOrder() {
   const [callOpen, setCallOpen] = React.useState(false);
   const [coalOpen, setCoalOpen] = React.useState(false);
   const [favOpen, setFavOpen] = React.useState(false);
+  const [trackOpen, setTrackOpen] = React.useState(false);
+  const [focusOrderId, setFocusOrderId] = React.useState<string | null>(null);
   const [favCount, setFavCount] = React.useState<number | null>(null);
   const [topPick, setTopPick] = React.useState<{
     label: string;
@@ -74,6 +77,12 @@ export function GuestOrder() {
 
   const isReturning = (favCount ?? 0) > 0;
 
+  const handleOrderPlaced = (orderId: string) => {
+    setFocusOrderId(orderId);
+    // open the live tracker shortly after the confirmation dialog shows
+    setTimeout(() => setTrackOpen(true), 1200);
+  };
+
   return (
     <>
       <OrderScreen
@@ -86,8 +95,22 @@ export function GuestOrder() {
         defaultTableId={tableCtx.tableId}
         onSignOut={signOut}
         enableScan
+        onOrderPlaced={handleOrderPlaced}
         headerExtra={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="relative gap-2 rounded-full"
+              onClick={() => {
+                setFocusOrderId(null);
+                setTrackOpen(true);
+              }}
+              aria-label="Track my orders"
+            >
+              <Radar className="size-4" />
+              <span className="hidden sm:inline">Track</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -168,6 +191,12 @@ export function GuestOrder() {
         open={favOpen}
         onOpenChange={setFavOpen}
         guestName={guest.name}
+      />
+      <GuestTrackingSheet
+        open={trackOpen}
+        onOpenChange={setTrackOpen}
+        guestName={guest.name}
+        focusOrderId={focusOrderId}
       />
     </>
   );
