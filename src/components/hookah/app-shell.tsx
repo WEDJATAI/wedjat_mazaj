@@ -5,6 +5,7 @@ import { useSession } from "@/store/session";
 import { SignIn } from "./sign-in";
 import { EmployeeDashboard } from "./employee-dashboard";
 import { GuestOrder } from "./guest-order";
+import { PwaManager } from "./pwa-manager";
 import { tableContextFromUrl, useTableContext } from "@/store/table-context";
 
 function useHydrated() {
@@ -38,6 +39,23 @@ export function AppShell() {
   const role = useSession((s) => s.role);
   const hydrated = useHydrated();
   usePosTableLink();
+
+  return (
+    <>
+      {/* PWA engine: install prompts, QR download sheet, two-way sync chip */}
+      <PwaManager />
+      <AppBody role={role} hydrated={hydrated} />
+    </>
+  );
+}
+
+function AppBody({
+  role,
+  hydrated,
+}: {
+  role: ReturnType<typeof useSession.getState>["role"];
+  hydrated: boolean;
+}) {
 
   // Avoid a flash of the sign-in screen while the persisted session rehydrates.
   if (!hydrated) {

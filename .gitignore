@@ -71,3 +71,4 @@ verify-dev.log
 verify*.sh
 diag*.sh
 guest-check.sh
+tool-results/

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
@@ -14,10 +14,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#16110e",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
+  applicationName: "Mazaj",
   title: "Mazaj · Hookah Ordering",
   description:
-    "Order hookah from Egyptian-market molasses brands — Mazaya, Al Fakher, Dandash, Nakhla, Amy, Salom & Kass. 20g bowls, 2-for-1 when you bring your own.",
+    "Order hookah from Egyptian-market molasses brands — Mazaya, Al Fakher, Dandash, Nakhla, Amy, Salom & Kass. 20g bowls, 2-for-1 when you bring your own. Install the app: full version, works offline, two-way synced.",
   keywords: [
     "hookah",
     "shisha",
@@ -33,9 +42,20 @@ export const metadata: Metadata = {
     "ordering",
   ],
   authors: [{ name: "Mazaj Lounge" }],
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: [
+      { url: "/icons/favicon-64.png", sizes: "64x64", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Mazaj",
+  },
+  formatDetection: { telephone: false },
   openGraph: {
     title: "Mazaj · Hookah Ordering",
     description: "Egyptian-market hookah & molasses ordering.",

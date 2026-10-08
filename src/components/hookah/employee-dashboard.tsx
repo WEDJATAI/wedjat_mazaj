@@ -35,7 +35,9 @@ import {
   Crown,
   Bell,
   BellOff,
+  QrCode,
 } from "lucide-react";
+import { usePwa } from "@/store/pwa";
 
 interface TabDef {
   key: Permission;
@@ -183,8 +185,17 @@ export function EmployeeDashboard() {
     <div className="relative min-h-screen bg-background">
       {activeTab && activeTab.render(signOut)}
 
-      {/* Floating language toggle + alerts mute toggle */}
+      {/* Floating language toggle + alerts mute toggle + guest QR share */}
       <div className="fixed left-4 bottom-[72px] z-50 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => usePwa.getState().setGetAppOpen(true)}
+          aria-label="Show guest app QR"
+          title="Show the guest download QR"
+          className="grid size-9 place-items-center rounded-full border border-primary/40 bg-primary/15 text-primary shadow-lg backdrop-blur-xl transition-colors hover:bg-primary/25"
+        >
+          <QrCode className="size-4" />
+        </button>
         <button
           type="button"
           onClick={alerts.toggleMuted}

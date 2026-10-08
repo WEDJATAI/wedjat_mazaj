@@ -248,10 +248,68 @@ export interface Translations {
   egp: string;
   perHookah: string;
   flame: string;
+
+  // PWA — get the app / install / two-way sync
+  getApp: string;
+  getAppDesc: string;
+  scanToInstall: string;
+  scanHint: string;
+  installNow: string;
+  installing: string;
+  howTo: string;
+  youHaveApp: string;
+  iosStep1: string;
+  iosStep2: string;
+  iosStep3: string;
+  installFromMenu: string;
+  syncTitle: string;
+  syncDesc1: string;
+  syncDesc2: string;
+  featTracking: string;
+  featLoyalty: string;
+  featOffline: string;
+  installBanner: string;
+  installBannerDesc: string;
+  later: string;
+  offlineMode: string;
+  queuedOrders: string;
+  syncingOrders: string;
+  ordersSynced: string;
 }
 
 export const translations: Record<Lang, Partial<Translations>> = {
-  en: {}, // English is the default; no overrides needed
+  en: {
+    getApp: "Get the app",
+    getAppDesc:
+      "The full Mazaj platform on your phone — install in seconds, no app store needed.",
+    scanToInstall: "Scan to install",
+    scanHint:
+      "Point any phone camera at the code — it opens Mazaj with one-tap install. Works on iPhone & Android.",
+    installNow: "Install now",
+    installing: "Installing…",
+    howTo: "How to",
+    youHaveApp: "You're using the installed app",
+    iosStep1: "Open Mazaj in Safari, then tap the Share button",
+    iosStep2: "Scroll down and tap “Add to Home Screen”",
+    iosStep3: "Open Mazaj from your home screen — enjoy!",
+    installFromMenu:
+      "Not showing? Open your browser menu (⋮) and choose “Install app”.",
+    syncTitle: "Always in sync — two-way",
+    syncDesc1:
+      "Orders placed offline are saved on your phone and sync to the lounge the moment you reconnect.",
+    syncDesc2:
+      "Live status, Mazaj+ points and the queue stay in step on every device — phone, staff screens and the platform.",
+    featTracking: "Live order tracking",
+    featLoyalty: "Mazaj+ rewards",
+    featOffline: "Works offline",
+    installBanner: "Install Mazaj on your phone",
+    installBannerDesc: "Full app · two-way sync · works offline",
+    later: "Later",
+    offlineMode: "Offline",
+    queuedOrders: "orders waiting to sync",
+    syncingOrders: "Syncing orders…",
+    ordersSynced: "Back online — orders synced ✓",
+  },
   ar: {
     mazaj: "مزاج",
     hookahLounge: "صالة شيشة · نظام الطلبات",
@@ -483,5 +541,36 @@ export const translations: Record<Lang, Partial<Translations>> = {
     egp: "ج.م",
     perHookah: "لكل جبلة",
     flame: "🔥",
+
+    getApp: "حمّل التطبيق",
+    getAppDesc:
+      "منصة مزاج كاملة على موبايلك — حمّلها في ثوانٍ بدون متجر تطبيقات.",
+    scanToInstall: "امسح للتحميل",
+    scanHint:
+      "وجّه كاميرا أي موبايل للكود — سيفتح مزاج مع تحميل بضغطة واحدة. يعمل على الآيفون والأندرويد.",
+    installNow: "حمّل الآن",
+    installing: "جارٍ التحميل…",
+    howTo: "الطريقة",
+    youHaveApp: "أنت تستخدم التطبيق المثبّت",
+    iosStep1: "افتح مزاج في سفاري ثم اضغط زر المشاركة",
+    iosStep2: "مرّر للأسفل واضغط «إضافة إلى الشاشة الرئيسية»",
+    iosStep3: "افتح مزاج من الشاشة الرئيسية — بالهنا والشفا!",
+    installFromMenu:
+      "لا يظهر؟ افتح قائمة المتصفح (⋮) واختر «تثبيت التطبيق».",
+    syncTitle: "مزامنة ثنائية دائمة",
+    syncDesc1:
+      "الطلبات المسجّلة أوفلاين تُحفظ على موبايلك وتتزامن مع الصالة فور عودة الإنترنت.",
+    syncDesc2:
+      "الحالة الحية ونقاط مزاج+ والطابور متزامنة على كل الأجهزة — الموبايل وشاشات الموظفين والمنصة.",
+    featTracking: "تتبع مباشر للطلبات",
+    featLoyalty: "مكافآت مزاج+",
+    featOffline: "يعمل أوفلاين",
+    installBanner: "حمّل مزاج على موبايلك",
+    installBannerDesc: "التطبيق الكامل · مزامنة ثنائية · يعمل أوفلاين",
+    later: "لاحقاً",
+    offlineMode: "غير متصل",
+    queuedOrders: "طلبات في انتظار المزامنة",
+    syncingOrders: "جارٍ مزامنة الطلبات…",
+    ordersSynced: "عاد الاتصال — تمت المزامنة ✓",
   },
 };

@@ -31,9 +31,11 @@ import {
   StickyNote,
   Gift,
   Sparkles,
+  CloudUpload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { queueOrder } from "@/lib/offline-queue";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -121,6 +123,7 @@ export function CheckoutDialog({
     id: string;
     total: number;
     loyalty: LoyaltySummary | null;
+    queuedOffline?: boolean;
   } | null>(null);
 
   // R49 loyalty state
@@ -213,11 +216,51 @@ export function CheckoutDialog({
       redeemPoints: redeem > 0 ? redeem : null,
     };
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      // Offline (or the network dropped): save the order locally — it
+      // replays automatically the moment we're back online.
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const item = queueOrder(
+          payload as unknown as Record<string, unknown>,
+          `${defaultCustomer ?? "Guest"} · ${egp(finalTotal)}`
+        );
+        setDone({
+          id: item.id,
+          total: finalTotal,
+          loyalty: null,
+          queuedOffline: true,
+        });
+        clear();
+        toast.success("Order saved on this device", {
+          description: "It will sync to the lounge automatically when you reconnect.",
+        });
+        return;
+      }
+
+      let res: Response;
+      try {
+        res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        // network-level failure — queue for the two-way sync
+        const item = queueOrder(
+          payload as unknown as Record<string, unknown>,
+          `${defaultCustomer ?? "Guest"} · ${egp(finalTotal)}`
+        );
+        setDone({
+          id: item.id,
+          total: finalTotal,
+          loyalty: null,
+          queuedOffline: true,
+        });
+        clear();
+        toast.success("Order saved on this device", {
+          description: "It will sync to the lounge automatically when you reconnect.",
+        });
+        return;
+      }
       const data = await res.json();
       if (!res.ok || !data.ok) {
         throw new Error(data.error ?? "Could not place order");
@@ -259,13 +302,28 @@ export function CheckoutDialog({
       <DialogContent className="max-h-[92vh] overflow-hidden p-0 sm:max-w-md">
         {done ? (
           <div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
-            <div className="grid size-16 place-items-center rounded-full bg-primary/15">
-              <CheckCircle2 className="size-9 text-primary" />
+            <div
+              className={cn(
+                "grid size-16 place-items-center rounded-full",
+                done.queuedOffline
+                  ? "bg-amber-500/15"
+                  : "bg-primary/15"
+              )}
+            >
+              {done.queuedOffline ? (
+                <CloudUpload className="size-9 text-amber-400" />
+              ) : (
+                <CheckCircle2 className="size-9 text-primary" />
+              )}
             </div>
             <div>
-              <DialogTitle className="text-xl">Order placed!</DialogTitle>
+              <DialogTitle className="text-xl">
+                {done.queuedOffline ? "Order saved offline" : "Order placed!"}
+              </DialogTitle>
               <DialogDescription className="mt-1">
-                The hookah session is queued for preparation.
+                {done.queuedOffline
+                  ? "You're offline — this order will sync to the lounge automatically the moment you reconnect."
+                  : "The hookah session is queued for preparation."}
               </DialogDescription>
             </div>
             <div className="w-full rounded-2xl border border-border bg-muted/40 p-4 text-left text-sm">

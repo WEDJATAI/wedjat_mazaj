@@ -7,7 +7,7 @@ import { OrderScreen } from "./order-screen";
 import { FavoritesSheet } from "./favorites-sheet";
 import { GuestTrackingSheet } from "./guest-tracking";
 import { Button } from "@/components/ui/button";
-import { HandHelping, Loader2, Heart, Flame, Sparkles, Radar } from "lucide-react";
+import { HandHelping, Loader2, Heart, Flame, Sparkles, Radar, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,11 +18,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { egp } from "@/lib/catalog";
+import { usePwa } from "@/store/pwa";
 
 export function GuestOrder() {
   const guest = useSession((s) => s.guest) as GuestSession | null;
   const signOut = useSession((s) => s.signOut);
   const tableCtx = useTableContext();
+  const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
   const [callOpen, setCallOpen] = React.useState(false);
   const [coalOpen, setCoalOpen] = React.useState(false);
   const [favOpen, setFavOpen] = React.useState(false);
@@ -98,6 +100,16 @@ export function GuestOrder() {
         onOrderPlaced={handleOrderPlaced}
         headerExtra={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-full"
+              onClick={() => setGetAppOpen(true)}
+              aria-label="Get the app"
+            >
+              <Download className="size-4" />
+              <span className="hidden sm:inline">App</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"

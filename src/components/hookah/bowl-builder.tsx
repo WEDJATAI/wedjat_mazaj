@@ -28,6 +28,7 @@ import {
   Plus,
   X,
   Check,
+  CloudUpload,
   Shuffle,
   Leaf,
   Wind,
@@ -42,6 +43,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { queueOrder } from "@/lib/offline-queue";
 import { tierDef } from "@/lib/loyalty";
 
 // --- types ---
@@ -116,7 +118,11 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
   const [tableId, setTableId] = React.useState<number | null>(null);
   const [ownType, setOwnType] = React.useState<"hookah" | "molasses" | null>(null);
   const [sending, setSending] = React.useState(false);
-  const [sent, setSent] = React.useState<{ id: string; total: number } | null>(null);
+  const [sent, setSent] = React.useState<{
+    id: string;
+    total: number;
+    queuedOffline?: boolean;
+  } | null>(null);
   const [shishaCat, setShishaCat] = React.useState<string | null>(null);
   const [wedjatTables, setWedjatTables] = React.useState<
     { id: number; name: string; status: string; floor?: string | null }[]
@@ -245,35 +251,80 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
       const total = revenue;
       const discount = Math.max(0, subtotal - total);
 
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerName: customerName.trim() || null,
-          phone: loyaltyPhone.trim() || null,
-          table: table.trim() || null,
-          tableId: tableId,
-          items,
-          subtotal,
-          discount,
-          total,
-          bogo,
-          ownType,
-          source: "employee",
-          orderedByName,
-          employeeId,
-          loyaltyPhone: loyaltyPhone.trim() || undefined,
-        }),
-      });
+      const resetAfterSend = () => {
+        setBowls([]);
+        setCustomerName("");
+        setTable("");
+        setLoyaltyPhone("");
+        setLoyaltyChip(null);
+        setOwnType(null);
+      };
+
+      // Offline (or the network dropped): queue locally — the two-way
+      // sync replays it to the kitchen the moment we reconnect.
+      const queueOffline = () => {
+        const item = queueOrder(
+          {
+            customerName: customerName.trim() || null,
+            phone: loyaltyPhone.trim() || null,
+            table: table.trim() || null,
+            tableId: tableId,
+            items,
+            subtotal,
+            discount,
+            total,
+            bogo,
+            ownType,
+            source: "employee",
+            orderedByName,
+            employeeId,
+            loyaltyPhone: loyaltyPhone.trim() || undefined,
+          },
+          `${orderedByName} · Table ${table.trim()} · ${egp(total)}`
+        );
+        setSent({ id: item.id, total, queuedOffline: true });
+        resetAfterSend();
+        toast.success("Order saved offline", {
+          description:
+            "It will sync to the kitchen automatically when you reconnect.",
+        });
+      };
+
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        queueOffline();
+        return;
+      }
+
+      let res: Response;
+      try {
+        res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerName: customerName.trim() || null,
+            phone: loyaltyPhone.trim() || null,
+            table: table.trim() || null,
+            tableId: tableId,
+            items,
+            subtotal,
+            discount,
+            total,
+            bogo,
+            ownType,
+            source: "employee",
+            orderedByName,
+            employeeId,
+            loyaltyPhone: loyaltyPhone.trim() || undefined,
+          }),
+        });
+      } catch {
+        queueOffline();
+        return;
+      }
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Could not send");
       setSent({ id: data.order.id, total });
-      setBowls([]);
-      setCustomerName("");
-      setTable("");
-      setLoyaltyPhone("");
-      setLoyaltyChip(null);
-      setOwnType(null);
+      resetAfterSend();
       toast.success("Order sent to kitchen!", {
         description:
           data.loyalty && data.loyalty.pointsEarned > 0
@@ -320,6 +371,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             <SentConfirmation
               orderId={sent.id}
               total={sent.total}
+              queuedOffline={sent.queuedOffline}
               onDone={() => setSent(null)}
             />
           ) : (
@@ -1065,10 +1117,12 @@ function FlavorPickerModal({
 function SentConfirmation({
   orderId,
   total,
+  queuedOffline,
   onDone,
 }: {
   orderId: string;
   total: number;
+  queuedOffline?: boolean;
   onDone: () => void;
 }) {
   return (
@@ -1077,6 +1131,12 @@ function SentConfirmation({
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col items-center justify-center gap-4 py-20 text-center"
     >
+      {queuedOffline && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300">
+          <CloudUpload className="size-4" />
+          Saved offline — syncs to the kitchen when you reconnect
+        </div>
+      )}
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}

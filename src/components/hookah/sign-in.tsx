@@ -15,6 +15,7 @@ import {
   Store,
   Sparkles,
   Zap,
+  QrCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,10 +23,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LangToggle } from "./lang-toggle";
 import { useI18n } from "@/store/i18n";
 import { useTableContext } from "@/store/table-context";
+import { usePwa } from "@/store/pwa";
 
 export function SignIn() {
   const [tab, setTab] = React.useState<"role" | "pin" | "guest">("role");
   const t = useI18n((s) => s.t);
+  const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
   return (
     <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
       <div className="ember-glow pointer-events-none absolute inset-0" />
@@ -89,6 +92,16 @@ export function SignIn() {
               >
                 <Zap className="size-4 text-primary" />
                 Just browsing — skip sign-in
+              </button>
+
+              {/* Get the app — QR download + one-tap install */}
+              <button
+                type="button"
+                onClick={() => setGetAppOpen(true)}
+                className="mt-2 flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-sm font-medium text-primary transition-all hover:border-primary/60 hover:bg-primary/15"
+              >
+                <QrCode className="size-4" />
+                {t("getApp")} — iOS & Android
               </button>
 
               <p className="mt-3 text-center text-xs text-muted-foreground">
