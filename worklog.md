@@ -411,3 +411,24 @@ Work Log:
 Stage Summary:
 - The mazaj↔RSM loop verified LIVE end-to-end today: POS button → table context → mazaj order → webhook → table check with house prices → KDS → engine sync to every terminal; Inngest registration complete (no owner action left); the pending-status self-healing gap closed and deployed.
 - mazaj prod: b7bd67b READY. 13 MAZAJ-* products mirrored with availability (13/13 matched).
+
+---
+Task ID: r48
+Agent: main (Z.ai Code)
+Task: Sandbox re-onboarding — pull WEDJAT_MAZAJ from GitHub and save on local (fresh sandbox recycle recovery).
+
+Work Log:
+- Cloned WEDJATAI/wedjat_mazaj from GitHub with the provided token → /home/z/wedjat_mazaj (pristine copy, HEAD = fc41daf r47).
+- Saved ALL provided credentials to .env (git-ignored, never committed): Neon PostgreSQL pooled+unpooled URLs (DATABASE_URL / DATABASE_URL_UNPOOLED + PG*/POSTGRES_* reference vars), INNGEST_EVENT_KEY + INNGEST_SIGNING_KEY, WEDJAT_MAZAJ_VERCEL_TOKEN + URL, Mazaj Turso edge-replica URL + token (reserved for future use — NOT the RSM DB), GitHub token (also embedded in git remote for push access). WEDJAT_RSM_KEY left empty locally (not provided this round — lives in Vercel prod env; sync panel degrades gracefully to "disconnected" by design).
+- Verified Neon PostgreSQL connectivity live (prisma db execute → success; pooled URL valid).
+- Restored the app into /home/z/my-project (the runnable/previewable sandbox copy): full rsync including .git (push access), src, prisma, public, skills, scripts; bun install (adds inngest@4 + @libsql/client); prisma generate.
+- SANDBOX FIX: this sandbox injects a global DATABASE_URL=file:/home/z/my-project/db/custom.db into every process, which would override .env and break the PostgreSQL Prisma client. Patched package.json dev script to force DATABASE_URL from .env at start: "dev": "DATABASE_URL=\"$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-)\" next dev -p 3000 2>&1 | tee dev.log". (Local-only diff on purpose — safe to push, Vercel never runs dev.)
+- Started dev server (Next 16.1.3 Turbopack, port 3000, .env loaded, Ready in 606ms).
+- AGENT BROWSER E2E (golden path): / renders sign-in → staff PIN 0000 (Manager) → "Welcome, Manager!" + live order queue from Neon (Incoming/Active/Done all populated) → New tab → quick presets + two-step category flow (Regular/Amy) → all 6 regular brand cards with correct prices (Mazaya/Al Fakher/Dandash/Nakhla from 125 EGP, Salom/Kass from 45 EGP). Mobile viewport 412x915 screenshot VLM-verified: clean layout, no overlaps, bottom nav intact. Zero page errors, zero console errors (only pre-existing cosmetic framer-motion warnings).
+- dev.log session: GET / 200, POST /api/auth/employee 401→200 (wrong-then-right PIN test), GET /api/orders 200, GET /api/wedjat/tables 200 — Neon fully live.
+- Cleaned /home/z/wedjat_mazaj/node_modules (pristine clone kept at 105MB as reference; /home/z/my-project is THE working copy).
+
+Stage Summary:
+- WEDJAT_MAZAJ fully restored on local: code + git push access + all credentials saved in .env, running on port 3000 against the intact production Neon database (orders, employees, inventory all present).
+- Only WEDJAT_RSM_KEY is absent locally (not provided) — Wedjat sync shows disconnected locally, prod on Vercel unaffected.
+- Local working state: main @ fc41daf + package.json dev-script sandbox fix (uncommitted, intentional).
