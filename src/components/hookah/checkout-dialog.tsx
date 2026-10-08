@@ -219,7 +219,7 @@ export function CheckoutDialog({
       // Offline (or the network dropped): save the order locally — it
       // replays automatically the moment we're back online.
       if (typeof navigator !== "undefined" && !navigator.onLine) {
-        const item = queueOrder(
+        const item = await queueOrder(
           payload as unknown as Record<string, unknown>,
           `${defaultCustomer ?? "Guest"} · ${egp(finalTotal)}`
         );
@@ -245,7 +245,7 @@ export function CheckoutDialog({
         });
       } catch {
         // network-level failure — queue for the two-way sync
-        const item = queueOrder(
+        const item = await queueOrder(
           payload as unknown as Record<string, unknown>,
           `${defaultCustomer ?? "Guest"} · ${egp(finalTotal)}`
         );

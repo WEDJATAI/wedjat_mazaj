@@ -21,10 +21,17 @@ import {
   Loader2,
   Clock,
   Gift,
+  BellRing,
+  BellOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
 import { tierDef } from "@/lib/loyalty";
+import {
+  pushSupported,
+  subscribeToPush,
+  isSubscribed,
+} from "@/lib/push-client";
 import { toast } from "sonner";
 
 interface TrackOrder {
@@ -119,6 +126,57 @@ export function GuestTrackingSheet({
   const active = orders.filter((o) => o.status !== "done");
   const anyActive = active.length > 0;
 
+  const [pushState, setPushState] = React.useState<
+    "checking" | "off" | "on" | "unsupported"
+  >("checking");
+  const [subscribing, setSubscribing] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    if (!pushSupported()) {
+      setPushState("unsupported");
+      return;
+    }
+    isSubscribed().then((sub) => {
+      if (alive) setPushState(sub ? "on" : "off");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [open]);
+
+  const enablePush = async () => {
+    if (subscribing) return;
+    setSubscribing(true);
+    try {
+      const result = await subscribeToPush(guestName);
+      if (result === "ok") {
+        setPushState("on");
+        toast.success("You'll get a ping when it's ready 🔔", {
+          description: "We'll notify you the moment your hookah is served.",
+        });
+      } else if (result === "denied") {
+        toast.error("Notifications are blocked", {
+          description:
+            "Enable them for Mazaj in your browser/site settings to get updates.",
+        });
+      } else if (result === "unsupported") {
+        setPushState("unsupported");
+        toast.info("Install the app to get notifications", {
+          description:
+            "On iPhone, add Mazaj to your home screen first — then this button turns on pings.",
+        });
+      } else {
+        toast.error("Couldn't enable notifications", {
+          description: "Check your connection and try again.",
+        });
+      }
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -155,6 +213,46 @@ export function GuestTrackingSheet({
               {orders.map((o) => (
                 <TrackedOrder key={o.id} order={o} onChanged={load} />
               ))}
+              {anyActive && (
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15">
+                    {pushState === "on" ? (
+                      <BellRing className="size-5 text-primary" />
+                    ) : (
+                      <BellOff className="size-5 text-muted-foreground" />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">
+                      {pushState === "on"
+                        ? "Notifications on"
+                        : "Ping me when it's ready"}
+                    </p>
+                    <p className="text-xs leading-snug text-muted-foreground">
+                      {pushState === "on"
+                        ? "We'll notify you when your hookah is prepared and served — even with the app closed."
+                        : pushState === "unsupported"
+                          ? "On iPhone: install the app first (Add to Home Screen), then come back to enable pings."
+                          : "Get a notification on this phone when your hookah is prepared and served."}
+                    </p>
+                  </div>
+                  {pushState !== "on" && pushState !== "unsupported" && (
+                    <Button
+                      size="sm"
+                      className="h-9 shrink-0 rounded-xl px-3 font-semibold"
+                      disabled={subscribing}
+                      onClick={enablePush}
+                    >
+                      {subscribing ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <BellRing className="size-4" />
+                      )}
+                      Notify me
+                    </Button>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>

@@ -35,10 +35,36 @@ function usePosTableLink() {
   }, []);
 }
 
+/** Push deep link (?track=…) — when nobody is signed in as a guest yet,
+ *  stash the target so GuestOrder opens the tracker right after the guest
+ *  checks in. (When a guest IS signed in, GuestOrder handles the URL
+ *  itself on mount.) */
+function usePendingTrackLink(role: string | null | undefined) {
+  React.useEffect(() => {
+    if (role === "guest") return; // GuestOrder consumes the URL directly
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("track");
+      if (!t) return;
+      window.sessionStorage.setItem(
+        "mazaj:pending-track",
+        JSON.stringify({ t, at: Date.now() })
+      );
+      const url = new URL(window.location.href);
+      url.searchParams.delete("track");
+      url.searchParams.delete("source");
+      window.history.replaceState({}, "", url.pathname + (url.search || ""));
+    } catch {
+      // non-fatal
+    }
+  }, [role]);
+}
+
 export function AppShell() {
   const role = useSession((s) => s.role);
   const hydrated = useHydrated();
   usePosTableLink();
+  usePendingTrackLink(role);
 
   return (
     <>

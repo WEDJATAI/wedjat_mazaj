@@ -262,8 +262,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
 
       // Offline (or the network dropped): queue locally — the two-way
       // sync replays it to the kitchen the moment we reconnect.
-      const queueOffline = () => {
-        const item = queueOrder(
+      const queueOffline = async () => {
+        const item = await queueOrder(
           {
             customerName: customerName.trim() || null,
             phone: loyaltyPhone.trim() || null,

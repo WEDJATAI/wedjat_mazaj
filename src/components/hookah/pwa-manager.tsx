@@ -10,18 +10,15 @@ import {
 import {
   flushQueue,
   queuedCount,
+  registerBackgroundSync,
   subscribeQueue,
 } from "@/lib/offline-queue";
+import { refreshSubscriptionAfterChange } from "@/lib/push-client";
 import { GetAppSheet } from "./get-app-sheet";
 import { InstallBanner } from "./install-banner";
 import { InstallLanding } from "./install-landing";
 import { SyncStatus } from "./sync-status";
 import { toast } from "sonner";
-
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
 
 /**
  * The PWA engine room, mounted once inside AppShell:
@@ -29,8 +26,13 @@ type BeforeInstallPromptEvent = Event & {
  *  - captures the native install prompt (Android / desktop Chrome)
  *  - tracks connectivity and replays the offline order queue on
  *    reconnect — the two-way sync between the installed app and the
- *    platform
- *  - renders the Get-App sheet, install banner and sync status chip
+ *    platform (Background Sync does it in the worker on supporting
+ *    browsers, even with the app closed)
+ *  - listens to the worker: synced orders, rotated push subscriptions,
+ *    new app versions ("update available" toast)
+ *  - asks for persistent storage so the offline queue/menu survive
+ *    browser storage pressure on the phone
+ *  - renders the Get-App sheet, install landing, banner and sync chip
  */
 export function PwaManager() {
   const setOnline = usePwa((s) => s.setOnline);
@@ -40,35 +42,103 @@ export function PwaManager() {
   const setQueuedCount = usePwa((s) => s.setQueuedCount);
   const setSyncing = usePwa((s) => s.setSyncing);
 
-  // --- register the service worker -------------------------------------
+  // --- register the service worker + update detection ----------------------
   React.useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      const mode =
-        process.env.NODE_ENV === "production" ? "prod" : "dev";
-      navigator.serviceWorker
-        .register(`/sw.js?mode=${mode}`, { scope: "/" })
-        .catch(() => {
-          // not fatal — app still works online-only
+    if (!("serviceWorker" in navigator)) return;
+    const mode =
+      process.env.NODE_ENV === "production" ? "prod" : "dev";
+
+    let reloading = false;
+    const onControllerChange = () => {
+      // a new worker took control (user tapped "reload" on the update toast)
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    };
+
+    navigator.serviceWorker
+      .register(`/sw.js?mode=${mode}`, { scope: "/" })
+      .then((reg) => {
+        // already-waiting worker (registered before this page load)
+        if (reg.waiting && reg.active) showUpdateToast();
+
+        reg.addEventListener("updatefound", () => {
+          const next = reg.installing;
+          if (!next) return;
+          next.addEventListener("statechange", () => {
+            if (next.state === "installed" && reg.active) {
+              showUpdateToast();
+            }
+          });
         });
-    }
+      })
+      .catch(() => {
+        // not fatal — app still works online-only
+      });
+
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      onControllerChange
+    );
+    return () => {
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        onControllerChange
+      );
+    };
   }, []);
+
+  // --- messages from the worker -------------------------------------------
+  React.useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as
+        | { type?: string; synced?: number; dropped?: number; remaining?: number }
+        | undefined;
+      if (!data?.type) return;
+      if (data.type === "ORDERS_SYNCED") {
+        setQueuedCount(data.remaining ?? 0);
+        if ((data.synced ?? 0) > 0) {
+          toast.success(
+            data.synced === 1
+              ? "Order synced ✓"
+              : `${data.synced} orders synced ✓`,
+            { description: "The lounge received your order(s)." }
+          );
+        }
+        if ((data.dropped ?? 0) > 0) {
+          toast.error(`${data.dropped} queued order(s) couldn't be placed`, {
+            description: "Please review and place them again.",
+          });
+        }
+      }
+      if (data.type === "PUSH_SUBSCRIPTION_CHANGE") {
+        void refreshSubscriptionAfterChange();
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, [setQueuedCount]);
 
   // --- platform / standalone / install-prompt detection ----------------
   React.useEffect(() => {
     setPlatform(detectPlatform());
     setStandalone(detectStandalone());
     setOnline(navigator.onLine);
-    setQueuedCount(queuedCount());
+    void queuedCount().then(setQueuedCount);
 
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
-      installPromptRef.current = e as BeforeInstallPromptEvent;
+      installPromptRef.current = e as typeof installPromptRef.current;
       setCanInstall(true);
     };
     const onInstalled = () => {
       installPromptRef.current = null;
       setCanInstall(false);
       setStandalone(true);
+      // installed apps: ask the browser to keep our offline data safe
+      void navigator.storage?.persist?.().catch(() => {});
     };
     const onDisplayMode = (e: MediaQueryListEvent) => {
       if (e.matches) setStandalone(true);
@@ -78,6 +148,11 @@ export function PwaManager() {
     window.addEventListener("appinstalled", onInstalled);
     const mq = window.matchMedia("(display-mode: standalone)");
     mq.addEventListener?.("change", onDisplayMode);
+
+    // already running as the installed app → persistent storage too
+    if (detectStandalone()) {
+      void navigator.storage?.persist?.().catch(() => {});
+    }
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
@@ -99,11 +174,16 @@ export function PwaManager() {
     const runFlush = async (announce: boolean) => {
       if (busy) return;
       if (!navigator.onLine) return;
-      if (queuedCount() === 0) return;
+      if ((await queuedCount()) === 0) return;
       busy = true;
       setSyncing(true);
       try {
-        const { synced, dropped } = await flushQueue();
+        const { synced, dropped, deferred } = await flushQueue();
+        if (deferred) {
+          // the service worker owns the replay (Background Sync) — it
+          // will message ORDERS_SYNCED; keep the spinner until then
+          return;
+        }
         if (announce && synced > 0) {
           toast.success(
             synced === 1
@@ -125,6 +205,8 @@ export function PwaManager() {
 
     const onOnline = () => {
       setOnline(true);
+      // ensure the background-sync tag is queued (no-op when unsupported)
+      void registerBackgroundSync();
       runFlush(true);
     };
     const onOffline = () => setOnline(false);
@@ -157,4 +239,28 @@ export function PwaManager() {
       <SyncStatus />
     </>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Update toast — new version installed on the server                  */
+/* ------------------------------------------------------------------ */
+
+let updateToastShown = false;
+
+function showUpdateToast() {
+  if (updateToastShown) return; // once per page load is enough
+  updateToastShown = true;
+  toast.info("Mazaj was updated ✨", {
+    description: "A new version is ready — reload to pick it up.",
+    duration: 12000,
+    action: {
+      label: "Reload",
+      onClick: async () => {
+        const reg = await navigator.serviceWorker?.getRegistration();
+        reg?.waiting?.postMessage("SKIP_WAITING");
+        // controllerchange (pwa-manager) performs the reload
+        window.setTimeout(() => window.location.reload(), 800);
+      },
+    },
+  });
 }

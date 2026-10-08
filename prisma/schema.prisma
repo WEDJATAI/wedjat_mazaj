@@ -181,6 +181,21 @@ model PointsLedger {
   createdAt DateTime @default(now())
 }
 
+// R53 web push — a phone/browser subscribed to order-status notifications.
+// Subscriptions are keyed by guest name (the same identity guests use for
+// check-in/favorites/tracking): when an order's status changes, every
+// subscription registered for that guest gets a push from the cloud.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique // the push service URL (browser-managed)
+  p256dh    String   // subscription.keys.p256dh
+  auth      String   // subscription.keys.auth
+  guestName String   // guest identity for matching to orders
+  platform  String   @default("web") // web | android | ios
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // A procurement purchase: buying molasses packs or supply boxes to restock.
 model Purchase {
   id          String   @id @default(cuid())

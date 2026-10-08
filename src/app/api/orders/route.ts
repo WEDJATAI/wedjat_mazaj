@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { pushToGuest } from "@/lib/push";
 import {
   MOLASSES_GRAMS,
   SUPPLIES,
@@ -633,10 +634,43 @@ export async function PATCH(req: NextRequest) {
         { status: 400 }
       );
     }
+    const existing = await db.order.findUnique({ where: { id } });
     const updated = await db.order.update({
       where: { id },
       data: { status },
     });
+
+    // Cloud → phone: push the status change to the guest's installed app.
+    // Fire-and-forget style: the update is already committed; a push
+    // failure must not fail the request. Only push on forward transitions
+    // (never when a status is set back / unchanged).
+    if (existing && existing.status !== status) {
+      const name = updated.customerName?.trim();
+      if (name) {
+        const pushPayload =
+          status === "preparing"
+            ? {
+                title: "Your hookah is being prepared 🔥",
+                body: `${name}, we're on it — hang tight, it's almost time.`,
+                url: `/?track=${updated.id}`,
+                tag: `order-${updated.id}`,
+              }
+            : status === "done"
+              ? {
+                  title: "Your hookah is served! 🎉",
+                  body: `Enjoy, ${name}! Tap to rate your session ✨`,
+                  url: `/?track=${updated.id}`,
+                  tag: `order-${updated.id}`,
+                }
+              : null;
+        if (pushPayload) {
+          void pushToGuest(name, pushPayload).catch(() => {
+            // never fatal
+          });
+        }
+      }
+    }
+
     return NextResponse.json({ ok: true, order: updated });
   } catch (err) {
     console.error("update order error", err);

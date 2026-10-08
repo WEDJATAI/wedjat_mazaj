@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { egp } from "@/lib/catalog";
 import { usePwa } from "@/store/pwa";
+import { attachGuestIfSubscribed } from "@/lib/push-client";
 
 export function GuestOrder() {
   const guest = useSession((s) => s.guest) as GuestSession | null;
@@ -35,6 +36,51 @@ export function GuestOrder() {
     label: string;
     unit: number;
   } | null>(null);
+
+  // Deep link from a push notification / app shortcut: ?track=<orderId>
+  // (or ?track=1 → just open the tracker). Survives the sign-in flow via
+  // sessionStorage, so tapping a push before checking in still opens the
+  // tracker right after the guest signs in.
+  React.useEffect(() => {
+    if (!guest?.name) return;
+    let target: string | null = null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("track");
+      if (t) {
+        target = t === "1" ? "latest" : t;
+        const url = new URL(window.location.href);
+        url.searchParams.delete("track");
+        url.searchParams.delete("source");
+        window.history.replaceState({}, "", url.pathname + (url.search || ""));
+      } else {
+        const raw = window.sessionStorage.getItem("mazaj:pending-track");
+        window.sessionStorage.removeItem("mazaj:pending-track");
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw) as { t?: string; at?: number };
+            // only honor the stashed link within 10 minutes (a push tap
+            // → sign-in → tracker should feel instant, not resurface hours
+            // later for whoever signs in next)
+            if (
+              parsed.t &&
+              parsed.at &&
+              Date.now() - parsed.at < 10 * 60 * 1000
+            ) {
+              target = parsed.t;
+            }
+          } catch {
+            // old format / corrupt — ignore
+          }
+        }
+      }
+    } catch {
+      // non-fatal
+    }
+    if (!target) return;
+    if (target !== "latest") setFocusOrderId(target);
+    setTrackOpen(true);
+  }, [guest?.name]);
 
   // Returning-guest recognition: check for saved favorites on check-in.
   React.useEffect(() => {
@@ -81,6 +127,9 @@ export function GuestOrder() {
 
   const handleOrderPlaced = (orderId: string) => {
     setFocusOrderId(orderId);
+    // keep this phone's push subscription attached to the guest's name
+    // (no-op unless notifications were already enabled on this device)
+    void attachGuestIfSubscribed(guest.name);
     // open the live tracker shortly after the confirmation dialog shows
     setTimeout(() => setTrackOpen(true), 1200);
   };
