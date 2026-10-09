@@ -36,8 +36,10 @@ import {
   Bell,
   BellOff,
   QrCode,
+  Wand2,
 } from "lucide-react";
 import { usePwa } from "@/store/pwa";
+import { SommelierSheet } from "./sommelier-sheet";
 
 interface TabDef {
   key: Permission;
@@ -53,6 +55,9 @@ export function EmployeeDashboard() {
 
   // R49 smart alerts: chime + notification + badge for new orders/requests.
   const alerts = useSmartAlerts();
+
+  // r54: AI sommelier for staff — help a guest choose a bowl.
+  const [sommOpen, setSommOpen] = React.useState(false);
 
   // Ask for notification permission once, on first interaction.
   React.useEffect(() => {
@@ -185,8 +190,24 @@ export function EmployeeDashboard() {
     <div className="relative min-h-screen bg-background">
       {activeTab && activeTab.render(signOut)}
 
-      {/* Floating language toggle + alerts mute toggle + guest QR share */}
+      <SommelierSheet
+        open={sommOpen}
+        onOpenChange={setSommOpen}
+        guestName={employee.name}
+        mode="staff"
+      />
+
+      {/* Floating language toggle + alerts mute toggle + AI sommelier + guest QR share */}
       <div className="fixed left-4 bottom-[72px] z-50 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setSommOpen(true)}
+          aria-label="AI Sommelier"
+          title="AI Sommelier — recommend a bowl for a guest"
+          className="grid size-9 place-items-center rounded-full border border-primary/40 bg-primary/15 text-primary shadow-lg backdrop-blur-xl transition-colors hover:bg-primary/25"
+        >
+          <Wand2 className="size-4" />
+        </button>
         <button
           type="button"
           onClick={() => usePwa.getState().setGetAppOpen(true)}
@@ -217,10 +238,11 @@ export function EmployeeDashboard() {
         <LangToggle />
       </div>
 
-      {/* Bottom tab bar — only shows tabs this employee can access */}
+      {/* Bottom tab bar — only shows tabs this employee can access.
+          Horizontally scrollable so wide permission sets never cramp. */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/90 backdrop-blur-xl">
         <div
-          className="mx-auto flex w-full max-w-5xl items-stretch justify-around px-1"
+          className="no-scrollbar mx-auto flex w-full max-w-5xl items-stretch justify-start gap-0.5 overflow-x-auto px-1 md:justify-around"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           {visibleTabs.map((t) => (
@@ -263,7 +285,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative flex flex-1 flex-col items-center gap-0.5 py-3 text-[11px] font-medium transition-colors",
+        "relative flex min-w-[64px] shrink-0 flex-1 flex-col items-center gap-0.5 py-3 text-[11px] font-medium transition-colors",
         active ? "text-primary" : "text-muted-foreground hover:text-foreground"
       )}
     >

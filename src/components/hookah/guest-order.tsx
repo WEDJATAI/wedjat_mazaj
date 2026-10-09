@@ -6,8 +6,18 @@ import { useTableContext } from "@/store/table-context";
 import { OrderScreen } from "./order-screen";
 import { FavoritesSheet } from "./favorites-sheet";
 import { GuestTrackingSheet } from "./guest-tracking";
+import { SommelierSheet } from "./sommelier-sheet";
 import { Button } from "@/components/ui/button";
-import { HandHelping, Loader2, Heart, Flame, Sparkles, Radar, Download } from "lucide-react";
+import {
+  HandHelping,
+  Loader2,
+  Heart,
+  Flame,
+  Sparkles,
+  Radar,
+  Download,
+  Wand2,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,19 +27,22 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { egp } from "@/lib/catalog";
+import { egp, getBrand } from "@/lib/catalog";
 import { usePwa } from "@/store/pwa";
+import { useI18n } from "@/store/i18n";
 import { attachGuestIfSubscribed } from "@/lib/push-client";
 
 export function GuestOrder() {
   const guest = useSession((s) => s.guest) as GuestSession | null;
   const signOut = useSession((s) => s.signOut);
   const tableCtx = useTableContext();
+  const t = useI18n((s) => s.t);
   const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
   const [callOpen, setCallOpen] = React.useState(false);
   const [coalOpen, setCoalOpen] = React.useState(false);
   const [favOpen, setFavOpen] = React.useState(false);
   const [trackOpen, setTrackOpen] = React.useState(false);
+  const [sommOpen, setSommOpen] = React.useState(false);
   const [focusOrderId, setFocusOrderId] = React.useState<string | null>(null);
   const [favCount, setFavCount] = React.useState<number | null>(null);
   const [topPick, setTopPick] = React.useState<{
@@ -98,11 +111,11 @@ export function GuestOrder() {
           const first = data.favorites[0];
           try {
             const comps = JSON.parse(first.componentsJson);
+            // real catalog pricing: max mix price across the favorite's brands
             const unit = comps.reduce(
               (max: number, c: { brandId: string }) => {
                 const p =
-                  // best-effort: regular mix = 145, amy = 180
-                  c.brandId === "amy" ? 180 : 145;
+                  getBrand(c.brandId)?.pricing.fruitsMix ?? 145;
                 return Math.max(max, p);
               },
               0
@@ -137,7 +150,7 @@ export function GuestOrder() {
   return (
     <>
       <OrderScreen
-        title="Guest order"
+        title={t("guestOrderTitle")}
         subtitle={`${guest.name}${guest.table ? ` · ${guest.table}` : ""}`}
         source="guest_call"
         orderedByName={guest.name}
@@ -153,11 +166,21 @@ export function GuestOrder() {
               variant="outline"
               size="sm"
               className="gap-2 rounded-full"
+              onClick={() => setSommOpen(true)}
+              aria-label={t("aiSommelier")}
+            >
+              <Wand2 className="size-4 text-primary" />
+              <span className="hidden sm:inline">{t("aiBtn")}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-full"
               onClick={() => setGetAppOpen(true)}
-              aria-label="Get the app"
+              aria-label={t("getApp")}
             >
               <Download className="size-4" />
-              <span className="hidden sm:inline">App</span>
+              <span className="hidden sm:inline">{t("getApp")}</span>
             </Button>
             <Button
               variant="outline"
@@ -167,20 +190,20 @@ export function GuestOrder() {
                 setFocusOrderId(null);
                 setTrackOpen(true);
               }}
-              aria-label="Track my orders"
+              aria-label={t("trackOrders")}
             >
               <Radar className="size-4" />
-              <span className="hidden sm:inline">Track</span>
+              <span className="hidden sm:inline">{t("track")}</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               className="relative gap-2 rounded-full"
               onClick={() => setFavOpen(true)}
-              aria-label="Favorite mixes"
+              aria-label={t("favorites")}
             >
               <Heart className="size-4" />
-              <span className="hidden sm:inline">Favorites</span>
+              <span className="hidden sm:inline">{t("favorites")}</span>
               {isReturning && (
                 <span className="absolute -top-1.5 -right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                   {favCount}
@@ -192,19 +215,19 @@ export function GuestOrder() {
               size="sm"
               className="gap-2 rounded-full"
               onClick={() => setCoalOpen(true)}
-              aria-label="Request coal"
+              aria-label={t("requestCoal")}
             >
               <Flame className="size-4" />
-              <span className="hidden sm:inline">Coal</span>
+              <span className="hidden sm:inline">{t("coal")}</span>
             </Button>
             <Button
               size="sm"
               className="gap-2 rounded-full"
               onClick={() => setCallOpen(true)}
-              aria-label="Call shisha man"
+              aria-label={t("callShishaMan")}
             >
               <HandHelping className="size-4" />
-              <span className="hidden sm:inline">Call</span>
+              <span className="hidden sm:inline">{t("call")}</span>
             </Button>
           </>
         }
@@ -215,10 +238,12 @@ export function GuestOrder() {
                 <Sparkles className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">Welcome back, {guest.name}!</p>
+                <p className="text-sm font-semibold">
+                  {t("welcomeBackName")} {guest.name}!
+                </p>
                 {topPick && (
                   <p className="text-xs text-muted-foreground">
-                    Your usual:{" "}
+                    {t("yourUsual")}{" "}
                     <span className="font-medium text-foreground">
                       {topPick.label}
                     </span>{" "}
@@ -231,7 +256,7 @@ export function GuestOrder() {
                 className="rounded-xl"
                 onClick={() => setFavOpen(true)}
               >
-                Re-order
+                {t("reorderBtn")}
               </Button>
             </div>
           ) : null
@@ -259,6 +284,11 @@ export function GuestOrder() {
         guestName={guest.name}
         focusOrderId={focusOrderId}
       />
+      <SommelierSheet
+        open={sommOpen}
+        onOpenChange={setSommOpen}
+        guestName={guest.name}
+      />
     </>
   );
 }
@@ -272,6 +302,7 @@ function CallShishaManDialog({
   onOpenChange: (o: boolean) => void;
   guest: GuestSession;
 }) {
+  const t = useI18n((s) => s.t);
   const [note, setNote] = React.useState("");
   const [sending, setSending] = React.useState(false);
 
@@ -294,12 +325,12 @@ function CallShishaManDialog({
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed");
-      toast.success("The shisha man is on the way!", {
-        description: "They'll be with you shortly.",
+      toast.success(t("shishaManToast"), {
+        description: t("shishaManToastDesc"),
       });
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send request");
+      toast.error(err instanceof Error ? err.message : t("couldNotSignIn"));
     } finally {
       setSending(false);
     }
@@ -311,20 +342,18 @@ function CallShishaManDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <HandHelping className="size-5 text-primary" />
-            Call the shisha man
+            {t("callShishaMan")}
           </DialogTitle>
-          <DialogDescription>
-            A request will be sent to the staff. Add a note if you like.
-          </DialogDescription>
+          <DialogDescription>{t("callDescShort")}</DialogDescription>
         </DialogHeader>
 
         <div className="rounded-2xl border border-border bg-muted/40 p-3 text-sm">
           <p>
-            <span className="text-muted-foreground">Name:</span>{" "}
+            <span className="text-muted-foreground">{t("nameLabel")}</span>{" "}
             <span className="font-medium">{guest.name}</span>
           </p>
           <p>
-            <span className="text-muted-foreground">Table:</span>{" "}
+            <span className="text-muted-foreground">{t("tableLabel")}</span>{" "}
             <span className="font-medium">{guest.table || "—"}</span>
           </p>
         </div>
@@ -332,7 +361,7 @@ function CallShishaManDialog({
         <Textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="e.g. Need help choosing flavors"
+          placeholder={t("needHelpPlaceholder")}
           rows={3}
           className="resize-none"
         />
@@ -345,10 +374,10 @@ function CallShishaManDialog({
         >
           {sending ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Sending…
+              <Loader2 className="size-4 animate-spin" /> {t("sending")}
             </>
           ) : (
-            "Send request"
+            t("sendRequest")
           )}
         </Button>
       </DialogContent>
@@ -365,6 +394,7 @@ function CoalRequestDialog({
   onOpenChange: (o: boolean) => void;
   guest: GuestSession;
 }) {
+  const t = useI18n((s) => s.t);
   const [sending, setSending] = React.useState(false);
 
   const submit = async (coalType: "regular_coal" | "cubed_coal") => {
@@ -377,18 +407,21 @@ function CoalRequestDialog({
           type: "coal_request",
           guestName: guest.name,
           table: guest.table,
-          note: coalType === "cubed_coal" ? "Cubed coal please" : "Regular coal please",
+          note:
+            coalType === "cubed_coal"
+              ? t("coalNoteCubed")
+              : t("coalNoteRegular"),
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed");
-      toast.success("Coal request sent!", {
+      toast.success(t("coalToast"), {
         description:
-          coalType === "cubed_coal" ? "Cubed coal on the way" : "Regular coal on the way",
+          coalType === "cubed_coal" ? t("cubedOnWay") : t("regularOnWay"),
       });
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send request");
+      toast.error(err instanceof Error ? err.message : t("couldNotSignIn"));
     } finally {
       setSending(false);
     }
@@ -400,20 +433,18 @@ function CoalRequestDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Flame className="size-5 text-primary" />
-            Request coal
+            {t("requestCoal")}
           </DialogTitle>
-          <DialogDescription>
-            Choose your coal type and a request goes straight to the shisha man.
-          </DialogDescription>
+          <DialogDescription>{t("coalDescShort")}</DialogDescription>
         </DialogHeader>
 
         <div className="rounded-2xl border border-border bg-muted/40 p-3 text-sm">
           <p>
-            <span className="text-muted-foreground">Name:</span>{" "}
+            <span className="text-muted-foreground">{t("nameLabel")}</span>{" "}
             <span className="font-medium">{guest.name}</span>
           </p>
           <p>
-            <span className="text-muted-foreground">Table:</span>{" "}
+            <span className="text-muted-foreground">{t("tableLabel")}</span>{" "}
             <span className="font-medium">{guest.table || "—"}</span>
           </p>
         </div>
@@ -426,8 +457,10 @@ function CoalRequestDialog({
             className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 text-center transition-all hover:border-primary/60 hover:bg-primary/5 disabled:opacity-50"
           >
             <span className="text-4xl">⚫</span>
-            <span className="font-semibold">Regular coal</span>
-            <span className="text-xs text-muted-foreground">Quick light</span>
+            <span className="font-semibold">{t("regularCoalType")}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("quickLight")}
+            </span>
           </button>
           <button
             type="button"
@@ -436,14 +469,16 @@ function CoalRequestDialog({
             className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 text-center transition-all hover:border-primary/60 hover:bg-primary/5 disabled:opacity-50"
           >
             <span className="text-4xl">🟫</span>
-            <span className="font-semibold">Cubed coal</span>
-            <span className="text-xs text-muted-foreground">Longer burn</span>
+            <span className="font-semibold">{t("cubedCoalType")}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("longerBurn")}
+            </span>
           </button>
         </div>
 
         {sending && (
           <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" /> Sending…
+            <Loader2 className="size-4 animate-spin" /> {t("sending")}
           </p>
         )}
       </DialogContent>

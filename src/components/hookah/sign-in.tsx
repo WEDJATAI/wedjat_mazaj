@@ -29,6 +29,17 @@ export function SignIn() {
   const [tab, setTab] = React.useState<"role" | "pin" | "guest">("role");
   const t = useI18n((s) => s.t);
   const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
+  // Demo PIN hints only on trusted local development origins — never on the
+  // public production deployment (the PINs are real employee credentials).
+  const [isLocal, setIsLocal] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      const h = window.location.hostname;
+      setIsLocal(h === "localhost" || h === "127.0.0.1" || h.endsWith(".local"));
+    } catch {
+      setIsLocal(false);
+    }
+  }, []);
   return (
     <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
       <div className="ember-glow pointer-events-none absolute inset-0" />
@@ -68,15 +79,15 @@ export function SignIn() {
             >
               <RoleCard
                 icon={<Store className="size-6" />}
-                title="I'm staff"
-                desc="Sign in with your PIN to take orders"
+                title={t("imStaff")}
+                desc={t("imStaffDesc")}
                 accent="from-primary/20 to-primary/5"
                 onClick={() => setTab("pin")}
               />
               <RoleCard
                 icon={<UserRound className="size-6" />}
-                title="I'm a guest"
-                desc="Order from your table or call for help"
+                title={t("imGuest")}
+                desc={t("imGuestDesc")}
                 accent="from-amber-500/20 to-amber-500/5"
                 onClick={() => setTab("guest")}
               />
@@ -86,12 +97,12 @@ export function SignIn() {
                 type="button"
                 onClick={() => {
                   useSession.getState().signInGuest({ name: "Guest", table: "" });
-                  toast.success("Welcome! Browse and order when ready.");
+                  toast.success(`${t("browseSkipToast")}`);
                 }}
                 className="mt-1 flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/40 p-3 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:text-foreground"
               >
                 <Zap className="size-4 text-primary" />
-                Just browsing — skip sign-in
+                {t("justBrowsing")}
               </button>
 
               {/* Get the app — QR download + one-tap install */}
@@ -104,13 +115,16 @@ export function SignIn() {
                 {t("getApp")} — iOS & Android
               </button>
 
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                Staff PINs · Boss <span className="font-mono text-primary">1111</span>{" "}
-                · Manager <span className="font-mono text-primary">0000</span>
-                <br />
-                Hassan <span className="font-mono text-primary">1234</span>{" "}
-                · Omar <span className="font-mono text-primary">5678</span>
-              </p>
+              {isLocal && (
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  {t("staffPins")} · Boss{" "}
+                  <span className="font-mono text-primary">1111</span> ·
+                  Manager <span className="font-mono text-primary">0000</span>
+                  <br />
+                  Hassan <span className="font-mono text-primary">1234</span>{" "}
+                  · Omar <span className="font-mono text-primary">5678</span>
+                </p>
+              )}
             </motion.div>
           )}
 
@@ -178,6 +192,7 @@ function RoleCard({
 }
 
 function PinPanel({ onBack }: { onBack: () => void }) {
+  const t = useI18n((s) => s.t);
   const signIn = useSession((s) => s.signInEmployee);
   const [pin, setPin] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -195,14 +210,14 @@ function PinPanel({ onBack }: { onBack: () => void }) {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? "Invalid PIN");
+        throw new Error(data.error ?? t("invalidPin"));
       }
-      toast.success(`Welcome, ${data.employee.name}!`);
+      toast.success(`${t("welcome")} ${data.employee.name}!`);
       signIn(data.employee);
     } catch (err) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
-      toast.error(err instanceof Error ? err.message : "Could not sign in");
+      toast.error(err instanceof Error ? err.message : t("couldNotSignIn"));
       setPin("");
     } finally {
       setLoading(false);
@@ -223,7 +238,7 @@ function PinPanel({ onBack }: { onBack: () => void }) {
     <div className="rounded-3xl border border-border bg-card/70 p-5">
       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
         <ShieldCheck className="size-4 text-primary" />
-        Enter your 4-digit PIN
+        {t("enterPin")}
       </div>
 
       <motion.div
@@ -267,7 +282,7 @@ function PinPanel({ onBack }: { onBack: () => void }) {
           onClick={onBack}
           disabled={loading}
         >
-          ← Back
+          ← {t("back")}
         </Button>
         <motion.button
           whileTap={{ scale: 0.92 }}
@@ -292,7 +307,7 @@ function PinPanel({ onBack }: { onBack: () => void }) {
 
       {loading && (
         <p className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Checking…
+          <Loader2 className="size-4 animate-spin" /> {t("checking")}
         </p>
       )}
     </div>
@@ -300,6 +315,7 @@ function PinPanel({ onBack }: { onBack: () => void }) {
 }
 
 function GuestPanel({ onBack }: { onBack: () => void }) {
+  const t = useI18n((s) => s.t);
   const signIn = useSession((s) => s.signInGuest);
   const tableCtx = useTableContext();
   const [name, setName] = React.useState("");
@@ -325,19 +341,19 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
     <div className="rounded-3xl border border-border bg-card/70 p-5">
       <div className="mb-5 flex items-center gap-2 text-sm text-muted-foreground">
         <UserRound className="size-4 text-primary" />
-        Guest check-in
+        {t("guestCheckIn")}
       </div>
 
       <div className="space-y-4">
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Sparkles className="size-3 text-primary" />
-            Your name
+            {t("yourName")}
           </Label>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Sara"
+            placeholder={t("namePlaceholder")}
             aria-label="Guest name"
             className="h-12 rounded-xl text-base"
             autoFocus
@@ -346,12 +362,12 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
         </div>
         <div className="space-y-2">
           <Label className="text-xs font-medium text-muted-foreground">
-            Table number (optional)
+            {t("tableOptional")}
           </Label>
           <Input
             value={table}
             onChange={(e) => setTable(e.target.value)}
-            placeholder="e.g. Table 5"
+            placeholder={t("tablePlaceholder")}
             aria-label="Guest table"
             className="h-12 rounded-xl text-base"
             onKeyDown={(e) => e.key === "Enter" && submit()}
@@ -359,7 +375,7 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
           {tableCtx.fromPosLink && (tableCtx.tableId != null || tableCtx.tableName) && (
             <p className="flex items-center gap-1.5 text-xs text-primary">
               <Store className="size-3.5" aria-hidden />
-              Linked to the table&apos;s check from the restaurant POS
+              {t("linkedPosNote")}
               {tableCtx.tableName ? ` · ${tableCtx.tableName}` : ""}
             </p>
           )}
@@ -371,7 +387,7 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
           disabled={!valid}
           onClick={submit}
         >
-          Start ordering
+          {t("startOrdering")}
           <ArrowRight className="size-4" />
         </Button>
         <Button
@@ -379,7 +395,7 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
           className="w-full text-sm"
           onClick={onBack}
         >
-          ← Back
+          ← {t("back")}
         </Button>
       </div>
     </div>

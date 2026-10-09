@@ -24,6 +24,7 @@ import {
   PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/store/i18n";
 
 interface CartDrawerProps {
   open: boolean;
@@ -33,25 +34,26 @@ interface CartDrawerProps {
 
 const OWN_OPTIONS: {
   value: Exclude<OwnType, null>;
-  label: string;
-  desc: string;
+  labelKey: "ownHookahLabel" | "ownMolassesLabel";
+  descKey: "ownHookahDesc" | "ownMolassesDesc";
   icon: React.ReactNode;
 }[] = [
   {
     value: "hookah",
-    label: "Bring my own hookah",
-    desc: "Customer brings the device, we bring the molasses.",
+    labelKey: "ownHookahLabel",
+    descKey: "ownHookahDesc",
     icon: <Wind className="size-4" />,
   },
   {
     value: "molasses",
-    label: "Bring my own molasses",
-    desc: "Customer brings the molasses, we bring the setup.",
+    labelKey: "ownMolassesLabel",
+    descKey: "ownMolassesDesc",
     icon: <FlaskRound className="size-4" />,
   },
 ];
 
 export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) {
+  const t = useI18n((s) => s.t);
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
   const addons = useCart((s) => s.addons);
@@ -77,17 +79,17 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
         <SheetHeader className="border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <ShoppingBag className="size-5 text-primary" />
-            <SheetTitle className="text-lg">Current order</SheetTitle>
+            <SheetTitle className="text-lg">{t("currentOrder")}</SheetTitle>
             {totals.totalQty > 0 && (
               <Badge
                 variant="secondary"
                 className="ml-auto bg-primary/15 text-primary"
               >
-                {totals.totalQty} hookah{totals.totalQty > 1 ? "s" : ""}
+                {totals.totalQty} {totals.totalQty > 1 ? t("bowls") : t("bowl")}
               </Badge>
             )}
           </div>
-          <SheetDescription>Each hookah is 20g of molasses.</SheetDescription>
+          <SheetDescription>{t("each20g")}</SheetDescription>
         </SheetHeader>
 
         <div className="slim-scroll flex-1 overflow-y-auto px-5 py-4">
@@ -97,9 +99,9 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                 <ShoppingBag className="size-7 text-muted-foreground" />
               </div>
               <div>
-                <p className="font-medium">Your cart is empty</p>
+                <p className="font-medium">{t("emptyCart")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Pick a brand to start a session.
+                  {t("emptyCartDesc")}
                 </p>
               </div>
             </div>
@@ -175,7 +177,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                             </p>
                             {bogo && free > 0 && (
                               <p className="text-[11px] font-medium text-primary">
-                                {free} free · {charged} charged
+                                {free} {t("freeWord")} · {charged} {t("chargedWord")}
                               </p>
                             )}
                           </div>
@@ -196,15 +198,11 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
               <div className="mb-2 flex items-center gap-2">
                 <Sparkles className="size-4 text-primary" />
                 <p className="text-sm font-semibold text-foreground">
-                  Bring Your Own · 2 for 1
+                  {t("byoTitle")}
                 </p>
               </div>
               <p className="mb-3 text-xs text-muted-foreground">
-                Customer brings own hookah <em>or</em> molasses →{" "}
-                <span className="font-semibold text-primary">
-                  2 hookahs for the price of 1
-                </span>
-                .
+                {t("byoDesc")}
               </p>
               <div className="space-y-2">
                 <button
@@ -219,9 +217,9 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                 >
                   <PartyPopper className="size-4 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">Use lounge setup</p>
+                    <p className="text-sm font-medium">{t("loungeSetup")}</p>
                     <p className="text-xs text-muted-foreground">
-                      Standard pricing, no promo.
+                      {t("loungeSetupDesc")}
                     </p>
                   </div>
                 </button>
@@ -241,9 +239,9 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                     >
                       <span className="text-primary">{opt.icon}</span>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium">{opt.label}</p>
+                        <p className="text-sm font-medium">{t(opt.labelKey)}</p>
                         <p className="text-xs text-muted-foreground">
-                          {opt.desc}
+                          {t(opt.descKey)}
                         </p>
                       </div>
                     </button>
@@ -258,7 +256,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
             {SELLABLE_ADDONS.length > 0 && (
               <div className="mb-3 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Add-ons
+                  {t("addons")}
                 </p>
                 {SELLABLE_ADDONS.map((a) => {
                   const on = addons.includes(a.key);
@@ -278,7 +276,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{a.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          Personal hose · +{egp(a.sellPrice)}
+                          {t("personalHose")} · +{egp(a.sellPrice)}
                         </p>
                       </div>
                       <span
@@ -301,23 +299,23 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
 
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span>
+                <span>{t("subtotal")}</span>
                 <span className="tabular-nums">{egp(totals.subtotal)}</span>
               </div>
               {totals.discount > 0 && (
                 <div className="flex justify-between font-medium text-primary">
-                  <span>BYO 2-for-1 saving</span>
+                  <span>{t("byoSaving")}</span>
                   <span className="tabular-nums">−{egp(totals.discount)}</span>
                 </div>
               )}
               {addonTotal > 0 && (
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Add-ons</span>
+                  <span>{t("addons")}</span>
                   <span className="tabular-nums">+{egp(addonTotal)}</span>
                 </div>
               )}
               <div className="flex items-baseline justify-between pt-1">
-                <span className="font-semibold">Total</span>
+                <span className="font-semibold">{t("total")}</span>
                 <span className="text-xl font-bold tabular-nums">
                   {egp(grandTotal)}
                 </span>
@@ -329,7 +327,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
               className="mt-4 w-full rounded-xl text-base font-semibold"
               onClick={onCheckout}
             >
-              Checkout · {egp(grandTotal)}
+              {t("checkout")} · {egp(grandTotal)}
             </Button>
           </div>
         )}

@@ -650,3 +650,88 @@ export function recomputeOrderTotals(
 export function serverComponentGrams(count: number): number[] {
   return splitGrams(count);
 }
+
+// ─── Flavor taste profiles (r54) ─────────────────────────────────────────────
+// Curated taste tags per flavor name — powers the AI sommelier prompt and the
+// offline recommendation engine. Tags are lowercase keywords.
+
+export const FLAVOR_NOTES: Record<string, string[]> = {
+  "Double Apple": ["classic", "sweet", "anise", "strong", "traditional"],
+  Mint: ["minty", "icy", "fresh", "light", "cooling"],
+  Grape: ["sweet", "fruity", "classic", "juicy"],
+  Blueberry: ["sweet", "fruity", "berry", "mild"],
+  Watermelon: ["sweet", "fruity", "refreshing", "summer", "light"],
+  Lemon: ["citrus", "fresh", "tangy", "light"],
+  Peach: ["sweet", "fruity", "soft", "aromatic"],
+  Guava: ["tropical", "sweet", "fruity", "aromatic"],
+  Rose: ["floral", "aromatic", "elegant", "classic"],
+  Cinnamon: ["spicy", "warm", "classic", "strong"],
+  "Standard": ["classic", "traditional", "simple"],
+  "Apple": ["classic", "sweet", "fruity"],
+};
+
+/** Brand character notes for the sommelier. */
+export const BRAND_NOTES: Record<string, string> = {
+  mazaya:
+    "Jordanian premium-style blend, very juicy and flavorful — the house favourite for fruity bowls",
+  "al-fakher":
+    "Classic Egyptian-market staple — consistent, balanced clouds, great for traditional flavors",
+  dandash:
+    "Traditional Egyptian brand — strong, authentic taste beloved by regulars",
+  nakhla:
+    "The iconic Egyptian classic since 1913 — strong, traditional, best Double Apple on the market",
+  amy: "Premium line — intense flavor, dense clouds, for guests who want the best",
+  salom: "Everyday special at a flat 45 EGP — simple, reliable, great value",
+  kass: "Everyday special at a flat 45 EGP — simple, reliable, great value",
+};
+
+export function flavorTags(flavorName: string): string[] {
+  return FLAVOR_NOTES[flavorName] ?? [];
+}
+
+// ─── Arabic search aliases (r54) ─────────────────────────────────────────────
+// The catalog stores flavor/brand names in English; Arabic queries get
+// normalized to their English equivalents so ابحث works naturally.
+
+export const AR_SEARCH_ALIASES: Record<string, string> = {
+  نعناع: "mint",
+  نعنع: "mint",
+  تفاح: "apple",
+  عنب: "grape",
+  بطيخ: "watermelon",
+  توت: "blueberry",
+  ليمون: "lemon",
+  خوخ: "peach",
+  ورد: "rose",
+  قرفة: "cinnamon",
+  جوافة: "guava",
+  فواكه: "fruits",
+  فاكهة: "fruits",
+  مكس: "mix",
+  مزايا: "mazaya",
+  الفاخر: "al fakher",
+  فاخر: "fakher",
+  دانداش: "dandash",
+  ناخلا: "nakhla",
+  نخلة: "nakhla",
+  امي: "amy",
+  سلوم: "salom",
+  كاس: "kass",
+  بريميوم: "premium",
+  ملكي: "premium",
+  ازرق: "blue",
+  حلو: "sweet",
+  قوي: "double apple",
+  منعش: "mint",
+};
+
+/** Expand Arabic keywords in a search query to their catalog equivalents. */
+export function normalizeSearchQuery(q: string): string {
+  let out = q;
+  for (const [ar, en] of Object.entries(AR_SEARCH_ALIASES)) {
+    if (out.includes(ar)) {
+      out = out.split(ar).join(` ${en} `);
+    }
+  }
+  return out;
+}

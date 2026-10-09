@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
@@ -26,7 +25,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
-import { tierDef } from "@/lib/loyalty";
+import { useI18n } from "@/store/i18n";
+import { celebrate, haptic } from "@/lib/delight";
 import {
   pushSupported,
   subscribeToPush,
@@ -49,32 +49,18 @@ interface TrackOrder {
 
 const POLL_MS = 10000;
 
-function timeAgo(iso: string): string {
-  const d = new Date(iso).getTime();
-  const diff = Math.max(0, Date.now() - d);
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
-/** Estimated prep time: base 7 min + 4 min per hookah, capped. */
-function estimateMinutes(itemCount: number): number {
-  return Math.min(30, 7 + itemCount * 4);
-}
-
-const STEPS = [
-  { key: "pending", label: "Order placed", icon: Radar },
-  { key: "preparing", label: "Preparing", icon: ChefHat },
-  { key: "done", label: "Served", icon: CheckCircle2 },
-] as const;
+const STEPS_KEYS = ["stepPlaced", "stepPreparing", "stepServed"] as const;
+const STEPS_ICONS = [Radar, ChefHat, CheckCircle2] as const;
 
 function stepIndex(status: string): number {
   if (status === "preparing") return 1;
   if (status === "done") return 2;
   return 0;
+}
+
+/** Estimated prep time: base 7 min + 4 min per hookah, capped. */
+function estimateMinutes(itemCount: number): number {
+  return Math.min(30, 7 + itemCount * 4);
 }
 
 export function GuestTrackingSheet({
@@ -89,25 +75,43 @@ export function GuestTrackingSheet({
   /** order id to highlight (from the checkout confirmation) */
   focusOrderId?: string | null;
 }) {
+  const t = useI18n((s) => s.t);
   const [orders, setOrders] = React.useState<TrackOrder[]>([]);
   const [loading, setLoading] = React.useState(true);
 
+  // Server-side privacy filter: only THIS guest's orders ever reach the
+  // phone (the old version fetched all 50 latest orders and filtered by
+  // name on the client — same-name guests could see each other).
   const load = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/orders");
+      const res = await fetch(
+        `/api/orders?guest=${encodeURIComponent(guestName)}`
+      );
       const data = await res.json();
       if (!data.ok) return;
-      const all: TrackOrder[] = data.orders;
+      const mine: TrackOrder[] = data.orders;
+      // keep the focused (just-placed) order visible even if the name changed
+      if (focusOrderId) {
+        try {
+          const all = await fetch("/api/orders").then((r) => r.json());
+          if (all.ok) {
+            const focused = (all.orders as TrackOrder[]).find(
+              (o) => o.id === focusOrderId
+            );
+            if (focused && !mine.some((o) => o.id === focused.id)) {
+              mine.unshift(focused);
+            }
+          }
+        } catch {
+          // focused lookup is best-effort
+        }
+      }
       const cutoff = Date.now() - 48 * 60 * 60 * 1000;
-      const mine = all
-        .filter(
-          (o) =>
-            (o.customerName?.toLowerCase() === guestName.toLowerCase() ||
-              o.id === focusOrderId) &&
-            new Date(o.createdAt).getTime() >= cutoff
-        )
-        .slice(0, 6);
-      setOrders(mine);
+      setOrders(
+        mine
+          .filter((o) => new Date(o.createdAt).getTime() >= cutoff)
+          .slice(0, 6)
+      );
     } catch {
       // silent — the next poll retries
     } finally {
@@ -153,24 +157,21 @@ export function GuestTrackingSheet({
       const result = await subscribeToPush(guestName);
       if (result === "ok") {
         setPushState("on");
-        toast.success("You'll get a ping when it's ready 🔔", {
-          description: "We'll notify you the moment your hookah is served.",
+        haptic("success");
+        toast.success(t("pingOnToast"), {
+          description: t("pingOnToastDesc"),
         });
       } else if (result === "denied") {
-        toast.error("Notifications are blocked", {
-          description:
-            "Enable them for Mazaj in your browser/site settings to get updates.",
+        toast.error(t("blockedToast"), {
+          description: t("blockedToastDesc"),
         });
       } else if (result === "unsupported") {
         setPushState("unsupported");
-        toast.info("Install the app to get notifications", {
-          description:
-            "On iPhone, add Mazaj to your home screen first — then this button turns on pings.",
+        toast.info(t("installAppToast"), {
+          description: t("installAppToastDesc"),
         });
       } else {
-        toast.error("Couldn't enable notifications", {
-          description: "Check your connection and try again.",
-        });
+        toast.error(t("sommelierError"));
       }
     } finally {
       setSubscribing(false);
@@ -185,11 +186,9 @@ export function GuestTrackingSheet({
       >
         <SheetHeader className="px-5 pt-5 pb-2">
           <SheetTitle className="flex items-center gap-2">
-            <Radar className="size-5 text-primary" /> Track my orders
+            <Radar className="size-5 text-primary" /> {t("trackOrders")}
           </SheetTitle>
-          <SheetDescription>
-            Live status of your hookah sessions · updates every 10 seconds
-          </SheetDescription>
+          <SheetDescription>{t("trackDesc")}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 space-y-3 px-5 pb-6 pt-1">
@@ -200,14 +199,13 @@ export function GuestTrackingSheet({
             </>
           ) : orders.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-              No orders in the last 48 hours. Place an order to see it here
-              live!
+              {t("noOrders48")}
             </div>
           ) : (
             <>
               {!anyActive && (
                 <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-center text-sm text-emerald-500">
-                  🎉 All your sessions are served. Enjoy!
+                  🎉 {t("allServed")}
                 </div>
               )}
               {orders.map((o) => (
@@ -224,16 +222,14 @@ export function GuestTrackingSheet({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">
-                      {pushState === "on"
-                        ? "Notifications on"
-                        : "Ping me when it's ready"}
+                      {pushState === "on" ? t("notifOn") : t("pingTitle")}
                     </p>
                     <p className="text-xs leading-snug text-muted-foreground">
                       {pushState === "on"
-                        ? "We'll notify you when your hookah is prepared and served — even with the app closed."
+                        ? t("notifOnDesc")
                         : pushState === "unsupported"
-                          ? "On iPhone: install the app first (Add to Home Screen), then come back to enable pings."
-                          : "Get a notification on this phone when your hookah is prepared and served."}
+                          ? t("notifUnsupportedDesc")
+                          : t("notifOffDesc")}
                     </p>
                   </div>
                   {pushState !== "on" && pushState !== "unsupported" && (
@@ -248,7 +244,7 @@ export function GuestTrackingSheet({
                       ) : (
                         <BellRing className="size-4" />
                       )}
-                      Notify me
+                      {t("notifyMe")}
                     </Button>
                   )}
                 </div>
@@ -268,6 +264,7 @@ function TrackedOrder({
   order: TrackOrder;
   onChanged: () => void;
 }) {
+  const t = useI18n((s) => s.t);
   const idx = stepIndex(order.status);
   const elapsedMin = Math.floor(
     (Date.now() - new Date(order.createdAt).getTime()) / 60000
@@ -283,16 +280,18 @@ function TrackedOrder({
     // keep empty
   }
 
+  const timeAgoText = timeAgo(order.createdAt, t);
+
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-semibold">
-            {order.itemCount} hookah{order.itemCount > 1 ? "s" : ""}
+            {order.itemCount} {order.itemCount > 1 ? t("bowls") : t("bowl")}
             {order.table ? ` · ${order.table}` : ""}
           </p>
           <p className="text-xs text-muted-foreground">
-            #{order.id.slice(-6).toUpperCase()} · {timeAgo(order.createdAt)}
+            #{order.id.slice(-6).toUpperCase()} · {timeAgoText}
           </p>
         </div>
         <p className="font-bold text-primary">{egp(order.total)}</p>
@@ -313,12 +312,12 @@ function TrackedOrder({
       {/* live stepper */}
       <div className="mt-4">
         <div className="flex items-center">
-          {STEPS.map((s, i) => {
-            const Icon = s.icon;
+          {STEPS_KEYS.map((key, i) => {
+            const Icon = STEPS_ICONS[i];
             const reached = i <= idx;
             const current = i === idx && order.status !== "done";
             return (
-              <React.Fragment key={s.key}>
+              <React.Fragment key={key}>
                 <div className="flex flex-col items-center gap-1">
                   <span
                     className={cn(
@@ -337,10 +336,10 @@ function TrackedOrder({
                       reached ? "text-primary" : "text-muted-foreground"
                     )}
                   >
-                    {s.label}
+                    {t(key)}
                   </span>
                 </div>
-                {i < STEPS.length - 1 && (
+                {i < STEPS_KEYS.length - 1 && (
                   <div
                     className={cn(
                       "-mt-4 h-0.5 flex-1 rounded",
@@ -355,12 +354,12 @@ function TrackedOrder({
 
         {/* status detail line */}
         {order.status === "pending" && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="size-3.5" />
-            In the queue · est. ~{est} min
+          <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="size-3.5 shrink-0" />
+            {t("inQueue")} ~{est} {t("minutesShort")}
             {elapsedMin > est && (
               <span className="font-medium text-amber-500">
-                (a little longer than usual)
+                {t("longerUsual")}
               </span>
             )}
           </p>
@@ -368,13 +367,13 @@ function TrackedOrder({
         {order.status === "preparing" && (
           <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-500">
             <Flame className="size-3.5 animate-pulse" />
-            Your shisha man is preparing it right now
+            {t("preparingNow")}
           </p>
         )}
         {order.status === "done" && order.pointsEarned > 0 && (
           <p className="mt-2 flex items-center gap-1.5 text-xs text-primary">
-            <Gift className="size-3.5" /> +{order.pointsEarned} Mazaj+ points
-            earned on this order
+            <Gift className="size-3.5" /> +{order.pointsEarned}{" "}
+            {t("ptsOrderNote")}
           </p>
         )}
       </div>
@@ -385,6 +384,17 @@ function TrackedOrder({
   );
 }
 
+function timeAgo(iso: string, t: (k: never) => string): string {
+  const d = new Date(iso).getTime();
+  const diff = Math.max(0, Date.now() - d);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return t("justNow" as never);
+  if (min < 60) return `${min}${t("mAgo" as never)}`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}${t("hAgo" as never)}`;
+  return new Date(iso).toLocaleDateString();
+}
+
 function RateControls({
   order,
   onChanged,
@@ -392,6 +402,7 @@ function RateControls({
   order: TrackOrder;
   onChanged: () => void;
 }) {
+  const t = useI18n((s) => s.t);
   const [stars, setStars] = React.useState(0);
   const [comment, setComment] = React.useState("");
   const [sending, setSending] = React.useState(false);
@@ -413,14 +424,14 @@ function RateControls({
             />
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">Thanks for rating!</p>
+        <p className="text-xs text-muted-foreground">{t("thanksRating")}</p>
       </div>
     );
   }
 
   const submit = async () => {
     if (stars < 1) {
-      toast.error("Tap the stars to rate first");
+      toast.error(t("rateStarsFirst"));
       return;
     }
     setSending(true);
@@ -433,28 +444,42 @@ function RateControls({
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed");
       setSubmitted(true);
-      toast.success("Thanks for your feedback!", {
-        description: "It helps us serve you better 🙏",
+      celebrate(stars >= 4 ? "big" : "small");
+      haptic("success");
+      toast.success(t("thanksFeedbackToast"), {
+        description: t("helpsServe"),
       });
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save rating");
+      toast.error(err instanceof Error ? err.message : t("sommelierError"));
     } finally {
       setSending(false);
     }
   };
 
+  const ratingWord =
+    stars === 0
+      ? ""
+      : stars >= 5
+        ? t("lovedIt")
+        : stars >= 3
+          ? t("goodRating")
+          : t("doBetter");
+
   return (
     <div className="mt-3 rounded-xl border border-border bg-muted/30 p-3">
-      <p className="text-sm font-medium">How was your session?</p>
+      <p className="text-sm font-medium">{t("howWasSession")}</p>
       <div className="mt-1.5 flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
             type="button"
             disabled={sending}
-            onClick={() => setStars(n)}
-            aria-label={`Rate ${n} stars`}
+            onClick={() => {
+              setStars(n);
+              haptic("light");
+            }}
+            aria-label={`${n}`}
             className="rounded p-0.5 transition-transform hover:scale-110 active:scale-95"
           >
             <Star
@@ -467,17 +492,15 @@ function RateControls({
             />
           </button>
         ))}
-        <span className="ml-2 text-xs text-muted-foreground">
-          {stars === 0 ? "" : stars >= 5 ? "Loved it!" : stars >= 3 ? "Good" : "We'll do better"}
-        </span>
+        <span className="ml-2 text-xs text-muted-foreground">{ratingWord}</span>
       </div>
       <Textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
-        placeholder="Anything to tell the team? (optional)"
+        placeholder={t("feedbackPlaceholder")}
         rows={2}
         className="mt-2 resize-none bg-background text-sm"
-        aria-label="Feedback comment"
+        aria-label={t("feedbackPlaceholder")}
       />
       <Button
         size="sm"
@@ -487,10 +510,10 @@ function RateControls({
       >
         {sending ? (
           <>
-            <Loader2 className="size-4 animate-spin" /> Sending…
+            <Loader2 className="size-4 animate-spin" /> {t("sending")}
           </>
         ) : (
-          "Send feedback"
+          t("sendFeedback")
         )}
       </Button>
     </div>

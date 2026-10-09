@@ -1,14 +1,25 @@
 "use client";
 
 import * as React from "react";
-import { BRANDS, Brand, egp, BOWL_PRESETS, getBrand, MOLASSES_GRAMS, SHISHA_CATEGORIES, brandsForCategory } from "@/lib/catalog";
-import { useCart, computeTotals } from "@/store/cart";
+import {
+  BRANDS,
+  Brand,
+  egp,
+  BOWL_PRESETS,
+  getBrand,
+  MOLASSES_GRAMS,
+  SHISHA_CATEGORIES,
+  brandsForCategory,
+  normalizeSearchQuery,
+} from "@/lib/catalog";
+import { useCart, computeTotals, splitGrams } from "@/store/cart";
 import { BrandCard } from "./brand-card";
 import { ConfigSheet } from "./config-sheet";
 import { CartDrawer } from "./cart-drawer";
 import { CheckoutDialog } from "./checkout-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   ShoppingBag,
   Flame,
@@ -18,15 +29,24 @@ import {
   ArrowRight,
   LogOut,
   ScanLine,
+  Search,
+  Plus,
 } from "lucide-react";
 import { BarcodeModal } from "./barcode-modal";
 import { SessionTimer } from "./session-timer";
+import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
+import { haptic } from "@/lib/delight";
 
 function useMounted() {
   const [m, setM] = React.useState(false);
   React.useEffect(() => setM(true), []);
   return m;
+}
+
+/** True when any search term is a substring of the text. */
+function matchTerms(terms: string[], text: string): boolean {
+  return terms.some((term) => text.includes(term));
 }
 
 interface OrderScreenProps {
@@ -73,6 +93,7 @@ export function OrderScreen({
   onOrderPlaced,
 }: OrderScreenProps) {
   const mounted = useMounted();
+  const t = useI18n((s) => s.t);
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
   const addItem = useCart((s) => s.addItem);
@@ -84,6 +105,7 @@ export function OrderScreen({
   const [checkoutOpen, setCheckoutOpen] = React.useState(false);
   const [scanOpen, setScanOpen] = React.useState(false);
   const [shishaCat, setShishaCat] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState("");
 
   const cartCount = mounted ? totals.totalQty : 0;
 
@@ -107,6 +129,123 @@ export function OrderScreen({
 
   const inCartFor = (brandId: string) =>
     items.filter((i) => i.primaryBrandId === brandId).reduce((s, i) => s + i.qty, 0);
+
+  // ─── r54: live menu search (brands, flavors, presets) ───────────────────
+  // Arabic queries are normalized to the catalog's English names first.
+  const terms = React.useMemo(
+    () =>
+      normalizeSearchQuery(query.trim().toLowerCase())
+        .split(/\s+/)
+        .filter((w) => w.length > 1),
+    [query]
+  );
+  const searchActive = terms.length > 0;
+
+  const flavorMatches = React.useMemo(() => {
+    if (!searchActive) return [];
+    const out: { brand: Brand; flavor: string }[] = [];
+    for (const brand of BRANDS) {
+      for (const flavor of brand.flavors) {
+        if (
+          matchTerms(terms, flavor.toLowerCase()) ||
+          matchTerms(terms, brand.name.toLowerCase())
+        ) {
+          out.push({ brand, flavor });
+        }
+      }
+    }
+    return out.slice(0, 12);
+  }, [terms, searchActive]);
+
+  const brandMatches = React.useMemo(() => {
+    if (!searchActive) return [];
+    return BRANDS.filter((b) => matchTerms(terms, b.name.toLowerCase()));
+  }, [terms, searchActive]);
+
+  const presetMatches = React.useMemo(() => {
+    if (!searchActive) return [];
+    return BOWL_PRESETS.filter(
+      (p) =>
+        matchTerms(terms, p.name.toLowerCase()) ||
+        p.components.some((c) => matchTerms(terms, c.flavorName.toLowerCase()))
+    );
+  }, [terms, searchActive]);
+
+  const hasMatches =
+    flavorMatches.length > 0 ||
+    brandMatches.length > 0 ||
+    presetMatches.length > 0;
+
+  const addFlavorQuick = (brand: Brand, flavor: string) => {
+    const isFlat = brand.flavorTypes.length === 1 && brand.flavorTypes[0] === "flat";
+    addItem({
+      primaryBrandId: brand.id,
+      primaryBrandName: brand.name,
+      emoji: brand.emoji,
+      accent: brand.accent,
+      flavor: isFlat ? "flat" : "fruits",
+      flavorLabel: isFlat ? "Standard" : "Fruits",
+      components: [
+        {
+          brandId: brand.id,
+          brandName: brand.name,
+          flavorName: flavor,
+          emoji: brand.emoji,
+          grams: MOLASSES_GRAMS,
+        },
+      ],
+      molassesGrams: MOLASSES_GRAMS,
+      unitPrice: isFlat ? brand.pricing.flat ?? 45 : brand.pricing.fruits ?? 125,
+      qty: 1,
+    });
+    haptic("light");
+    toast.success(`${brand.name} · ${flavor} — ${t("addedToCart")}`);
+  };
+
+  const addPreset = (presetId: string) => {
+    const p = BOWL_PRESETS.find((x) => x.id === presetId);
+    if (!p) return;
+    const brand = getBrand(p.components[0].brandId);
+    if (!brand) return;
+    const comps = p.components.map((c) => {
+      const b = getBrand(c.brandId)!;
+      return {
+        brandId: c.brandId,
+        brandName: b.name,
+        flavorName: c.flavorName,
+        emoji: b.emoji,
+        grams: MOLASSES_GRAMS,
+      };
+    });
+    const unit =
+      p.components.length > 1
+        ? Math.max(
+            ...p.components.map(
+              (c) => getBrand(c.brandId)?.pricing.fruitsMix ?? 145
+            )
+          )
+        : getBrand(p.components[0]?.brandId)?.pricing.fruits ?? 125;
+    addItem({
+      primaryBrandId: comps[0].brandId,
+      primaryBrandName: comps[0].brandName,
+      emoji: comps[0].emoji,
+      accent: brand.accent,
+      flavor: p.components.length > 1 ? "fruits-mix" : "fruits",
+      flavorLabel: p.components.length > 1 ? "Fruits Mix" : "Fruits",
+      components:
+        p.components.length > 1
+          ? (() => {
+              const grams = splitGrams(comps.length);
+              return comps.map((c, i) => ({ ...c, grams: grams[i] }));
+            })()
+          : comps,
+      molassesGrams: MOLASSES_GRAMS,
+      unitPrice: unit,
+      qty: 1,
+    });
+    haptic("light");
+    toast.success(`${p.emoji} ${p.name} — ${t("addedToCart")}`);
+  };
 
   return (
     <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
@@ -142,7 +281,7 @@ export function OrderScreen({
                   aria-label="Scan barcode"
                 >
                   <ScanLine className="size-4" />
-                  <span className="hidden sm:inline">Scan</span>
+                  <span className="hidden sm:inline">{t("scan")}</span>
                 </Button>
               )}
               {headerExtra}
@@ -150,7 +289,7 @@ export function OrderScreen({
                 variant="secondary"
                 className="hidden bg-muted/60 text-muted-foreground sm:inline-flex"
               >
-                20g / hookah
+                20g / {t("perHookah")}
               </Badge>
               <Button
                 variant="outline"
@@ -159,7 +298,7 @@ export function OrderScreen({
                 onClick={() => setCartOpen(true)}
               >
                 <ShoppingBag className="size-4" />
-                <span className="hidden sm:inline">Cart</span>
+                <span className="hidden sm:inline">{t("cartBtn")}</span>
                 {cartCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
                     {cartCount}
@@ -172,7 +311,7 @@ export function OrderScreen({
                   size="icon"
                   className="rounded-full"
                   onClick={onSignOut}
-                  aria-label="Sign out"
+                  aria-label={t("signOut")}
                 >
                   <LogOut className="size-4" />
                 </Button>
@@ -189,223 +328,323 @@ export function OrderScreen({
             </section>
           )}
 
-          {/* Hero */}
-          <section className="relative overflow-hidden rounded-3xl border border-border">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: "url(/images/hero.png)" }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/40" />
-            <div className="relative flex flex-col gap-4 p-6 sm:p-10">
-              <Badge
-                variant="secondary"
-                className="w-fit gap-1.5 border border-primary/30 bg-primary/10 text-primary"
-              >
-                <Sparkles className="size-3.5" />
-                Egyptian market · lounge pricing
-              </Badge>
-              <h1 className="max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-                Build your perfect{" "}
-                <span className="smoke-text">hookah session</span>
-              </h1>
-              <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
-                Pick your molasses brand and flavor. Every hookah is 20g of
-                molasses, mixed fresh.
-              </p>
-
-              <div className="mt-2 grid gap-3 sm:grid-cols-3">
-                <PromoCard
-                  icon={<Wind className="size-4" />}
-                  title="Bring your own hookah"
-                  body="Get 2 hookahs for the price of 1."
-                />
-                <PromoCard
-                  icon={<FlaskRound className="size-4" />}
-                  title="Bring your own molasses"
-                  body="Same 2-for-1 deal applies."
-                />
-                <PromoCard
-                  icon={<Sparkles className="size-4" />}
-                  title="Mix & match flavors"
-                  body="Cross-brand mixes, one bowl."
-                />
-              </div>
+          {/* Menu search (r54) */}
+          <section className="mb-6" aria-label={t("searchMenu")}>
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("searchPlaceholder")}
+                className="h-12 rounded-2xl border-border bg-card ps-10 pe-4 text-base"
+                aria-label={t("searchMenu")}
+              />
+              {searchActive && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                  aria-label={t("cancel")}
+                >
+                  ✕
+                </button>
+              )}
             </div>
           </section>
 
-          {/* Quick start — popular bowls for one-tap add */}
-          <section className="mt-6">
-            <div className="mb-2 flex items-center gap-2">
-              <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary">
-                <Sparkles className="size-3.5" />
-              </span>
+          {searchActive ? (
+            /* ─── Search results ─── */
+            <section className="space-y-6">
               <div>
-                <h2 className="text-sm font-bold">Popular bowls</h2>
-                <p className="text-[11px] text-muted-foreground">
-                  One tap to add a house favourite
-                </p>
+                <h2 className="mb-3 text-xl font-bold tracking-tight">
+                  {t("searchMatches")}: “{query.trim()}”
+                </h2>
+                {!hasMatches && (
+                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
+                    {t("searchNoResults")}
+                  </div>
+                )}
+
+                {/* matching flavors — one-tap add rows */}
+                {flavorMatches.length > 0 && (
+                  <div className="space-y-2">
+                    {flavorMatches.map(({ brand, flavor }) => {
+                      const isFlat =
+                        brand.flavorTypes.length === 1 &&
+                        brand.flavorTypes[0] === "flat";
+                      return (
+                        <button
+                          key={`${brand.id}:${flavor}`}
+                          type="button"
+                          onClick={() => addFlavorQuick(brand, flavor)}
+                          className="group flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3 text-start transition-all hover:border-primary/60 hover:shadow-lg active:scale-[0.99]"
+                        >
+                          <span
+                            className={`grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-xl ${brand.accent}`}
+                          >
+                            {brand.emoji}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold">
+                              {brand.name} · {flavor}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {isFlat ? brand.pricing.flat : brand.pricing.fruits}{" "}
+                              EGP · {isFlat ? "Standard" : "Fruits"} · 20g
+                            </p>
+                          </div>
+                          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary transition-transform group-hover:scale-105">
+                            <Plus className="size-4" />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* matching presets */}
+                {presetMatches.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {presetMatches.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => addPreset(p.id)}
+                        className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-all hover:bg-primary/20 active:scale-95"
+                      >
+                        <span className="text-base">{p.emoji}</span>
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* whole-brand matches open the config sheet */}
+                {brandMatches.length > 0 && (
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {brandMatches.map((brand) => (
+                      <BrandCard
+                        key={brand.id}
+                        brand={brand}
+                        inCart={mounted ? inCartFor(brand.id) : 0}
+                        onSelect={() => handleSelectBrand(brand)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-              {BOWL_PRESETS.map((p) => {
-                const unit =
-                  p.components.length > 1
-                    ? Math.max(
-                        ...p.components.map((c) =>
-                          getBrand(c.brandId)?.pricing.fruitsMix ?? 145
-                        )
-                      )
-                    : getBrand(p.components[0]?.brandId)?.pricing.fruits ?? 125;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      const brand = getBrand(p.components[0].brandId);
-                      if (!brand) return;
-                      const comps = p.components.map((c) => {
-                        const b = getBrand(c.brandId)!;
-                        return {
-                          brandId: c.brandId,
-                          brandName: b.name,
-                          flavorName: c.flavorName,
-                          emoji: b.emoji,
-                          grams: MOLASSES_GRAMS,
-                        };
-                      });
-                      addItem({
-                        primaryBrandId: comps[0].brandId,
-                        primaryBrandName: comps[0].brandName,
-                        emoji: comps[0].emoji,
-                        accent: brand.accent,
-                        flavor: "fruits-mix",
-                        flavorLabel: "Fruits Mix",
-                        components: comps,
-                        molassesGrams: MOLASSES_GRAMS,
-                        unitPrice: unit,
-                        qty: 1,
-                      });
-                      toast.success(`${p.emoji} ${p.name} added!`);
-                    }}
-                    className="group flex shrink-0 flex-col items-center gap-1 rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
-                    style={{ minWidth: 96 }}
+            </section>
+          ) : (
+            <>
+              {/* Hero */}
+              <section className="relative overflow-hidden rounded-3xl border border-border">
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: "url(/images/hero.png)" }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/40" />
+                <div className="relative flex flex-col gap-4 p-6 sm:p-10">
+                  <Badge
+                    variant="secondary"
+                    className="w-fit gap-1.5 border border-primary/30 bg-primary/10 text-primary"
                   >
-                    <span className="text-3xl">{p.emoji}</span>
-                    <span className="text-center text-[11px] font-medium leading-tight">
-                      {p.name}
-                    </span>
-                    <span className="text-[10px] font-semibold text-primary">
-                      {egp(unit)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Price legend */}
-          <section className="mt-6 grid gap-3 sm:grid-cols-4">
-            <LegendCard title="Regular fruits" price="125 EGP" sub="Mazaya · Al Fakher · Dandash · Nakhla" />
-            <LegendCard title="Fruits mix" price="145 EGP" sub="Same regular brands" />
-            <LegendCard title="Amy (premium)" price="180 EGP" sub="Fruits & mix" badge="Premium" />
-            <LegendCard title="Salom / Kass" price="45 EGP" sub="Everyday flat price" />
-          </section>
-
-          {/* Shisha category + Brands */}
-          <section className="mt-8">
-            {/* Step 1: choose shisha type */}
-            {!shishaCat && (
-              <div>
-                <div className="mb-4">
-                  <h2 className="text-xl font-bold tracking-tight">
-                    Choose your shisha
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Select a category to see available brands.
+                    <Sparkles className="size-3.5" />
+                    {t("egyptianLounge")}
+                  </Badge>
+                  <h1 className="max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+                    {t("heroLine1")}{" "}
+                    <span className="smoke-text">{t("heroLine2")}</span>
+                  </h1>
+                  <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
+                    {t("heroBody")}
                   </p>
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {SHISHA_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.key}
-                      type="button"
-                      onClick={() => setShishaCat(cat.key)}
-                      className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10"
-                    >
-                      <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/95 ring-1 ring-border">
-                        <img
-                          src={cat.logo}
-                          alt={cat.label}
-                          className="h-full w-full object-contain p-1.5"
-                          loading="lazy"
-                        />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-lg font-semibold">{cat.label}</p>
-                        <p className="text-xs text-muted-foreground">{cat.desc}</p>
-                        <p className="mt-1 text-[11px] font-medium text-primary">
-                          {cat.brandIds.length} brand{cat.brandIds.length > 1 ? "s" : ""} →
-                        </p>
-                      </div>
-                      <ArrowRight className="size-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Step 2: brands in chosen category */}
-            {shishaCat && (
-              <div>
-                <div className="mb-4 flex items-end justify-between">
+                  <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                    <PromoCard
+                      icon={<Wind className="size-4" />}
+                      title={t("promoByoTitle")}
+                      body={t("promoByoBody")}
+                    />
+                    <PromoCard
+                      icon={<FlaskRound className="size-4" />}
+                      title={t("promoMolassesTitle")}
+                      body={t("promoMolassesBody")}
+                    />
+                    <PromoCard
+                      icon={<Sparkles className="size-4" />}
+                      title={t("promoMixTitle")}
+                      body={t("promoMixBody")}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Quick start — popular bowls for one-tap add */}
+              <section className="mt-6">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary">
+                    <Sparkles className="size-3.5" />
+                  </span>
                   <div>
-                    <button
-                      type="button"
-                      onClick={() => setShishaCat(null)}
-                      className="mb-1 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      ← Change category
-                    </button>
-                    <h2 className="text-xl font-bold tracking-tight">
-                      {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)?.label}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Tap a brand to set flavor & quantity.
+                    <h2 className="text-sm font-bold">{t("popularBowls")}</h2>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("oneTapFav")}
                     </p>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {brandsForCategory(shishaCat).length} brands
-                  </span>
                 </div>
+                <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+                  {BOWL_PRESETS.map((p) => {
+                    const unit =
+                      p.components.length > 1
+                        ? Math.max(
+                            ...p.components.map(
+                              (c) => getBrand(c.brandId)?.pricing.fruitsMix ?? 145
+                            )
+                          )
+                        : getBrand(p.components[0]?.brandId)?.pricing.fruits ?? 125;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => addPreset(p.id)}
+                        className="group flex shrink-0 flex-col items-center gap-1 rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
+                        style={{ minWidth: 96 }}
+                      >
+                        <span className="text-3xl">{p.emoji}</span>
+                        <span className="text-center text-[11px] font-medium leading-tight">
+                          {p.name}
+                        </span>
+                        <span className="text-[10px] font-semibold text-primary">
+                          {egp(unit)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {brandsForCategory(shishaCat).map((brand) => (
-                    <BrandCard
-                      key={brand.id}
-                      brand={brand}
-                      inCart={mounted ? inCartFor(brand.id) : 0}
-                      onSelect={() => handleSelectBrand(brand)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
+              {/* Price legend */}
+              <section className="mt-6 grid gap-3 sm:grid-cols-4">
+                <LegendCard
+                  title={t("legendFruits")}
+                  price="125 EGP"
+                  sub="Mazaya · Al Fakher · Dandash · Nakhla"
+                />
+                <LegendCard title={t("legendMix")} price="145 EGP" sub="" />
+                <LegendCard
+                  title={t("legendAmy")}
+                  price="180 EGP"
+                  sub=""
+                  badge="Premium"
+                />
+                <LegendCard
+                  title={t("legendSpecial")}
+                  price="45 EGP"
+                  sub={t("legendFlatSub")}
+                />
+              </section>
+
+              {/* Shisha category + Brands */}
+              <section className="mt-8">
+                {/* Step 1: choose shisha type */}
+                {!shishaCat && (
+                  <div>
+                    <div className="mb-4">
+                      <h2 className="text-xl font-bold tracking-tight">
+                        {t("chooseShisha")}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {t("chooseShishaDesc")}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {SHISHA_CATEGORIES.map((cat) => (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          onClick={() => setShishaCat(cat.key)}
+                          className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-border bg-card p-5 text-start transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10"
+                        >
+                          <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/95 ring-1 ring-border">
+                            <img
+                              src={cat.logo}
+                              alt={cat.label}
+                              className="h-full w-full object-contain p-1.5"
+                              loading="lazy"
+                            />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-lg font-semibold">{cat.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {cat.desc}
+                            </p>
+                            <p className="mt-1 text-[11px] font-medium text-primary">
+                              {cat.brandIds.length} {t("brands")} →
+                            </p>
+                          </div>
+                          <ArrowRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary rtl:-scale-x-100" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: brands in chosen category */}
+                {shishaCat && (
+                  <div>
+                    <div className="mb-4 flex items-end justify-between">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setShishaCat(null)}
+                          className="mb-1 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                        >
+                          ← {t("changeCategory")}
+                        </button>
+                        <h2 className="text-xl font-bold tracking-tight">
+                          {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)
+                            ?.label}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          {t("tapBrandHint")}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {brandsForCategory(shishaCat).length} {t("brands")}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {brandsForCategory(shishaCat).map((brand) => (
+                        <BrandCard
+                          key={brand.id}
+                          brand={brand}
+                          inCart={mounted ? inCartFor(brand.id) : 0}
+                          onSelect={() => handleSelectBrand(brand)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
         </main>
 
         {/* Footer */}
         <footer className="relative mt-auto border-t border-border bg-background/60 py-6">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-1 px-4 text-center text-xs text-muted-foreground">
             <p className="font-medium text-foreground">Mazaj Hookah Lounge</p>
-            <p>20g molasses per hookah · Prices in EGP · Egyptian market</p>
+            <p>{t("footerLine")}</p>
           </div>
         </footer>
       </div>
 
-      {/* Floating cart bar */}
+      {/* Floating cart bar — always anchored to the bottom (bottomInset
+          lifts it above things like the staff tab bar) */}
       {mounted && cartCount > 0 && (
         <div
-          className="fixed inset-x-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
           style={bottomInset ? { bottom: `${bottomInset}px` } : undefined}
         >
           <div className="mx-auto flex w-full max-w-5xl items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl shadow-black/30 backdrop-blur-xl">
@@ -415,8 +654,8 @@ export function OrderScreen({
               </span>
               <div className="leading-tight">
                 <p className="text-xs text-muted-foreground">
-                  {cartCount} hookah{cartCount > 1 ? "s" : ""}
-                  {totals.bogo ? " · 2-for-1 on" : ""}
+                  {cartCount} {cartCount > 1 ? t("bowls") : t("bowl")}
+                  {totals.bogo ? ` · ${t("bogoOn")}` : ""}
                 </p>
                 <p className="text-base font-bold tabular-nums">
                   {egp(totals.total)}
@@ -428,8 +667,8 @@ export function OrderScreen({
               className="ml-auto rounded-xl font-semibold"
               onClick={() => setCartOpen(true)}
             >
-              View cart
-              <ArrowRight className="size-4" />
+              {t("viewCart")}
+              <ArrowRight className="size-4 rtl:-scale-x-100" />
             </Button>
           </div>
         </div>

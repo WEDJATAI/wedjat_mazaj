@@ -16,9 +16,12 @@ import {
   Flame,
   Users,
   TrendingUp,
+  Wand2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
+import { useI18n } from "@/store/i18n";
 import {
   ResponsiveContainer,
   LineChart,
@@ -69,17 +72,25 @@ interface AnalyticsData {
 const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => `${h}:00`);
 
 export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
+  const t = useI18n((s) => s.t);
   const [data, setData] = React.useState<AnalyticsData | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState(false);
+  // AI executive brief (LLM with deterministic fallback server-side)
+  const [brief, setBrief] = React.useState<string | null>(null);
+  const [briefLoading, setBriefLoading] = React.useState(false);
+  const [briefSource, setBriefSource] = React.useState<"ai" | "engine">("engine");
 
   const load = React.useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const res = await fetch("/api/analytics");
       const json = await res.json();
       if (json.ok) setData(json);
+      else setLoadError(true);
     } catch {
-      // silent
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -88,6 +99,27 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
   React.useEffect(() => {
     load();
   }, [load]);
+
+  const generateBrief = async () => {
+    if (briefLoading) return;
+    setBriefLoading(true);
+    try {
+      const res = await fetch("/api/ai/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setBrief(json.brief);
+        setBriefSource(json.source);
+      }
+    } catch {
+      // keep any previous brief
+    } finally {
+      setBriefLoading(false);
+    }
+  };
 
   // Find peak hour for the highlight card
   const peakHour = data
@@ -116,6 +148,20 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-full border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                onClick={generateBrief}
+                disabled={briefLoading}
+              >
+                {briefLoading ? (
+                  <RefreshCw className="size-4 animate-spin" />
+                ) : (
+                  <Wand2 className="size-4" />
+                )}
+                <span className="hidden sm:inline">{t("aiBrief")}</span>
+              </Button>
+              <Button
                 variant="ghost"
                 size="icon"
                 className="rounded-full"
@@ -138,7 +184,19 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
         </header>
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6">
-          {loading || !data ? (
+          {!loading && loadError && !data ? (
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-8 text-center">
+              <AlertTriangle className="size-8 text-destructive" />
+              <p className="text-sm font-medium">{t("analyticsLoadError")}</p>
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={load}
+              >
+                <RefreshCw className="size-4" /> {t("tryAgain")}
+              </Button>
+            </div>
+          ) : loading || !data ? (
             <div className="space-y-4">
               <Skeleton className="h-28 rounded-2xl" />
               <Skeleton className="h-64 rounded-2xl" />
@@ -146,6 +204,35 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
             </div>
           ) : (
             <>
+              {/* AI executive brief */}
+              {brief && (
+                <section className="mb-6 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+                  <div className="flex items-center gap-2 border-b border-primary/20 bg-primary/10 px-4 py-2.5">
+                    <Wand2 className="size-4 text-primary" />
+                    <p className="text-sm font-bold text-primary">
+                      {t("briefTitle")}
+                    </p>
+                    {briefSource === "ai" && (
+                      <span className="ml-auto rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                        {t("aiBadge")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 px-4 py-3">
+                    {brief.split("\n").map((line, i) =>
+                      line.trim() ? (
+                        <p
+                          key={i}
+                          className="text-sm leading-relaxed text-foreground/90"
+                        >
+                          {line.replace(/^[-•*]\s*/, "")}
+                        </p>
+                      ) : null
+                    )}
+                  </div>
+                </section>
+              )}
+
               {/* Today KPIs */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <Kpi

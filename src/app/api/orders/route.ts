@@ -600,8 +600,29 @@ async function syncToWedjat(opts: {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // Guest privacy filter: ?guest=<name> returns only that guest's orders
+    // (server-side, case-insensitive) so the tracking sheet never receives
+    // other guests' data — same-name collisions included. Filtering happens
+    // in the handler (not via `mode:"insensitive"`) so it works identically
+    // on PostgreSQL (production) and SQLite (local dev).
+    const guest = req.nextUrl.searchParams.get("guest")?.trim();
+    if (guest) {
+      const recent = await db.order.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      });
+      const needle = guest.toLowerCase();
+      const orders = recent
+        .filter(
+          (o) =>
+            o.customerName?.toLowerCase() === needle ||
+            o.orderedByName?.toLowerCase() === needle
+        )
+        .slice(0, 50);
+      return NextResponse.json({ ok: true, orders });
+    }
     const orders = await db.order.findMany({
       orderBy: { createdAt: "desc" },
       take: 50,

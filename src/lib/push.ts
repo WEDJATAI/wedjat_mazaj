@@ -54,10 +54,16 @@ export async function pushToGuest(
     auth: string;
   }[] = [];
   try {
-    subs = await db.pushSubscription.findMany({
-      where: { guestName: { equals: name, mode: "insensitive" } },
-      select: { id: true, endpoint: true, p256dh: true, auth: true },
+    // fetch case-insensitively in JS so the code works identically on
+    // PostgreSQL (production) and SQLite (local dev) — `mode:"insensitive"`
+    // is a Postgres-only Prisma feature.
+    const candidates = await db.pushSubscription.findMany({
+      where: { guestName: { equals: name } },
+      select: { id: true, endpoint: true, p256dh: true, auth: true, guestName: true },
     });
+    subs = candidates
+      .filter((s) => s.guestName?.toLowerCase() === name.toLowerCase())
+      .map(({ id, endpoint, p256dh, auth }) => ({ id, endpoint, p256dh, auth }));
   } catch {
     return { sent: 0, pruned: 0 };
   }

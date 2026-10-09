@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
 
 export interface FavoriteMix {
@@ -49,6 +50,7 @@ interface FavoritesSheetProps {
 }
 
 export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheetProps) {
+  const t = useI18n((s) => s.t);
   const addItem = useCart((s) => s.addItem);
   const items = useCart((s) => s.items);
   const [favorites, setFavorites] = React.useState<FavoriteMix[]>([]);
@@ -123,8 +125,8 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
       unitPrice: unit,
       qty: 1,
     });
-    toast.success(`Added "${fav.label}"`, {
-      description: `${comps.length} flavors · ${egp(unit)}`,
+    toast.success(`${t("favAdded")} "${fav.label}"`, {
+      description: `${comps.length} ${t("flavors")} · ${egp(unit)}`,
     });
     onOpenChange(false);
   };
@@ -133,7 +135,7 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
     try {
       const res = await fetch(`/api/favorites/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Could not delete");
-      toast.success("Favorite removed");
+      toast.success(t("favRemoved"));
       setFavorites((f) => f.filter((x) => x.id !== id));
     } catch {
       toast.error("Could not delete favorite");
@@ -148,10 +150,10 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
       >
         <SheetHeader className="px-5 pt-5 pb-2">
           <SheetTitle className="flex items-center gap-2">
-            <Heart className="size-5 text-primary" /> Your favorite mixes
+            <Heart className="size-5 text-primary" /> {t("favTitle")}
           </SheetTitle>
           <SheetDescription>
-            Save your go-to bowl and re-order it in one tap, {guestName}.
+            {t("favDesc")}, {guestName}.
           </SheetDescription>
         </SheetHeader>
 
@@ -159,14 +161,14 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
           {/* Save current mix */}
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-3">
             <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-              <Sparkles className="size-4 text-primary" /> Save your current mix
+              <Sparkles className="size-4 text-primary" /> {t("saveCurrentMix")}
             </p>
             {canSave ? (
               <div className="flex gap-2">
                 <Input
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="e.g. My Blueberry Mint"
+                  placeholder={t("favPlaceholder")}
                   aria-label="Favorite name"
                   className="flex-1"
                   onKeyDown={(e) => e.key === "Enter" && saveFavorite()}
@@ -180,15 +182,14 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
                     <>
-                      <Plus className="size-4" /> Save
+                      <Plus className="size-4" /> {t("saveBtn")}
                     </>
                   )}
                 </Button>
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Add a <span className="font-medium text-foreground">Fruits Mix</span>{" "}
-                to your cart first, then save it here.
+                {t("favHint")}
               </p>
             )}
           </div>
@@ -202,7 +203,7 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
             </div>
           ) : favorites.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-              No favorites yet. Save your first mix above.
+              {t("noFavs")}
             </div>
           ) : (
             <ul className="space-y-2">
@@ -232,7 +233,7 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
                         className="rounded-lg"
                         onClick={() => applyFavorite(fav)}
                       >
-                        Add
+                        {t("addBtn")}
                       </Button>
                       <button
                         type="button"

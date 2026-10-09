@@ -35,7 +35,9 @@ import {
   priceForConfig,
   splitGrams,
 } from "@/store/cart";
+import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
+import { haptic } from "@/lib/delight";
 
 /** Flavors marked as popular (⭐) to guide first-time guests. */
 const POPULAR_FLAVORS = new Set([
@@ -53,6 +55,7 @@ interface ConfigSheetProps {
 }
 
 export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
+  const t = useI18n((s) => s.t);
   const addItem = useCart((s) => s.addItem);
   const [flavor, setFlavor] = React.useState<FlavorType>("fruits");
   const [qty, setQty] = React.useState(1);
@@ -130,11 +133,14 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
       qty,
     });
 
+    haptic("light");
     const summary =
       components.length === 1
         ? `${brand.name} · ${components[0].flavorName}`
-        : `${components.length} flavors · ${egp(unitPrice)}`;
-    toast.success(`${qty}× ${brand.name} added`, { description: summary });
+        : `${components.length} ${t("flavors")} · ${egp(unitPrice)}`;
+    toast.success(`${qty}× ${brand.name} — ${t("addedToCart")}`, {
+      description: summary,
+    });
     onOpenChange(false);
   };
 
@@ -152,7 +158,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
             <div>
               <SheetTitle className="text-xl">{brand.name}</SheetTitle>
               <SheetDescription>
-                {brand.origin} · 20g molasses per hookah
+                {brand.origin} · {t("grams20Note")}
               </SheetDescription>
             </div>
           </div>
@@ -162,7 +168,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
           {/* Flavor type selector */}
           {!isFlat && (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Type</p>
+              <p className="text-sm font-medium text-foreground">{t("type")}</p>
               <div className="grid grid-cols-2 gap-2">
                 {(["fruits", "fruits-mix"] as FlavorType[]).map((f) => {
                   const active = flavor === f;
@@ -208,9 +214,9 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
             <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
               <FlaskConical className="size-5 text-primary" />
               <div>
-                <p className="text-sm font-medium">Standard session</p>
+                <p className="text-sm font-medium">{t("standardSession")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Flat price {egp(brand.pricing.flat ?? 0)} · 20g molasses
+                  {t("flatNote")} {egp(brand.pricing.flat ?? 0)} · 20g
                 </p>
               </div>
             </div>
@@ -220,7 +226,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
           {!isFlat && flavor === "fruits" && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">
-                Pick a flavor
+                {t("pickFlavor")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {brand.flavors.map((f) => {
@@ -285,7 +291,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
           {/* Quantity */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-foreground">Quantity</p>
+              <p className="text-sm font-medium text-foreground">{t("quantity")}</p>
               <p className="text-xs text-muted-foreground">
                 {qty} × 20g = {qty * 20}g total
               </p>
@@ -320,7 +326,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
         {/* Footer */}
         <div className="border-t border-border bg-background/80 px-5 pb-5 pt-3 backdrop-blur">
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Line total</span>
+            <span className="text-muted-foreground">{t("lineTotal")}</span>
             <span className="text-lg font-bold">
               {egp(unitPrice * qty)}
             </span>
@@ -332,7 +338,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
             onClick={handleAdd}
             disabled={!canAdd}
           >
-            Add to cart · {egp(unitPrice * qty)}
+            {t("addToCart")} · {egp(unitPrice * qty)}
           </Button>
         </div>
       </SheetContent>
@@ -351,6 +357,7 @@ function MixPicker({
   grams: number[];
   onChange: (c: FlavorComponent[]) => void;
 }) {
+  const t = useI18n((s) => s.t);
   const [pickerOpen, setPickerOpen] = React.useState(false);
 
   const remove = (idx: number) => {
@@ -361,20 +368,17 @@ function MixPicker({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-foreground">
-          Mix flavors{" "}
+          {t("mixFlavors")}{" "}
           <span className="text-muted-foreground">
-            ({components.length} selected)
+            ({components.length} {t("selectedWord")})
           </span>
         </p>
         <Badge variant="secondary" className="bg-primary/15 text-primary">
-          <Shuffle className="mr-1 size-3" /> mix & match
+          <Shuffle className="mr-1 size-3" /> {t("mixMatch")}
         </Badge>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Combine flavors from {baseBrand.name} or any other brand. The 20g is
-        split evenly; price is the highest mix price among chosen brands.
-      </p>
+      <p className="text-xs text-muted-foreground">{t("mixAcrossBrands")}</p>
 
       {/* Selected components */}
       {components.length > 0 ? (
@@ -406,7 +410,7 @@ function MixPicker({
         </ul>
       ) : (
         <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
-          No flavors yet. Tap “Add a flavor” to start your mix.
+          {t("mixEmpty")}
         </div>
       )}
 
@@ -416,7 +420,7 @@ function MixPicker({
         className="w-full rounded-xl"
         onClick={() => setPickerOpen(true)}
       >
-        <Plus className="size-4" /> Add a flavor
+        <Plus className="size-4" /> {t("addFlavor")}
       </Button>
 
       {pickerOpen && (
@@ -461,6 +465,7 @@ function FlavorPicker({
   onPick: (brandId: string, flavorName: string) => void;
   onClose: () => void;
 }) {
+  const t = useI18n((s) => s.t);
   const [activeBrand, setActiveBrand] = React.useState(baseBrand.id);
   const brand = getBrand(activeBrand) ?? baseBrand;
 
@@ -487,7 +492,7 @@ function FlavorPicker({
       </div>
 
       <p className="mb-2 text-xs text-muted-foreground">
-        {brand.name} flavors:
+        {brand.name} {t("flavorsOf")}
       </p>
       <div className="flex flex-wrap gap-2">
         {brand.flavors.map((f) => {
@@ -514,7 +519,7 @@ function FlavorPicker({
         className="mt-3 w-full text-sm"
         onClick={onClose}
       >
-        Close
+        {t("closeBtn")}
       </Button>
     </div>
   );

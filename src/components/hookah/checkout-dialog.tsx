@@ -36,6 +36,8 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { queueOrder } from "@/lib/offline-queue";
+import { useI18n } from "@/store/i18n";
+import { celebrate, haptic } from "@/lib/delight";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -107,6 +109,7 @@ export function CheckoutDialog({
   favoriteMixId,
   onOrderPlaced,
 }: CheckoutDialogProps) {
+  const t = useI18n((s) => s.t);
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
   const addons = useCart((s) => s.addons);
@@ -144,7 +147,7 @@ export function CheckoutDialog({
       setIsNewMember(false);
       setRedeem(0);
     }
-  }, [open]);
+  }, [open, defaultCustomer, defaultTable]);
 
   // Debounced loyalty lookup whenever the phone is long enough.
   React.useEffect(() => {
@@ -186,12 +189,14 @@ export function CheckoutDialog({
     ? redeemOptions(member.points, totals.total)
     : [];
 
-  // Customer name is now optional — the order can be placed with just a table.
-  const valid = true;
+  // r54: an order needs a name OR a table so staff know where it goes
+  // (previously any order could be placed with zero context).
+  const valid = name.trim().length > 0 || table.trim().length > 0;
 
   const submit = async () => {
     if (!valid || submitting) return;
     setSubmitting(true);
+    haptic("light");
     const payload: PlaceOrderPayload = {
       customerName: name.trim(),
       phone: phone.trim(),
@@ -230,8 +235,9 @@ export function CheckoutDialog({
           queuedOffline: true,
         });
         clear();
-        toast.success("Order saved on this device", {
-          description: "It will sync to the lounge automatically when you reconnect.",
+        haptic("success");
+        toast.success(t("orderSavedDeviceToast"), {
+          description: t("willSyncToast"),
         });
         return;
       }
@@ -256,8 +262,9 @@ export function CheckoutDialog({
           queuedOffline: true,
         });
         clear();
-        toast.success("Order saved on this device", {
-          description: "It will sync to the lounge automatically when you reconnect.",
+        haptic("success");
+        toast.success(t("orderSavedDeviceToast"), {
+          description: t("willSyncToast"),
         });
         return;
       }
@@ -271,11 +278,14 @@ export function CheckoutDialog({
         loyalty: data.loyalty ?? null,
       });
       clear();
-      toast.success("Order placed!", {
-        description: "Session added to the queue.",
+      celebrate("big");
+      haptic("success");
+      toast.success(t("orderPlaced"), {
+        description: t("sessionQueuedToast"),
       });
       onOrderPlaced?.(data.order.id);
     } catch (err) {
+      haptic("error");
       toast.error("Could not place order", {
         description: err instanceof Error ? err.message : undefined,
       });
@@ -318,24 +328,26 @@ export function CheckoutDialog({
             </div>
             <div>
               <DialogTitle className="text-xl">
-                {done.queuedOffline ? "Order saved offline" : "Order placed!"}
+                {done.queuedOffline
+                  ? t("orderSavedOfflineTitle")
+                  : t("orderPlaced")}
               </DialogTitle>
               <DialogDescription className="mt-1">
                 {done.queuedOffline
-                  ? "You're offline — this order will sync to the lounge automatically the moment you reconnect."
-                  : "The hookah session is queued for preparation."}
+                  ? t("orderSavedOfflineDesc")
+                  : t("sessionQueued")}
               </DialogDescription>
             </div>
             <div className="w-full rounded-2xl border border-border bg-muted/40 p-4 text-left text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Order ID</span>
+                <span className="text-muted-foreground">{t("orderId")}</span>
                 <span className="font-mono font-semibold">
                   {done.id.slice(-6).toUpperCase()}
                 </span>
               </div>
               <Separator className="my-2" />
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total</span>
+                <span className="text-muted-foreground">{t("total")}</span>
                 <span className="font-bold text-primary">
                   {egp(done.total)}
                 </span>
@@ -347,12 +359,14 @@ export function CheckoutDialog({
                     <span className="text-lg">{tierDef(done.loyalty.tier).emoji}</span>
                     <div className="min-w-0 flex-1 text-xs">
                       <p className="font-semibold">
-                        {done.loyalty.isNew ? "Welcome to Mazaj+!" : `${done.loyalty.memberName} · ${tierDef(done.loyalty.tier).label}`}
+                        {done.loyalty.isNew
+                          ? t("welcomeMazajPlus")
+                          : `${done.loyalty.memberName} · ${tierDef(done.loyalty.tier).label}`}
                       </p>
                       <p className="text-muted-foreground">
-                        +{done.loyalty.pointsEarned} pts earned
+                        +{done.loyalty.pointsEarned} {t("ptsEarned")}
                         {done.loyalty.pointsRedeemed > 0 &&
-                          ` · −${done.loyalty.pointsRedeemed} pts redeemed (−${egp(done.loyalty.discount)})`}
+                          ` · −${done.loyalty.pointsRedeemed} ${t("ptsRedeemed")} (−${egp(done.loyalty.discount)})`}
                       </p>
                     </div>
                     <span className="shrink-0 rounded-lg bg-primary/15 px-2 py-1 text-xs font-bold text-primary">
@@ -363,45 +377,44 @@ export function CheckoutDialog({
               )}
             </div>
             <Button className="w-full rounded-xl" onClick={close}>
-              Done
+              {t("done")}
             </Button>
           </div>
         ) : (
           <>
             <DialogHeader className="px-6 pt-6">
-              <DialogTitle>Checkout</DialogTitle>
+              <DialogTitle>{t("checkout")}</DialogTitle>
               <DialogDescription>
                 {source === "employee"
-                  ? `Placing order as ${orderedByName}`
-                  : `Guest order by ${defaultCustomer ?? "guest"}`}
-                . Confirm and place.
+                  ? `${orderedByName} → ${defaultCustomer ?? "—"}`
+                  : `${defaultCustomer ?? "—"}${table ? ` · ${table}` : ""}`}
               </DialogDescription>
             </DialogHeader>
 
             <div className="slim-scroll max-h-[60vh] space-y-4 overflow-y-auto px-6 pb-2">
-              <Field label="Customer name (optional)" icon={<User className="size-3.5" />}>
+              <Field label={t("customerNameOptional")} icon={<User className="size-3.5" />}>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Customer name (optional)"
-                  aria-label="Customer name"
+                  placeholder={t("customerNameOptional")}
+                  aria-label={t("customerName")}
                 />
               </Field>
               <Field
-                label="Phone (loyalty)"
+                label={`${t("phone")} · ${t("loyalty")}`}
                 icon={<Phone className="size-3.5" />}
               >
                 <Input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="01xxxxxxxxx — earn & redeem points"
+                  placeholder={t("loyaltyPhonePlaceholder")}
                   inputMode="tel"
-                  aria-label="Phone for loyalty points"
+                  aria-label={t("phone")}
                 />
                 {/* Loyalty lookup result */}
                 {lookingUp && (
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Loader2 className="size-3 animate-spin" /> Checking Mazaj+…
+                    <Loader2 className="size-3 animate-spin" /> {t("checkingPlus")}
                   </p>
                 )}
                 {member && (
@@ -413,8 +426,8 @@ export function CheckoutDialog({
                           {member.name}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
-                          {tierDef(member.tier).label} member · ×
-                          {tierDef(member.tier).multiplier} earn rate
+                          {tierDef(member.tier).label} · ×
+                          {tierDef(member.tier).multiplier}
                         </p>
                       </div>
                       <span className="shrink-0 rounded-lg bg-primary/15 px-2 py-1 text-xs font-bold text-primary">
@@ -424,8 +437,8 @@ export function CheckoutDialog({
                     {redeemOpts.length > 0 && (
                       <div className="mt-2 border-t border-primary/20 pt-2">
                         <p className="mb-1.5 flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-                          <Gift className="size-3" /> Redeem points (
-                          {REDEEM_BLOCK} pts = {egp(REDEEM_BLOCK_EGP)} off)
+                          <Gift className="size-3" /> {t("loyalty")} · {REDEEM_BLOCK} pts ={" "}
+                          {egp(REDEEM_BLOCK_EGP)}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {redeemOpts.map((pts) => (
@@ -455,47 +468,50 @@ export function CheckoutDialog({
                   <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
                     <Sparkles className="size-4 shrink-0 text-amber-500" />
                     <p className="text-xs text-muted-foreground">
-                      New here? This phone joins <b>Mazaj+</b> automatically —
-                      50 bonus pts + {Math.floor(finalTotal)} pts on this
-                      order.
+                      {t("newToMazajPlus")} — {t("bonusPtsPrefix")}{" "}
+                      {Math.floor(finalTotal)} {t("ptsOnOrder")}
                     </p>
                   </div>
                 )}
               </Field>
-              <Field label="Table / room" icon={<Hash className="size-3.5" />}>
+              <Field label={t("tableRoom")} icon={<Hash className="size-3.5" />}>
                 <Input
                   value={table}
                   onChange={(e) => {
                     setTable(e.target.value);
                     setTableTouched(true);
                   }}
-                  placeholder="e.g. Table 7"
-                  aria-label="Table"
+                  placeholder={t("tablePlaceholder2")}
+                  aria-label={t("tableRoom")}
                 />
                 {!tableTouched && defaultTableId != null && (
-                  <p className="text-xs text-primary">
-                    ✓ linked to check of table {table || defaultTableId} (from the restaurant POS)
-                  </p>
+                  <p className="text-xs text-primary">{t("posLinkedNote")}</p>
                 )}
               </Field>
-              <Field label="Notes (optional)" icon={<StickyNote className="size-3.5" />}>
+              <Field label={t("notesOptional")} icon={<StickyNote className="size-3.5" />}>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Extra coal, flavor requests…"
+                  placeholder={t("notesPlaceholder")}
                   rows={2}
                   className="resize-none"
                 />
               </Field>
 
+              {!valid && (
+                <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-500">
+                  {t("nameOrTableHint")}
+                </p>
+              )}
+
               <div className="rounded-2xl border border-border bg-muted/40 p-3 text-sm">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal</span>
+                  <span>{t("subtotal")}</span>
                   <span className="tabular-nums">{egp(totals.subtotal)}</span>
                 </div>
                 {totals.discount > 0 && (
                   <div className="flex justify-between font-medium text-primary">
-                    <span>BYO 2-for-1 saving</span>
+                    <span>{t("byoSaving")}</span>
                     <span className="tabular-nums">
                       −{egp(totals.discount)}
                     </span>
@@ -504,7 +520,7 @@ export function CheckoutDialog({
                 {loyaltyDiscount > 0 && (
                   <div className="flex justify-between font-medium text-primary">
                     <span className="flex items-center gap-1">
-                      <Gift className="size-3.5" /> Mazaj+ points
+                      <Gift className="size-3.5" /> {t("loyalty")}
                     </span>
                     <span className="tabular-nums">
                       −{egp(loyaltyDiscount)}
@@ -513,14 +529,14 @@ export function CheckoutDialog({
                 )}
                 <Separator className="my-2" />
                 <div className="flex items-baseline justify-between">
-                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold">{t("total")}</span>
                   <span className="text-lg font-bold tabular-nums">
                     {egp(finalTotal)}
                   </span>
                 </div>
                 {(member || isNewMember) && earnPreview > 0 && (
-                  <p className="mt-1 text-right text-[11px] text-muted-foreground">
-                    +{earnPreview} pts on this order
+                  <p className="mt-1 text-end text-[11px] text-muted-foreground">
+                    +{earnPreview} {t("ptsOnOrder")}
                   </p>
                 )}
               </div>
@@ -535,10 +551,10 @@ export function CheckoutDialog({
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> Placing order…
+                    <Loader2 className="size-4 animate-spin" /> {t("placingOrder")}
                   </>
                 ) : (
-                  `Place order · ${egp(finalTotal)}`
+                  `${t("placeOrder")} · ${egp(finalTotal)}`
                 )}
               </Button>
             </div>
