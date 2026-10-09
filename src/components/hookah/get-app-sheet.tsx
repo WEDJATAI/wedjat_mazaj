@@ -24,6 +24,7 @@ import {
   Gift,
   Loader2,
   ArrowUpRight,
+  FileDown,
 } from "lucide-react";
 import { installPromptRef, usePwa } from "@/store/pwa";
 import { useI18n } from "@/store/i18n";
@@ -175,6 +176,16 @@ export function GetAppSheet() {
                   </>
                 )}
               </Button>
+              {platform === "android" && (
+                <a
+                  href="/downloads/mazaj.apk"
+                  download="Mazaj.apk"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/70 text-sm font-semibold transition-colors hover:bg-muted"
+                >
+                  <FileDown className="size-4 text-primary" aria-hidden />
+                  {t("sheetApk")}
+                </a>
+              )}
               {!canInstall && (
                 <p className="text-center text-xs text-muted-foreground">
                   {t("installFromMenu")}

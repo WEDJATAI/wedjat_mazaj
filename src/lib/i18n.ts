@@ -281,6 +281,17 @@ export interface Translations {
   iosStep2: string;
   iosStep3: string;
   installFromMenu: string;
+  apkButton: string;
+  apkSub: string;
+  apkStarted: string;
+  apkAfterTitle: string;
+  apkStep1: string;
+  apkStep2: string;
+  apkStep3: string;
+  orDivider: string;
+  instantAdd: string;
+  iosNoStore: string;
+  sheetApk: string;
   syncTitle: string;
   syncDesc1: string;
   syncDesc2: string;
@@ -307,12 +318,12 @@ export const translations: Record<Lang, Partial<Translations>> = {
     installNow: "Install now",
     installing: "Installing…",
     landingTagline: "The full lounge in your pocket — order, track, earn.",
-    installMeta: "Free · ~2 MB · installs in seconds",
+    installMeta: "Free · 2–4 MB · installs in seconds",
     installFree: "Install — Free",
     preparingDownload: "Preparing download…",
     preparingHint: "One moment — getting Mazaj ready for your phone.",
     installAndroidIntro:
-      "Tap Install and your phone downloads Mazaj instantly — it lands on your home screen.",
+      "The APK is the full app in one file — your phone installs it directly and it lands on your home screen with the Mazaj icon.",
     installFallbackTitle: "One more step",
     retry: "Try again",
     installIosTitle: "Install on iPhone",
@@ -337,6 +348,18 @@ export const translations: Record<Lang, Partial<Translations>> = {
     iosStep3: "Open Mazaj from your home screen — enjoy!",
     installFromMenu:
       "Not showing? Open your browser menu (⋮) and choose “Install app”.",
+    apkButton: "Download the app",
+    apkSub: "Direct APK file — no Play Store",
+    apkStarted:
+      "Mazaj.apk is downloading — watch your browser's download bar",
+    apkAfterTitle: "When the download finishes",
+    apkStep1: "Tap “Open” in the downloads bar",
+    apkStep2: "Allow from this source — first time only",
+    apkStep3: "Tap “Install” — that's it, you're done",
+    orDivider: "or",
+    instantAdd: "Add instantly from this browser",
+    iosNoStore: "100% App-Store-free — Apple's official install path",
+    sheetApk: "Download the app file (APK) · no Play Store",
     syncTitle: "Always in sync — two-way",
     syncDesc1:
       "Orders placed offline are saved on your phone and sync to the lounge the moment you reconnect.",
@@ -594,12 +617,12 @@ export const translations: Record<Lang, Partial<Translations>> = {
     installNow: "حمّل الآن",
     installing: "جارٍ التحميل…",
     landingTagline: "الصالة كاملة في جيبك — اطلب، تابع، واكسب النقاط.",
-    installMeta: "مجاني · ~٢ ميجا · يثبّت في ثوانٍ",
+    installMeta: "مجاني · ٢–٤ ميجا · يثبّت في ثوانٍ",
     installFree: "تحميل — مجاني",
     preparingDownload: "جارٍ تجهيز التحميل…",
     preparingHint: "لحظة واحدة — نجهّز مزاج لموبايلك.",
     installAndroidIntro:
-      "اضغط «تحميل» وسيتنزّل مزاج فوراً — ستجده على شاشتك الرئيسية.",
+      "ملف APK هو التطبيق الكامل في ملف واحد — يثبّته هاتفك مباشرةً ويظهر على شاشتك الرئيسية بأيقونة مزاج.",
     installFallbackTitle: "خطوة أخيرة",
     retry: "أعد المحاولة",
     installIosTitle: "ثبّت على الآيفون",
@@ -623,6 +646,17 @@ export const translations: Record<Lang, Partial<Translations>> = {
     iosStep3: "افتح مزاج من الشاشة الرئيسية — بالهنا والشفا!",
     installFromMenu:
       "لا يظهر؟ افتح قائمة المتصفح (⋮) واختر «تثبيت التطبيق».",
+    apkButton: "حمّل التطبيق",
+    apkSub: "ملف APK مباشر — بدون Google Play",
+    apkStarted: "جارٍ تنزيل Mazaj.apk — تابع شريط التنزيل في المتصفح",
+    apkAfterTitle: "بعد اكتمال التنزيل",
+    apkStep1: "اضغط «فتح» في شريط التنزيلات",
+    apkStep2: "اسمح من هذا المصدر — أول مرة فقط",
+    apkStep3: "اضغط «تثبيت» — وهذا كل شيء",
+    orDivider: "أو",
+    instantAdd: "أضِف فورًا من هذا المتصفح",
+    iosNoStore: "بدون App Store تمامًا — المسار الرسمي من آبل",
+    sheetApk: "تنزيل ملف التطبيق (APK) · بدون Google Play",
     syncTitle: "مزامنة ثنائية دائمة",
     syncDesc1:
       "الطلبات المسجّلة أوفلاين تُحفظ على موبايلك وتتزامن مع الصالة فور عودة الإنترنت.",

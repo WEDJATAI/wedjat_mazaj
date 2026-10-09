@@ -75,12 +75,28 @@ export function detectPlatform(): InstallPlatform {
 
 export function detectStandalone(): boolean {
   if (typeof window === "undefined") return false;
+  if (isNativeApp()) return true;
   return (
     window.matchMedia?.("(display-mode: standalone)").matches ||
     window.matchMedia?.("(display-mode: fullscreen)").matches ||
     (window.navigator as unknown as { standalone?: boolean }).standalone ===
       true
   );
+}
+
+/** True when running inside the installed Mazaj APK (Capacitor WebView).
+ * In that context the app IS the installed production app — install
+ * banners/landing must never appear there. Two signals: the Capacitor
+ * bridge (server.url apps) and Android WebView's "wv" UA marker. */
+export function isNativeApp(): boolean {
+  if (typeof window === "undefined") return false;
+  const cap = (window as unknown as {
+    Capacitor?: { isNativePlatform?: () => boolean };
+  }).Capacitor;
+  if (typeof cap?.isNativePlatform === "function" && cap.isNativePlatform()) {
+    return true;
+  }
+  return /\swv\)/.test(navigator.userAgent);
 }
 
 /** The native install prompt event lives outside the store (not

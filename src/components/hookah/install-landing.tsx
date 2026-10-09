@@ -18,9 +18,11 @@ import {
   Gift,
   QrCode,
   X,
+  Zap,
 } from "lucide-react";
 import {
   installPromptRef,
+  isNativeApp,
   setPlatformOverride,
   usePwa,
   detectPlatform,
@@ -36,7 +38,12 @@ export const INSTALL_LANDING_SESSION_KEY = "mazaj:install-landing-shown";
 
 type T = (key: keyof Translations) => string;
 
-type LandingPhase = "idle" | "waiting" | "ready" | "prompting" | "success" | "fallback";
+type LandingPhase = "idle" | "waiting" | "ready" | "prompting" | "success";
+
+/** Metadata from /downloads/app.json (version + size of the hosted APK). */
+type AppMeta = { version: string; sizeBytes: number };
+const APK_URL = "/downloads/mazaj.apk";
+const APP_META_URL = "/downloads/app.json";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -55,6 +62,7 @@ function detectInAppBrowser(): boolean {
 
 function detectInstalled(): boolean {
   if (typeof window === "undefined") return false;
+  if (isNativeApp()) return true; // inside the installed APK — it IS the app
   return (
     window.matchMedia?.("(display-mode: standalone)").matches ||
     window.matchMedia?.("(display-mode: fullscreen)").matches ||
@@ -82,6 +90,8 @@ export function InstallLanding() {
   const [phase, setPhase] = React.useState<LandingPhase>("idle");
   const [origin, setOrigin] = React.useState("https://wmazaj.vercel.app");
   const [inApp, setInApp] = React.useState(false);
+  const [appMeta, setAppMeta] = React.useState<AppMeta | null>(null);
+  const [apkStarted, setApkStarted] = React.useState(false);
 
   // --- QR entry: ?install=1 takes over the whole screen ------------------
   React.useEffect(() => {
@@ -144,32 +154,44 @@ export function InstallLanding() {
           : "waiting"
         : "idle",
     );
+    setApkStarted(false);
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
   }, [open, platform]);
 
-  // --- Android: waiting → ready the instant Chrome offers the prompt ----
+  // --- Android: fetch APK metadata (version · size) for the button sub-line
+  React.useEffect(() => {
+    if (!open || platform !== "android") return;
+    let alive = true;
+    fetch(APP_META_URL, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (
+          alive &&
+          j &&
+          typeof j.version === "string" &&
+          typeof j.sizeBytes === "number"
+        ) {
+          setAppMeta({ version: j.version, sizeBytes: j.sizeBytes });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [open, platform]);
+
+  // --- Android: waiting → ready the instant the browser offers the prompt --
   React.useEffect(() => {
     if (!open || platform !== "android" || phase === "success") return;
-    if (canInstall && (phase === "waiting" || phase === "fallback")) {
+    if (canInstall && phase === "waiting") {
       setPhase("ready");
     } else if (!canInstall && phase === "ready") {
       setPhase("waiting");
     }
   }, [open, platform, canInstall, phase]);
-
-  // --- Android: prompt never arrived → menu-instructions fallback -------
-  React.useEffect(() => {
-    if (!open || platform !== "android" || phase !== "waiting" || canInstall) {
-      return;
-    }
-    const id = window.setTimeout(() => {
-      if (!usePwa.getState().canInstall) setPhase("fallback");
-    }, 9000);
-    return () => window.clearTimeout(id);
-  }, [open, platform, phase, canInstall]);
 
   // --- celebrate when the OS finishes installing -------------------------
   React.useEffect(() => {
@@ -185,16 +207,9 @@ export function InstallLanding() {
     return () => window.clearTimeout(id);
   }, [phase, setOpen]);
 
-  const install = async () => {
-    if (phase === "fallback") {
-      setPhase("waiting"); // retry — maybe the prompt arrives late
-      return;
-    }
+  const installInstant = async () => {
     const prompt = installPromptRef.current;
-    if (!prompt) {
-      setPhase("fallback");
-      return;
-    }
+    if (!prompt) return;
     setPhase("prompting");
     try {
       await prompt.prompt();
@@ -207,7 +222,7 @@ export function InstallLanding() {
             : "waiting",
       );
     } catch {
-      setPhase("fallback");
+      setPhase(usePwa.getState().canInstall ? "ready" : "waiting");
     }
   };
 
@@ -272,65 +287,69 @@ export function InstallLanding() {
               ) : platform === "android" ? (
                 phase === "success" ? (
                   <InstallSuccess t={t} onDone={() => setOpen(false)} />
-                ) : phase === "fallback" ? (
-                  <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-card/80 p-6 backdrop-blur">
-                    <p className="text-base font-bold">
-                      {t("installFallbackTitle")}
-                    </p>
-                    <p className="max-w-[34ch] text-xs leading-relaxed text-muted-foreground">
-                      {t("installFromMenu")}
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="h-11 rounded-xl px-5 font-semibold"
-                      onClick={install}
-                    >
-                      <RefreshCw className="size-4" /> {t("retry")}
-                    </Button>
-                  </div>
                 ) : (
-                  <motion.div
-                    animate={
-                      phase === "ready"
-                        ? {
-                            boxShadow: [
-                              "0 0 0 0 rgba(217,119,6,0.0)",
-                              "0 0 34px 6px rgba(217,119,6,0.35)",
-                              "0 0 0 0 rgba(217,119,6,0.0)",
-                            ],
-                          }
-                        : {}
-                    }
-                    transition={
-                      phase === "ready"
-                        ? { repeat: Infinity, duration: 1.8 }
-                        : {}
-                    }
-                    className="w-full rounded-2xl"
-                  >
-                    <Button
-                      size="lg"
-                      className="h-14 w-full rounded-2xl text-lg font-bold"
-                      disabled={phase !== "ready"}
-                      onClick={install}
+                  <div className="w-full space-y-3">
+                    {/* Primary — direct APK download, zero Play Store */}
+                    <motion.div
+                      animate={{
+                        boxShadow: [
+                          "0 0 0 0 rgba(217,119,6,0.0)",
+                          "0 0 34px 6px rgba(217,119,6,0.35)",
+                          "0 0 0 0 rgba(217,119,6,0.0)",
+                        ],
+                      }}
+                      transition={{ repeat: Infinity, duration: 1.8 }}
+                      className="w-full rounded-2xl"
                     >
-                      {phase === "waiting" ? (
+                      <a
+                        href={APK_URL}
+                        download="Mazaj.apk"
+                        onClick={() => setApkStarted(true)}
+                        className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
+                      >
+                        <Download className="size-5" aria-hidden />
+                        {t("apkButton")}
+                      </a>
+                    </motion.div>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      {apkStarted
+                        ? t("apkStarted")
+                        : `${t("apkSub")}${
+                            appMeta
+                              ? ` · v${appMeta.version} · ${(
+                                  appMeta.sizeBytes / 1048576
+                                ).toFixed(1)} MB`
+                              : ""
+                          }`}
+                    </p>
+                    {apkStarted && <ApkAfterSteps t={t} />}
+                    {phase === "prompting" ? (
+                      <p className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card/70 py-3 text-xs font-medium text-muted-foreground backdrop-blur">
+                        <Loader2 className="size-4 animate-spin" aria-hidden />
+                        {t("installing")}
+                      </p>
+                    ) : (
+                      canInstall && (
                         <>
-                          <Loader2 className="size-5 animate-spin" />{" "}
-                          {t("preparingDownload")}
+                          <div className="flex items-center gap-2 py-1" aria-hidden>
+                            <span className="h-px flex-1 bg-border" />
+                            <span className="text-[11px] text-muted-foreground">
+                              {t("orDivider")}
+                            </span>
+                            <span className="h-px flex-1 bg-border" />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={installInstant}
+                            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card/70 text-sm font-semibold backdrop-blur transition-colors hover:bg-muted"
+                          >
+                            <Zap className="size-4 text-primary" aria-hidden />
+                            {t("instantAdd")}
+                          </button>
                         </>
-                      ) : phase === "prompting" ? (
-                        <>
-                          <Loader2 className="size-5 animate-spin" />{" "}
-                          {t("installing")}
-                        </>
-                      ) : (
-                        <>
-                          <Download className="size-5" /> {t("installFree")}
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
+                      )
+                    )}
+                  </div>
                 )
               ) : (
                 <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card/80 p-6 backdrop-blur">
@@ -348,12 +367,7 @@ export function InstallLanding() {
               )}
             </div>
 
-            {platform === "android" && phase === "waiting" && (
-              <p className="mt-3 text-[11px] text-muted-foreground">
-                {t("preparingHint")}
-              </p>
-            )}
-            {platform === "android" && phase !== "success" && phase !== "fallback" && (
+            {platform === "android" && phase !== "success" && (
               <p className="mt-3 max-w-[36ch] text-[11px] leading-relaxed text-muted-foreground">
                 {t("installAndroidIntro")}
               </p>
@@ -429,6 +443,9 @@ function IosSteps({ t }: { t: T }) {
       <p className="text-center text-[11px] text-muted-foreground">
         {t("iosInstallNote")}
       </p>
+      <p className="mx-auto flex w-fit items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-center text-[11px] font-semibold text-amber-200">
+        {t("iosNoStore")}
+      </p>
     </div>
   );
 }
@@ -461,8 +478,34 @@ function IosSafariFirst({ t }: { t: T }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Success — the OS took over, the app lands on the home screen       */
+/* Android: sideload steps once the APK file download has started      */
 /* ------------------------------------------------------------------ */
+
+function ApkAfterSteps({ t }: { t: T }) {
+  const steps = [t("apkStep1"), t("apkStep2"), t("apkStep3")];
+  return (
+    <div className="rounded-3xl border border-border bg-card/80 p-4 text-left backdrop-blur">
+      <p className="mb-2 text-center text-xs font-bold">
+        {t("apkAfterTitle")}
+      </p>
+      <ol className="space-y-1.5">
+        {steps.map((s, i) => (
+          <li
+            key={s}
+            className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-background/40 px-3 py-2"
+          >
+            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
+              {i + 1}
+            </span>
+            <span className="text-xs leading-snug text-foreground/90">
+              {s}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 function InstallSuccess({
   t,
