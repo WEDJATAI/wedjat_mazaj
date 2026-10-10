@@ -21,12 +21,14 @@ import {
   UserCheck,
   AlarmClock,
   Banknote,
+  PenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { egp } from "@/lib/catalog";
 import { useBranchScope } from "@/hooks/use-branch-scope";
 import { useI18n } from "@/store/i18n";
+import { useCart, type CartItem } from "@/store/cart";
 import {
   Sheet,
   SheetContent,
@@ -60,6 +62,10 @@ interface OrderRow {
   /** r57 — the branch this order belongs to (set in the all-branches scope) */
   branchName?: string | null;
   branchNameAr?: string | null;
+  /** r58 living orders — amend support */
+  ownType?: string | null;
+  addonsJson?: string | null;
+  revision?: number;
 }
 
 interface Comment {
@@ -79,6 +85,23 @@ function parseItems(json: string): ItemSummary[] {
   try {
     const arr = JSON.parse(json) as ItemSummary[];
     return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+/** r58: the full cart items stored on the order (for amend sessions). */
+function parseFullItems(json: string): CartItem[] {
+  try {
+    const arr = JSON.parse(json) as CartItem[];
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(
+      (i) =>
+        i &&
+        typeof i.primaryBrandId === "string" &&
+        Array.isArray(i.components) &&
+        i.components.length > 0
+    );
   } catch {
     return [];
   }
@@ -159,7 +182,7 @@ function HeaderPill({
   );
 }
 
-export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
+export function OrdersPanel({ onSignOut, onAmendStart }: { onSignOut: () => void; onAmendStart?: () => void }) {
   const employee = useSession((s) => s.employee);
   const { branchParam, branchName } = useBranchScope();
   const t = useI18n((s) => s.t);
@@ -232,6 +255,37 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not claim order");
     }
+  };
+
+  // r58 living orders — load a placed order into the editor (amend mode):
+  // the staff member keeps the full menu (mixes, BYO, add-ons) but the
+  // cart now edits THIS order instead of creating a new one.
+  const startAmend = (order: OrderRow) => {
+    const items = parseFullItems(order.itemsJson);
+    if (items.length === 0) {
+      toast.error("This order can't be edited (legacy items)");
+      return;
+    }
+    let addons: string[] = [];
+    try {
+      const arr = JSON.parse(order.addonsJson ?? "[]");
+      if (Array.isArray(arr)) addons = arr;
+    } catch {
+      addons = [];
+    }
+    useCart
+      .getState()
+      .beginAmend(
+        order.id,
+        items,
+        (order.ownType as "hookah" | "molasses" | null) ?? null,
+        addons,
+        employee?.name ?? "Staff"
+      );
+    toast.info(t("amendEditingTitle"), {
+      description: t("amendStartDesc"),
+    });
+    onAmendStart?.();
   };
 
   const incoming = orders.filter((o) => o.assignment === "unassigned");
@@ -347,6 +401,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
                         showBranch={scopeAll}
                         onClaim={() => claimOrder(o)}
                         onComments={() => setCommentsFor(o)}
+                        onAmend={() => startAmend(o)}
                       />
                     </StaggerItem>
                   ))}
@@ -361,6 +416,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
                         showBranch={scopeAll}
                         onStatus={(s) => setStatus(o, s)}
                         onComments={() => setCommentsFor(o)}
+                        onAmend={() => startAmend(o)}
                       />
                     </StaggerItem>
                   ))}
@@ -374,6 +430,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
                         order={o}
                         showBranch={scopeAll}
                         onComments={() => setCommentsFor(o)}
+                        onAmend={() => startAmend(o)}
                       />
                     </StaggerItem>
                   ))}
@@ -450,6 +507,7 @@ function OrderCard({
   onStatus,
   onComments,
   onClaim,
+  onAmend,
   highlight,
   showBranch,
 }: {
@@ -457,11 +515,14 @@ function OrderCard({
   onStatus?: (status: string) => void;
   onComments: () => void;
   onClaim?: () => void;
+  /** r58 — start an amend session (active orders only) */
+  onAmend?: () => void;
   highlight?: boolean;
   /** r57 — all-branches scope: render the branch chip when present */
   showBranch?: boolean;
 }) {
   const lang = useI18n((s) => s.lang);
+  const t = useI18n((s) => s.t);
   const items = parseItems(order.itemsJson);
   const meta = STATUS_META[order.status] ?? STATUS_META.pending;
   const isUnassigned = order.assignment === "unassigned";
@@ -509,6 +570,15 @@ function OrderCard({
             ) : (
               <Badge variant="secondary" className={meta.cls}>
                 {meta.label}
+              </Badge>
+            )}
+            {order.revision != null && order.revision > 0 && (
+              <Badge
+                variant="secondary"
+                className="gap-1 rounded-full border-transparent bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/40"
+              >
+                <PenLine className="size-3" />
+                {t("amendRevWord")} {order.revision}
               </Badge>
             )}
             {sla && (
@@ -606,6 +676,11 @@ function OrderCard({
             onClick={() => onStatus("done")}
           >
             <CheckCheck className="size-4" /> Mark done
+          </button>
+        )}
+        {onAmend && order.status !== "done" && (
+          <button type="button" className={glassPillBtn} onClick={onAmend}>
+            <PenLine className="size-4" /> {t("amendAction")}
           </button>
         )}
         <button type="button" className={glassPillBtn} onClick={onComments}>

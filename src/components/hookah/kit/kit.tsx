@@ -37,8 +37,8 @@ import {
   useReducedMotion,
   type Variants,
 } from "framer-motion";
-import { Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MazajMark } from "../logo";
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -268,9 +268,7 @@ export function AppHeader({
 
         {wordmark ? (
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
-              <Flame className="size-5" />
-            </span>
+            <MazajMark size={26} className="-my-1" />
             <div className="min-w-0 leading-tight">
               <p className="font-display truncate text-lg font-bold tracking-wide text-gold-soft">
                 {title ?? "Mazaj"}
@@ -646,7 +644,7 @@ export function EmptyState({
 }
 
 /* ------------------------------------------------------------------ */
-/* Wordmark — flame + display wordmark                                  */
+/* Wordmark — the living-ember mark + display wordmark                  */
 /* ------------------------------------------------------------------ */
 
 export function Wordmark({
@@ -660,13 +658,13 @@ export function Wordmark({
     <span
       className={cn("font-display inline-flex items-center gap-2 font-bold tracking-wide", className)}
     >
-      <Flame
+      <MazajMark
         className={cn(
-          "text-primary",
-          size === "sm" && "size-4",
-          size === "md" && "size-5",
-          size === "lg" && "size-7"
+          size === "sm" && "-my-0.5",
+          size === "md" && "-my-1",
+          size === "lg" && "-my-1.5"
         )}
+        size={size === "sm" ? 17 : size === "md" ? 22 : 32}
       />
       <span
         className={cn(

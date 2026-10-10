@@ -20,15 +20,23 @@ import {
   FlaskRound,
   PartyPopper,
   Check,
+  PenLine,
+  Loader2,
+  X,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/store/i18n";
 import { EmptyState, GoldButton, Kicker } from "./kit/kit";
+import { toast } from "sonner";
+import { haptic } from "@/lib/delight";
 
 interface CartDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCheckout: () => void;
+  /** r58: fired after an amend session saves, so parents can refresh */
+  onAmended?: () => void;
 }
 
 const OWN_OPTIONS: {
@@ -51,7 +59,7 @@ const OWN_OPTIONS: {
   },
 ];
 
-export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) {
+export function CartDrawer({ open, onOpenChange, onCheckout, onAmended }: CartDrawerProps) {
   const t = useI18n((s) => s.t);
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
@@ -60,6 +68,12 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
   const setQty = useCart((s) => s.setQty);
   const removeItem = useCart((s) => s.removeItem);
   const setOwnType = useCart((s) => s.setOwnType);
+  // r58 living-orders amend session
+  const amendOrderId = useCart((s) => s.amendOrderId);
+  const amendActorName = useCart((s) => s.amendActorName);
+  const amendOriginal = useCart((s) => s.amendOriginal);
+  const endAmend = useCart((s) => s.endAmend);
+  const [saving, setSaving] = React.useState(false);
 
   const addonTotal = addons.reduce(
     (sum, k) => sum + (getSupply(k)?.sellPrice ?? 0),
@@ -69,27 +83,126 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
   const grandTotal = totals.total + addonTotal;
   const bogo = totals.bogo;
 
+  const amending = !!amendOrderId;
+
+  // delta vs the order's original state (for the amend summary chip)
+  const origTotals = amendOriginal
+    ? computeTotals(amendOriginal.items, amendOriginal.ownType)
+    : null;
+  const origAddonTotal = amendOriginal
+    ? amendOriginal.addons.reduce(
+        (sum, k) => sum + (getSupply(k)?.sellPrice ?? 0),
+        0
+      )
+    : 0;
+  const deltaBowls = origTotals ? totals.totalQty - origTotals.totalQty : 0;
+  const deltaTotal = origTotals
+    ? Math.round((grandTotal - (origTotals.total + origAddonTotal)) * 100) / 100
+    : 0;
+  const hasChanges =
+    !!amendOriginal &&
+    (deltaBowls !== 0 ||
+      Math.abs(deltaTotal) > 0.01 ||
+      ownType !== amendOriginal.ownType ||
+      JSON.stringify([...addons].sort()) !==
+        JSON.stringify([...amendOriginal.addons].sort()));
+
+  const saveAmend = async () => {
+    if (!amendOrderId || saving || items.length === 0) return;
+    setSaving(true);
+    haptic("light");
+    try {
+      const res = await fetch(`/api/orders/${amendOrderId}/amend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items,
+          ownType,
+          addons,
+          actorName: amendActorName ?? undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error ?? "Could not save");
+      }
+      endAmend();
+      onOpenChange(false);
+      haptic("success");
+      toast.success(t("amendUpdatedToast"), {
+        description:
+          data.revision > 1
+            ? `${t("amendRevWord")} ${data.revision} — ${t("amendUpdatedDesc")}`
+            : t("amendUpdatedDesc"),
+      });
+      onAmended?.();
+    } catch (err) {
+      haptic("error");
+      toast.error(err instanceof Error ? err.message : "Could not save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
         className="flex w-full flex-col gap-0 border-white/[0.08] bg-[oklch(0.175_0.015_60/0.92)] p-0 backdrop-blur-2xl sm:max-w-md"
       >
-        {/* ── glass header with display title ── */}
+        {/* ── glass header — switches to AMEND MODE when editing an order ── */}
         <SheetHeader className="gap-1 border-b border-white/[0.08] px-5 py-4">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
-              <ShoppingBag className="size-4" />
-            </span>
-            <div className="min-w-0 leading-tight">
-              <SheetTitle className="font-display text-xl font-bold tracking-tight text-gold-soft">
-                {t("currentOrder")}
-              </SheetTitle>
-              <SheetDescription className="text-xs">
-                {t("each20g")}
-              </SheetDescription>
-            </div>
-            {totals.totalQty > 0 && (
+            {amending ? (
+              <>
+                <span className="relative grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+                  <PenLine className="size-4" />
+                  <span
+                    className="absolute -end-0.5 -top-0.5 size-2.5 animate-pulse rounded-full bg-primary"
+                    aria-hidden
+                  />
+                </span>
+                <div className="min-w-0 flex-1 leading-tight">
+                  <SheetTitle className="font-display truncate text-xl font-bold tracking-tight text-gold-soft">
+                    {t("amendEditingTitle")}{" "}
+                    <span className="font-mono text-sm text-primary">
+                      #{amendOrderId?.slice(-6).toUpperCase()}
+                    </span>
+                  </SheetTitle>
+                  <SheetDescription className="text-xs">
+                    {t("amendEditingDesc")}
+                  </SheetDescription>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    endAmend();
+                    onOpenChange(false);
+                    toast.info(t("amendCancelled"));
+                  }}
+                  className="glass grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={t("amendCancelEdit")}
+                  title={t("amendCancelEdit")}
+                >
+                  <X className="size-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+                  <ShoppingBag className="size-4" />
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <SheetTitle className="font-display text-xl font-bold tracking-tight text-gold-soft">
+                    {t("currentOrder")}
+                  </SheetTitle>
+                  <SheetDescription className="text-xs">
+                    {t("each20g")}
+                  </SheetDescription>
+                </div>
+              </>
+            )}
+            {!amending && totals.totalQty > 0 && (
               <span className="ms-auto shrink-0 rounded-full border border-primary/30 bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
                 {totals.totalQty}{" "}
                 {totals.totalQty > 1 ? t("bowls") : t("bowl")}
@@ -103,9 +216,17 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
             <div className="flex h-full min-h-72 items-center justify-center">
               <EmptyState
                 className="w-full"
-                icon={<ShoppingBag className="size-7" />}
-                title={t("emptyCart")}
-                description={t("emptyCartDesc")}
+                icon={
+                  amending ? (
+                    <RotateCcw className="size-7" />
+                  ) : (
+                    <ShoppingBag className="size-7" />
+                  )
+                }
+                title={amending ? t("amendEmptyTitle") : t("emptyCart")}
+                description={
+                  amending ? t("amendEmptyDesc") : t("emptyCartDesc")
+                }
               />
             </div>
           ) : (
@@ -321,6 +442,38 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
 
             {/* Totals */}
             <div className="space-y-1.5 text-sm">
+              {amending && (
+                <div
+                  className={cn(
+                    "mb-3 flex items-center justify-between gap-2 rounded-xl border p-2.5 text-xs font-semibold",
+                    hasChanges
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-white/[0.08] bg-white/[0.04] text-muted-foreground"
+                  )}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <PenLine className="size-3.5" />
+                    {hasChanges ? t("amendChangesChip") : t("amendNoChanges")}
+                  </span>
+                  {hasChanges && (
+                    <span className="flex items-center gap-2 tabular-nums">
+                      {deltaBowls !== 0 && (
+                        <span>
+                          {deltaBowls > 0 ? "+" : "−"}
+                          {Math.abs(deltaBowls)}{" "}
+                          {Math.abs(deltaBowls) > 1 ? t("bowls") : t("bowl")}
+                        </span>
+                      )}
+                      {Math.abs(deltaTotal) > 0.01 && (
+                        <span className="font-display text-sm font-bold">
+                          {deltaTotal > 0 ? "+" : "−"}
+                          {egp(Math.abs(deltaTotal))}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="flex justify-between text-muted-foreground">
                 <span>{t("subtotal")}</span>
                 <span className="tabular-nums">{egp(totals.subtotal)}</span>
@@ -345,13 +498,39 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
               </div>
             </div>
 
-            <GoldButton
-              size="lg"
-              className="mt-4 w-full"
-              onClick={onCheckout}
-            >
-              {t("checkout")} · {egp(grandTotal)}
-            </GoldButton>
+            {amending ? (
+              <div className="mt-4 space-y-2">
+                <GoldButton
+                  size="lg"
+                  className="w-full"
+                  disabled={!hasChanges || saving || items.length === 0}
+                  onClick={saveAmend}
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />{" "}
+                      {t("amendSaving")}
+                    </>
+                  ) : (
+                    <>
+                      <Check className="size-4" /> {t("amendSaveChanges")}{" "}
+                      {hasChanges && `· ${egp(grandTotal)}`}
+                    </>
+                  )}
+                </GoldButton>
+                <p className="text-center text-[11px] text-muted-foreground">
+                  {t("amendFooterNote")}
+                </p>
+              </div>
+            ) : (
+              <GoldButton
+                size="lg"
+                className="mt-4 w-full"
+                onClick={onCheckout}
+              >
+                {t("checkout")} · {egp(grandTotal)}
+              </GoldButton>
+            )}
           </div>
         )}
       </SheetContent>

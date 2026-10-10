@@ -165,6 +165,7 @@ export function GuestOrder() {
         onSignOut={signOut}
         enableScan
         onOrderPlaced={handleOrderPlaced}
+        onAmended={() => setTrackOpen(true)}
         headerExtra={
           <Stagger className="flex items-center gap-1" delay={0.22}>
             <StaggerItem>

@@ -38,17 +38,44 @@ export interface CartItem {
 
 export type OwnType = "hookah" | "molasses" | null;
 
+/** r58 living orders — a stashed draft cart (restored when an amend session ends). */
+export interface CartStash {
+  items: CartItem[];
+  ownType: OwnType;
+  addons: string[];
+}
+
 interface CartState {
   items: CartItem[];
   ownType: OwnType;
   /** selected supply add-on keys (e.g. ["medical_hose"]) */
   addons: string[];
+  /** r58: when set, the cart is EDITING this placed order (amend mode) —
+   * the whole ordering UI (brand grid, config sheet, mixes) becomes the
+   * editor, and checkout turns into “save changes” via the amend API. */
+  amendOrderId: string | null;
+  /** display name of the person amending (employee or guest) */
+  amendActorName: string | null;
+  /** the order's original state, so the drawer can show a delta summary */
+  amendOriginal: { items: CartItem[]; ownType: OwnType; addons: string[] } | null;
+  /** a draft cart that existed before the amend session started */
+  amendStash: CartStash | null;
   addItem: (item: Omit<CartItem, "id">) => void;
   removeItem: (id: string) => void;
   setQty: (id: string, qty: number) => void;
   clear: () => void;
   setOwnType: (own: OwnType) => void;
   toggleAddon: (key: string) => void;
+  /** r58: start editing a placed order — stashes any draft cart first */
+  beginAmend: (
+    orderId: string,
+    items: CartItem[],
+    ownType: OwnType,
+    addons: string[],
+    actorName: string
+  ) => void;
+  /** r58: leave amend mode — restores the stashed draft cart (if any) */
+  endAmend: () => void;
 }
 
 /** Build a stable id from the primary brand, flavor type and the component signature. */
@@ -137,6 +164,10 @@ export const useCart = create<CartState>()(
       items: [],
       ownType: null,
       addons: [],
+      amendOrderId: null,
+      amendActorName: null,
+      amendOriginal: null,
+      amendStash: null,
       addItem: (item) =>
         set((state) => {
           const id = makeId(item.primaryBrandId, item.flavor, item.components);
@@ -166,6 +197,33 @@ export const useCart = create<CartState>()(
             ? state.addons.filter((k) => k !== key)
             : [...state.addons, key],
         })),
+      beginAmend: (orderId, items, ownType, addons, actorName) =>
+        set((state) => ({
+          // stash any draft cart so it comes back after the amend session
+          amendStash:
+            state.items.length > 0 && !state.amendOrderId
+              ? { items: state.items, ownType: state.ownType, addons: state.addons }
+              : state.amendStash,
+          items: items.map((i) => ({ ...i })),
+          ownType,
+          addons: [...addons],
+          amendOrderId: orderId,
+          amendActorName: actorName,
+          amendOriginal: { items: items.map((i) => ({ ...i })), ownType, addons: [...addons] },
+        })),
+      endAmend: () =>
+        set((state) => {
+          const stash = state.amendStash;
+          return {
+            items: stash ? stash.items : [],
+            ownType: stash ? stash.ownType : null,
+            addons: stash ? stash.addons : [],
+            amendOrderId: null,
+            amendActorName: null,
+            amendOriginal: null,
+            amendStash: null,
+          };
+        }),
     }),
     {
       name: "mazaj-cart",

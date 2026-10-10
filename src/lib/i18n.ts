@@ -336,6 +336,31 @@ export interface Translations {
   clearChat: string;
   sendBtn: string;
   addedToCart: string;
+  // r58 living orders — amend after confirming
+  amendAction: string;
+  amendEditingTitle: string;
+  amendEditingDesc: string;
+  amendBarTitle: string;
+  amendBarCta: string;
+  amendSaveChanges: string;
+  amendSaving: string;
+  amendCancelEdit: string;
+  amendCancelled: string;
+  amendNoChanges: string;
+  amendChangesChip: string;
+  amendFooterNote: string;
+  amendUpdatedToast: string;
+  amendUpdatedDesc: string;
+  amendRevWord: string;
+  amendGuestButton: string;
+  amendGuestStartDesc: string;
+  amendStartDesc: string;
+  amendStaffTitle: string;
+  amendStaffSubtitle: string;
+  amendEmptyTitle: string;
+  amendEmptyDesc: string;
+  amendLegacyError: string;
+  backToQueue: string;
   sommelierError: string;
 
   // AI brief (manager analytics)
@@ -654,7 +679,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     orderSentDesc: "Synced with Wedjat RSM",
     newOrder: "New order",
     from: "from",
-    inCart: "in cart",
+    inCart: "packed",
     revenue: "Revenue",
     netProfit: "Net profit",
     margin: "Margin",
@@ -670,7 +695,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     type: "Type",
     quantity: "Quantity",
     lineTotal: "Line total",
-    addToCart: "Add to cart",
+    addToCart: "Pack my Shisha",
     addFlavor: "Add a flavor",
     addAnotherFlavor: "Add another flavor",
     mixFlavors: "Mix flavors",
@@ -689,13 +714,13 @@ export const translations: Record<Lang, Partial<Translations>> = {
     // Cart
     cart: "Cart",
     yourOrder: "Your order",
-    currentOrder: "Current order",
+    currentOrder: "My packed shisha",
     subtotal: "Subtotal",
     total: "Total",
     byoSaving: "BYO 2-for-1 saving",
     addons: "Add-ons",
     checkout: "Checkout",
-    emptyCart: "Your cart is empty",
+    emptyCart: "No shisha packed yet",
     emptyCartDesc: "Pick a brand to start a session.",
     each20g: "Each hookah is 20g of molasses.",
     byoTitle: "Bring Your Own · 2 for 1",
@@ -746,7 +771,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     // Order screen
     guestOrderTitle: "Guest order",
     scan: "Scan",
-    cartBtn: "Cart",
+    cartBtn: "My Shisha",
     egyptianLounge: "Egyptian market · lounge pricing",
     heroLine1: "Build your perfect",
     heroLine2: "hookah session",
@@ -760,7 +785,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     promoMixBody: "Cross-brand mixes, one bowl.",
     oneTapFav: "One tap to add a house favourite",
     tapBrandHint: "Tap a brand to set flavor & quantity.",
-    viewCart: "View cart",
+    viewCart: "View my shisha",
     bogoOn: "2-for-1 on",
     footerLine: "20g molasses per hookah · Prices in EGP · Egyptian market",
     searchMenu: "Search the menu",
@@ -923,7 +948,32 @@ export const translations: Record<Lang, Partial<Translations>> = {
     engineBadge: "Smart match",
     clearChat: "Clear",
     sendBtn: "Send",
-    addedToCart: "Added to cart",
+    addedToCart: "Shisha packed",
+    // r58 living orders — amend after confirming
+    amendAction: "Edit order",
+    amendEditingTitle: "Editing order",
+    amendEditingDesc: "Change anything — the kitchen updates instantly.",
+    amendBarTitle: "Editing order",
+    amendBarCta: "Review changes",
+    amendSaveChanges: "Save changes",
+    amendSaving: "Saving…",
+    amendCancelEdit: "Stop editing",
+    amendCancelled: "Editing cancelled — the order stays as it was",
+    amendNoChanges: "No changes yet",
+    amendChangesChip: "Your changes",
+    amendFooterNote: "Saving updates the kitchen queue and stock instantly.",
+    amendUpdatedToast: "Order updated",
+    amendUpdatedDesc: "The kitchen sees your revision instantly.",
+    amendRevWord: "Rev",
+    amendGuestButton: "Modify my order",
+    amendGuestStartDesc: "Browse the menu and change your bowls — then save.",
+    amendStartDesc: "Browse the menu, change the bowls, then save the revision.",
+    amendStaffTitle: "Edit Order",
+    amendStaffSubtitle: "Modify a placed order — the queue updates on save",
+    amendEmptyTitle: "Nothing left in this order",
+    amendEmptyDesc: "Add at least one bowl, or stop editing to keep it as it was.",
+    amendLegacyError: "This order can't be edited (older format)",
+    backToQueue: "Back to queue",
     sommelierError: "The sommelier is resting — try again",
 
     // AI brief
@@ -1254,7 +1304,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     orderSentDesc: "تمت مزامنته مع Wedjat RSM",
     newOrder: "طلب جديد",
     from: "من",
-    inCart: "في السلة",
+    inCart: "مجهّزة",
     revenue: "الإيرادات",
     netProfit: "صافي الربح",
     margin: "الهامش",
@@ -1269,7 +1319,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     type: "النوع",
     quantity: "الكمية",
     lineTotal: "إجمالي السطر",
-    addToCart: "أضف للسلة",
+    addToCart: "جهّز شيشتي",
     addFlavor: "أضف نكهة",
     addAnotherFlavor: "أضف نكهة أخرى",
     mixFlavors: "نكهات مختلطة",
@@ -1287,13 +1337,13 @@ export const translations: Record<Lang, Partial<Translations>> = {
 
     cart: "السلة",
     yourOrder: "طلبك",
-    currentOrder: "الطلب الحالي",
+    currentOrder: "شيشتي المجهّزة",
     subtotal: "المجموع الفرعي",
     total: "الإجمالي",
     byoSaving: "وفّر 2 مقابل 1",
     addons: "إضافات",
     checkout: "الدفع",
-    emptyCart: "سلتك فارغة",
+    emptyCart: "لسه مفيش شيشة",
     emptyCartDesc: "اختر علامة تجارية لبدء الجلسة.",
     each20g: "كل جبلة ٢٠ جرام معسل.",
     byoTitle: "اجيب معاك · ٢ مقابل ١",
@@ -1342,7 +1392,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
 
     guestOrderTitle: "طلب الضيف",
     scan: "امسح",
-    cartBtn: "السلة",
+    cartBtn: "شيشتي",
     egyptianLounge: "السوق المصري · أسعار الصالة",
     heroLine1: "اصنع جلستك المثالية",
     heroLine2: "بالظبط على ذوقك",
@@ -1355,7 +1405,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     promoMixBody: "مكس بين العلامات في جبلة واحدة.",
     oneTapFav: "ضغطة واحدة تضيف أفضل جبلاتنا",
     tapBrandHint: "اضغط على علامة لاختيار النكهة والكمية.",
-    viewCart: "شوف السلة",
+    viewCart: "شوف شيشتك",
     bogoOn: "عرض ٢×١ شغّال",
     footerLine: "٢٠ جرام معسل للجبلة · الأسعار بالجنيه المصري · السوق المصري",
     searchMenu: "ابحث في المنيو",
@@ -1514,7 +1564,32 @@ export const translations: Record<Lang, Partial<Translations>> = {
     engineBadge: "ترشيح ذكي",
     clearChat: "مسح",
     sendBtn: "إرسال",
-    addedToCart: "اتضافت للسلة",
+    addedToCart: "الشيشة اتجهازت",
+    // r58 living orders — amend after confirming
+    amendAction: "تعديل الطلب",
+    amendEditingTitle: "تعديل الطلب",
+    amendEditingDesc: "غيّر أي حاجة — المطبخ هيتحدث فورًا.",
+    amendBarTitle: "تعديل الطلب",
+    amendBarCta: "راجع التعديلات",
+    amendSaveChanges: "احفظ التعديلات",
+    amendSaving: "جاري الحفظ…",
+    amendCancelEdit: "إيقاف التعديل",
+    amendCancelled: "اتلغى التعديل — الطلب زي ما كان",
+    amendNoChanges: "مفيش تغيير لسه",
+    amendChangesChip: "تعديلاتك",
+    amendFooterNote: "الحفظ يحدّث طابور المطبخ والمخزون فورًا.",
+    amendUpdatedToast: "تم تحديث الطلب",
+    amendUpdatedDesc: "المطبخ شاف التعديل فورًا.",
+    amendRevWord: "نسخة",
+    amendGuestButton: "عدّل طلبي",
+    amendGuestStartDesc: "اتفرج على المنيو وغيّر الشيشن — وبعدين احفظ.",
+    amendStartDesc: "اتفرج على المنيو وغيّر الشيشن — وبعدين احفظ النسخة الجديدة.",
+    amendStaffTitle: "تعديل الطلب",
+    amendStaffSubtitle: "عدّل طلب موجود — الطابور يتحدث مع الحفظ",
+    amendEmptyTitle: "الطلب فضي خلاص",
+    amendEmptyDesc: "ضيف شيشة واحدة على الأقل، أو أوقف التعديل لتركيه زي ما كان.",
+    amendLegacyError: "الطلب ده ما ينفعش يتعدل (صيغة قديمة)",
+    backToQueue: "رجوع للطابور",
     sommelierError: "السوميلييه رايح يستريح — جرب تاني",
 
     aiBrief: "ملخص ذكي",

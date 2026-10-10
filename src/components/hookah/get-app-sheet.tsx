@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +26,7 @@ import {
 import { installPromptRef, usePwa } from "@/store/pwa";
 import { useI18n } from "@/store/i18n";
 import { QrCodeSvg } from "./qr-code";
+import { MazajMark } from "./logo";
 import { toast } from "sonner";
 import {
   GoldButton,
@@ -87,14 +87,7 @@ export function GetAppSheet() {
       <DialogContent className="max-h-[92vh] overflow-y-auto border-white/[0.08] bg-[oklch(0.175_0.015_60/0.92)] p-0 backdrop-blur-2xl sm:max-w-md">
         <DialogHeader className="items-center px-6 pt-7 text-center sm:text-center">
           <div className="flex flex-col items-center gap-2.5">
-            <Image
-              src="/icons/icon-192.png"
-              alt="Mazaj app icon"
-              width={56}
-              height={56}
-              className="rounded-2xl shadow-[0_0_40px_-8px_oklch(0.78_0.15_65/0.45)] ring-1 ring-primary/30"
-              priority
-            />
+            <MazajMark size={64} className="drop-shadow-[0_0_28px_oklch(0.78_0.15_65/0.4)]" />
             <Kicker>MAZAJ</Kicker>
             <DialogTitle className="font-display text-2xl font-bold tracking-tight text-gold-soft">
               {t("getApp")}

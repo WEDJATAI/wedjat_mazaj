@@ -21,18 +21,20 @@ import {
   Gift,
   BellRing,
   BellOff,
+  PenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
 import { useI18n } from "@/store/i18n";
 import { celebrate, haptic } from "@/lib/delight";
 import { motion } from "framer-motion";
+import { useCart, type CartItem } from "@/store/cart";
+import { toast } from "sonner";
 import {
   pushSupported,
   subscribeToPush,
   isSubscribed,
 } from "@/lib/push-client";
-import { toast } from "sonner";
 import {
   EASE,
   EmptyState,
@@ -53,6 +55,10 @@ interface TrackOrder {
   createdAt: string;
   rating: number | null;
   pointsEarned: number;
+  /** r58 living orders — amend support */
+  ownType?: string | null;
+  addonsJson?: string | null;
+  revision?: number;
 }
 
 const POLL_MS = 10000;
@@ -186,6 +192,50 @@ export function GuestTrackingSheet({
     }
   };
 
+  // r58 living orders — the guest edits their own active order: the full
+  // menu becomes the editor, the floating bar shows “editing order”, and
+  // saving pushes a revision to the kitchen instantly.
+  const startGuestAmend = (order: TrackOrder) => {
+    let items: CartItem[] = [];
+    try {
+      const arr = JSON.parse(order.itemsJson) as CartItem[];
+      if (Array.isArray(arr)) {
+        items = arr.filter(
+          (i) =>
+            i &&
+            typeof i.primaryBrandId === "string" &&
+            Array.isArray(i.components) &&
+            i.components.length > 0
+        );
+      }
+    } catch {
+      items = [];
+    }
+    if (items.length === 0) {
+      toast.error(t("amendLegacyError"));
+      return;
+    }
+    let addons: string[] = [];
+    try {
+      const arr = JSON.parse(order.addonsJson ?? "[]");
+      if (Array.isArray(arr)) addons = arr;
+    } catch {
+      addons = [];
+    }
+    useCart
+      .getState()
+      .beginAmend(
+        order.id,
+        items,
+        (order.ownType as "hookah" | "molasses" | null) ?? null,
+        addons,
+        guestName
+      );
+    toast.info(t("amendEditingTitle"), {
+      description: t("amendGuestStartDesc"),
+    });
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -245,7 +295,14 @@ export function GuestTrackingSheet({
               )}
               {orders.map((o) => (
                 <StaggerItem key={o.id}>
-                  <TrackedOrder order={o} onChanged={load} />
+                  <TrackedOrder
+                    order={o}
+                    onChanged={load}
+                    onModify={() => {
+                      startGuestAmend(o);
+                      onOpenChange(false);
+                    }}
+                  />
                 </StaggerItem>
               ))}
               {anyActive && (
@@ -303,9 +360,12 @@ export function GuestTrackingSheet({
 function TrackedOrder({
   order,
   onChanged,
+  onModify,
 }: {
   order: TrackOrder;
   onChanged: () => void;
+  /** r58 — start editing this order (active orders only) */
+  onModify?: () => void;
 }) {
   const t = useI18n((s) => s.t);
   const idx = stepIndex(order.status);
@@ -343,6 +403,11 @@ function TrackedOrder({
           <p className="font-display text-base font-bold tracking-tight text-foreground">
             {order.itemCount} {order.itemCount > 1 ? t("bowls") : t("bowl")}
             {order.table ? ` · ${order.table}` : ""}
+            {order.revision != null && order.revision > 0 && (
+              <span className="ms-2 inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 align-middle text-[10px] font-semibold text-amber-300">
+                <PenLine className="size-3" /> {t("amendRevWord")} {order.revision}
+              </span>
+            )}
           </p>
           <p className="mt-0.5 text-xs font-medium tabular-nums text-foreground/80">
             #{order.id.slice(-6).toUpperCase()} · {timeAgoText}
@@ -465,6 +530,17 @@ function TrackedOrder({
             <span className="tabular-nums">+{order.pointsEarned}</span>{" "}
             {t("ptsOrderNote")}
           </p>
+        )}
+
+        {/* r58 — the guest can still change their mind on active orders */}
+        {onModify && order.status !== "done" && (
+          <button
+            type="button"
+            onClick={onModify}
+            className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 text-sm font-semibold text-primary transition-all hover:border-primary/50 hover:bg-primary/15 active:scale-[0.98]"
+          >
+            <PenLine className="size-4" /> {t("amendGuestButton")}
+          </button>
         )}
       </div>
 

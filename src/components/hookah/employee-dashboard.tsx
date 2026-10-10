@@ -41,13 +41,17 @@ import {
   X,
   MapPin,
   ChevronDown,
+  ChevronLeft,
+  PenLine,
   LayoutGrid,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePwa } from "@/store/pwa";
 import { useBranchScope } from "@/hooks/use-branch-scope";
 import { useI18n } from "@/store/i18n";
+import { useCart } from "@/store/cart";
 import { SommelierSheet } from "./sommelier-sheet";
+import { OrderScreen } from "./order-screen";
 import { EASE, EmptyState, FadeSwap, TabBar, type TabItem } from "./kit/kit";
 
 interface TabDef extends TabItem {
@@ -86,6 +90,12 @@ export function EmployeeDashboard() {
   // r54: AI sommelier for staff — help a guest choose a bowl.
   const [sommOpen, setSommOpen] = React.useState(false);
 
+  // r58 living orders — when an amend session is active (started from the
+  // queue), the “New” tab becomes the ORDER EDITOR (cart-driven OrderScreen)
+  // instead of BowlBuilder, so the staff member edits with the full menu:
+  // mixes, BYO, add-ons — and saves a revision straight to the kitchen.
+  const amendActive = useCart((s) => !!s.amendOrderId);
+
   // r56: the floating action cluster — one FAB, fans open on demand.
   const [fabOpen, setFabOpen] = React.useState(false);
 
@@ -96,25 +106,72 @@ export function EmployeeDashboard() {
     return () => window.removeEventListener("pointerdown", handler);
   }, []);
 
+  // Active tab state — declared before the tabs memo so `selectTab` can
+  // be referenced inside it. Starts on the queue (order-receiving focus);
+  // the visibility effect below corrects it if permissions disallow.
+  const [tab, setTab] = React.useState<Permission | null>("queue");
+
+  // Switching to the queue/requests tab acknowledges unseen alerts.
+  const selectTab = React.useCallback(
+    (key: string) => {
+      setTab(key as Permission);
+      if (key === "queue" || key === "requests") {
+        alerts.acknowledge();
+      }
+    },
+    [alerts]
+  );
+
   const tabs: TabDef[] = React.useMemo(
     () => [
       {
         key: "queue",
         label: "Queue",
         icon: <ScrollText className="size-5" />,
-        render: (so) => <OrdersPanel onSignOut={so} />,
+        render: (so) => (
+          <OrdersPanel
+            onSignOut={so}
+            onAmendStart={() => selectTab("new_order")}
+          />
+        ),
       },
       {
         key: "new_order",
-        label: "New",
-        icon: <PlusCircle className="size-5" />,
-        render: (so) => (
-          <BowlBuilder
-            orderedByName={employee?.name ?? ""}
-            employeeId={employee?.id ?? ""}
-            onSignOut={so}
-          />
+        label: amendActive ? "Edit" : "New",
+        icon: amendActive ? (
+          <PenLine className="size-5" />
+        ) : (
+          <PlusCircle className="size-5" />
         ),
+        render: (so) =>
+          amendActive ? (
+            <OrderScreen
+              title={t("amendStaffTitle")}
+              subtitle={t("amendStaffSubtitle")}
+              source="employee"
+              orderedByName={employee?.name ?? ""}
+              employeeId={employee?.id ?? null}
+              bottomInset={64}
+              onAmended={() => selectTab("queue")}
+              headerExtra={
+                <button
+                  type="button"
+                  onClick={() => selectTab("queue")}
+                  className="glass grid size-11 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={t("backToQueue")}
+                  title={t("backToQueue")}
+                >
+                  <ChevronLeft className="size-4 rtl:rotate-180" />
+                </button>
+              }
+            />
+          ) : (
+            <BowlBuilder
+              orderedByName={employee?.name ?? ""}
+              employeeId={employee?.id ?? ""}
+              onSignOut={so}
+            />
+          ),
       },
       {
         key: "inventory",
@@ -165,7 +222,7 @@ export function EmployeeDashboard() {
         render: (so) => <SyncPanel onSignOut={so} />,
       },
     ],
-    [employee]
+    [employee, amendActive, t, selectTab]
   );
 
   // Filter tabs by the employee's permissions.
@@ -173,20 +230,7 @@ export function EmployeeDashboard() {
 
   // Default to the first visible tab, preferring the queue (order-receiving focus).
   const defaultTab = visibleTabs.find((t) => t.key === "queue") ?? visibleTabs[0];
-  const [tab, setTab] = React.useState<Permission | null>(
-    defaultTab?.key ?? null
-  );
 
-  // Switching to the queue/requests tab acknowledges unseen alerts.
-  const selectTab = React.useCallback(
-    (key: string) => {
-      setTab(key as Permission);
-      if (key === "queue" || key === "requests") {
-        alerts.acknowledge();
-      }
-    },
-    [alerts]
-  );
 
   // If the current tab is no longer visible (permissions changed), reset.
   React.useEffect(() => {

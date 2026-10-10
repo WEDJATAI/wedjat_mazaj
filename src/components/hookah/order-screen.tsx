@@ -28,6 +28,7 @@ import {
   ScanLine,
   Search,
   Plus,
+  PenLine,
 } from "lucide-react";
 import { BarcodeModal } from "./barcode-modal";
 import { SessionTimer } from "./session-timer";
@@ -35,6 +36,7 @@ import { motion } from "framer-motion";
 import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
+import { cn } from "@/lib/utils";
 import {
   AppHeader,
   EASE,
@@ -83,6 +85,8 @@ interface OrderScreenProps {
   /** R49: called with the placed order id — lets the guest flow open
    * the live tracking view straight from checkout. */
   onOrderPlaced?: (orderId: string) => void;
+  /** r58: fired after an amend session saves (parent lists refresh). */
+  onAmended?: () => void;
 }
 
 export function OrderScreen({
@@ -102,12 +106,16 @@ export function OrderScreen({
   returningBanner,
   bottomInset = 0,
   onOrderPlaced,
+  onAmended,
 }: OrderScreenProps) {
   const mounted = useMounted();
   const t = useI18n((s) => s.t);
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
   const addItem = useCart((s) => s.addItem);
+  // r58 living orders — the whole screen becomes the order editor
+  const amendOrderId = useCart((s) => s.amendOrderId);
+  const amending = !!amendOrderId;
   const totals = computeTotals(items, ownType);
 
   const [selectedBrand, setSelectedBrand] = React.useState<Brand | null>(null);
@@ -667,34 +675,81 @@ export function OrderScreen({
       </footer>
 
       {/* Floating cart bar — always anchored to the bottom (bottomInset
-          lifts it above things like the staff tab bar) */}
-      {mounted && cartCount > 0 && (
+          lifts it above things like the staff tab bar). In AMEND mode it
+          becomes the living-order editor bar. */}
+      {mounted && (cartCount > 0 || amending) && (
         <motion.div
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 320, damping: 28 }}
-          className="fixed inset-x-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className={cn(
+            "fixed inset-x-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]",
+            amending && "amend-bar"
+          )}
           style={bottomInset ? { bottom: `${bottomInset}px` } : undefined}
         >
-          <div className="glass mx-auto flex w-full max-w-5xl items-center gap-3 rounded-2xl p-3 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]">
+          <div
+            className={cn(
+              "glass mx-auto flex w-full max-w-5xl items-center gap-3 rounded-2xl p-3 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]",
+              amending && "ring-1 ring-primary/50"
+            )}
+          >
             <div className="flex items-center gap-2.5">
-              <span className="grid size-10 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
-                <ShoppingBag className="size-4" />
+              <span
+                className={cn(
+                  "relative grid size-10 place-items-center rounded-xl ring-1",
+                  amending
+                    ? "bg-primary/20 text-primary ring-primary/40"
+                    : "bg-primary/15 text-primary ring-primary/25"
+                )}
+              >
+                {amending ? (
+                  <PenLine className="size-4" />
+                ) : (
+                  <ShoppingBag className="size-4" />
+                )}
+                {amending && (
+                  <span
+                    className="absolute -end-0.5 -top-0.5 size-2.5 animate-pulse rounded-full bg-primary"
+                    aria-hidden
+                  />
+                )}
               </span>
               <div className="leading-tight">
-                <p className="text-xs text-muted-foreground">
-                  {cartCount} {cartCount > 1 ? t("bowls") : t("bowl")}
-                  {totals.bogo ? ` · ${t("bogoOn")}` : ""}
-                </p>
-                <p className="font-display text-lg font-bold tabular-nums text-gold">
-                  {egp(totals.total)}
-                </p>
+                {amending ? (
+                  <>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                      {t("amendBarTitle")}
+                    </p>
+                    <p className="font-display text-lg font-bold tabular-nums text-gold">
+                      #{amendOrderId?.slice(-6).toUpperCase()} · {cartCount}{" "}
+                      {cartCount > 1 ? t("bowls") : t("bowl")} · {egp(totals.total)}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      {cartCount} {cartCount > 1 ? t("bowls") : t("bowl")}
+                      {totals.bogo ? ` · ${t("bogoOn")}` : ""}
+                    </p>
+                    <p className="font-display text-lg font-bold tabular-nums text-gold">
+                      {egp(totals.total)}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
-            <GoldButton className="ms-auto" onClick={() => setCartOpen(true)}>
-              {t("viewCart")}
-              <ArrowRight className="size-4 rtl:rotate-180" />
-            </GoldButton>
+            {amending ? (
+              <GoldButton className="ms-auto" onClick={() => setCartOpen(true)}>
+                {t("amendBarCta")}
+                <ArrowRight className="size-4 rtl:rotate-180" />
+              </GoldButton>
+            ) : (
+              <GoldButton className="ms-auto" onClick={() => setCartOpen(true)}>
+                {t("viewCart")}
+                <ArrowRight className="size-4 rtl:rotate-180" />
+              </GoldButton>
+            )}
           </div>
         </motion.div>
       )}
@@ -708,6 +763,7 @@ export function OrderScreen({
         open={cartOpen}
         onOpenChange={setCartOpen}
         onCheckout={handleCheckout}
+        onAmended={onAmended}
       />
       <CheckoutDialog
         open={checkoutOpen}

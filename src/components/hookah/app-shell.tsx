@@ -8,6 +8,7 @@ import { GuestOrder } from "./guest-order";
 import { PlatformConsole } from "./platform-console";
 import { PwaManager } from "./pwa-manager";
 import { tableContextFromUrl, useTableContext } from "@/store/table-context";
+import { LogoSplash, MazajMark } from "./logo";
 
 function useHydrated() {
   const [h, setH] = React.useState(false);
@@ -69,6 +70,8 @@ export function AppShell() {
 
   return (
     <>
+      {/* the one-per-session living-ember boot splash */}
+      <LogoSplash />
       {/* PWA engine: install prompts, QR download sheet, two-way sync chip */}
       <PwaManager />
       <AppBody role={role} hydrated={hydrated} />
@@ -91,10 +94,8 @@ function AppBody({
     return (
       <div className="dark relative flex min-h-screen items-center justify-center bg-background">
         <div className="ember-glow pointer-events-none absolute inset-0" />
-        <div className="relative flex flex-col items-center gap-3">
-          <span className="grid size-14 animate-pulse place-items-center rounded-2xl bg-primary/15 text-primary text-3xl">
-            🔥
-          </span>
+        <div className="relative flex flex-col items-center gap-1">
+          <MazajMark size={44} animated={false} className="animate-pulse" />
           <p className="text-sm text-muted-foreground">Mazaj…</p>
         </div>
       </div>

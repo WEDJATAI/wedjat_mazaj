@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
@@ -29,6 +28,7 @@ import {
 import { useI18n } from "@/store/i18n";
 import type { Translations } from "@/lib/i18n";
 import { QrCodeSvg } from "./qr-code";
+import { MazajMark } from "./logo";
 import {
   EASE,
   GoldButton,
@@ -279,13 +279,11 @@ export function InstallLanding() {
                     className="absolute inset-0 -z-10 scale-[1.8] animate-pulse rounded-full bg-primary/30 blur-3xl"
                     aria-hidden
                   />
-                  <Image
-                    src="/icons/icon-192.png"
-                    alt="Mazaj app icon"
-                    width={96}
-                    height={96}
-                    priority
-                    className="rounded-[1.6rem] shadow-2xl shadow-black/60 ring-1 ring-white/10"
+                  {/* the living-ember mark — the brand animates the very
+                      first second a phone lands here from the QR code */}
+                  <MazajMark
+                    size={104}
+                    className="drop-shadow-[0_18px_44px_rgba(0,0,0,0.6)]"
                   />
                 </div>
                 <p className="mt-5 text-xs font-semibold tracking-[0.5em] text-muted-foreground">

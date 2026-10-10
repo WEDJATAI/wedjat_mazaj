@@ -9,10 +9,11 @@ import {
   useScroll,
   useSpring,
 } from "framer-motion";
-import { ArrowRight, Flame, X } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
 import { useI18n } from "@/store/i18n";
 import { usePwa } from "@/store/pwa";
 import { LangToggle } from "../lang-toggle";
+import { MazajMark } from "../logo";
 import { SignIn } from "../sign-in";
 import { LandingHero } from "./landing-hero";
 import {
@@ -227,7 +228,7 @@ export function Landing() {
             className="font-display flex items-center gap-2 text-lg font-bold tracking-wide"
             aria-label="Mazaj — back to top"
           >
-            <Flame className="size-5 text-primary" />
+            <MazajMark size={24} className="-my-0.5" />
             <span className="text-gold-soft">Mazaj</span>
           </button>
 

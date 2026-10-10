@@ -199,6 +199,13 @@ model Order {
   // R46: sellable add-ons chosen with the order (JSON string array, e.g.
   // ["medical_hose"]) — needed to re-push the exact check lines on retry.
   addonsJson       String?
+  // r58 "Living Orders": an order stays editable (amendable) until it is
+  // served. Every amendment bumps `revision`, restamps `amendedAt`,
+  // records who edited it, re-adjusts branch inventory to the net delta
+  // and writes a human-readable diff into the order's comment thread.
+  revision         Int       @default(0)
+  amendedAt        DateTime?
+  amendedByName    String?
   // Wedjat RSM sync tracking
   wedjatOrderId    Int? // the order ID in Wedjat RSM (null = not synced)
   wedjatSyncStatus String    @default("pending") // pending | synced | failed | revoked

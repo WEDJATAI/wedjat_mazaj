@@ -47,14 +47,14 @@ const CartItemSchema = z.object({
 });
 
 const CreateOrderSchema = z.object({
-  customerName: z.string().trim().max(80).optional().or(z.literal("")),
-  phone: z.string().trim().max(20).optional().or(z.literal("")),
-  table: z.string().trim().max(40).optional().or(z.literal("")),
+  customerName: z.string().trim().max(80).nullish().or(z.literal("")),
+  phone: z.string().trim().max(20).nullish().or(z.literal("")),
+  table: z.string().trim().max(40).nullish().or(z.literal("")),
   // R46: the NUMERIC Wedjat RSM table id — the unambiguous reference for
   // the check (names repeat across the restaurant's floors). Comes from
   // the POS "Order Shisha" button URL (?tableId=) or the table picker.
   tableId: z.number().int().positive().max(1_000_000_000).optional().nullable(),
-  notes: z.string().trim().max(400).optional().or(z.literal("")),
+  notes: z.string().trim().max(400).nullish().or(z.literal("")),
   items: z.array(CartItemSchema).min(1, "Add at least one hookah"),
   subtotal: z.number().nonnegative(),
   discount: z.number().nonnegative(),
@@ -69,7 +69,7 @@ const CreateOrderSchema = z.object({
   addons: z.array(z.string()).default([]),
   // R49 loyalty: member phone to earn/redeem points for. Redemption is
   // validated + applied SERVER-SIDE (client totals are never trusted).
-  loyaltyPhone: z.string().trim().max(20).optional().or(z.literal("")),
+  loyaltyPhone: z.string().trim().max(20).nullish().or(z.literal("")),
   redeemPoints: z.number().int().nonnegative().max(100000).optional().nullable(),
   // r57: the branch receiving this order (stock deducts from ITS jars)
   branchId: z.string().trim().optional().nullable(),

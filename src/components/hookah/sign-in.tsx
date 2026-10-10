@@ -5,7 +5,6 @@ import { useSession } from "@/store/session";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Flame,
   Delete,
   ShieldCheck,
   UserRound,
@@ -24,6 +23,7 @@ import { useI18n } from "@/store/i18n";
 import { useTableContext } from "@/store/table-context";
 import { usePwa } from "@/store/pwa";
 import { EASE, GoldButton, Kicker, ScreenShell } from "./kit/kit";
+import { MazajMark } from "./logo";
 import type { EmployeeBranch } from "@/store/session";
 import { MapPin, LayoutGrid } from "lucide-react";
 
@@ -58,14 +58,15 @@ export function SignIn() {
           transition={{ duration: 0.8, ease: EASE }}
           className="mb-9 flex flex-col items-center text-center"
         >
-          <motion.span
-            initial={{ scale: 0, rotate: -18 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", delay: 0.15, stiffness: 200, damping: 16 }}
-            className="mb-4 grid size-20 place-items-center rounded-[1.6rem] bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary shadow-[0_0_44px_-6px_oklch(0.78_0.15_65/0.45)] ring-1 ring-primary/30"
+          {/* the living-ember mark — the hookah draws itself in */}
+          <motion.div
+            initial={{ scale: 0.82, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", delay: 0.1, stiffness: 160, damping: 18 }}
+            className="relative mb-2 grid size-24 place-items-center rounded-[1.6rem] bg-gradient-to-b from-primary/20 to-primary/[0.04] shadow-[0_0_44px_-6px_oklch(0.78_0.15_65/0.45)] ring-1 ring-primary/30"
           >
-            <Flame className="size-10" />
-          </motion.span>
+            <MazajMark size={54} className="-mt-1" />
+          </motion.div>
           <p className="text-xs font-semibold tracking-[0.5em] text-muted-foreground">
             مــزاج
           </p>
