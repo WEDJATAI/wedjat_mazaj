@@ -1,32 +1,47 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Playfair_Display, Amiri } from "next/font/google";
+// r60: fonts are SELF-HOSTED (next/font/local). The previous
+// next/font/google setup fetched Google Fonts at build time, which made
+// Vercel builds flaky ("next/font/google queries have exactly one entry"
+// when fonts.gstatic.com rate-limits the build IP — took down the r60
+// restore deploy). Local files = deterministic builds, faster cold starts.
+import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { I18nProvider } from "@/components/hookah/i18n-provider";
 
-const geistSans = Geist({
+const geistSans = localFont({
+  src: "./fonts/geist-latin.woff2",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/geist-mono-latin.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
 // Cinematic display serif for the landing — per-glyph fallback:
 // Latin glyphs render in Playfair, Arabic glyphs fall through to Amiri.
-const playfair = Playfair_Display({
+// (Playfair latin variable woff2 covers weights 500–900, normal + italic.)
+const playfair = localFont({
+  src: [
+    { path: "./fonts/playfair-display-latin.woff2", weight: "500 900", style: "normal" },
+    { path: "./fonts/playfair-display-italic-latin.woff2", weight: "500 900", style: "italic" },
+  ],
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800", "900"],
-  style: ["normal", "italic"],
+  display: "swap",
 });
 
-const amiri = Amiri({
+const amiri = localFont({
+  src: [
+    { path: "./fonts/amiri-arabic.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/amiri-arabic-bold.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-display-ar",
-  subsets: ["arabic"],
-  weight: ["400", "700"],
+  display: "swap",
 });
 
 export const viewport: Viewport = {
