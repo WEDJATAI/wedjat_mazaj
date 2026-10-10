@@ -45,6 +45,7 @@ import {
   Stagger,
   StaggerItem,
 } from "./kit/kit";
+import { BrandMark, BrandStack } from "./brand-mark";
 
 interface OrderRow {
   id: string;
@@ -77,6 +78,8 @@ interface Comment {
 
 interface ItemSummary {
   primaryBrandName: string;
+  primaryBrandId?: string;
+  components?: { brandId: string }[];
   flavorLabel: string;
   qty: number;
 }
@@ -628,14 +631,27 @@ function OrderCard({
 
       {items.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {items.map((it, i) => (
-            <span
-              key={i}
-              className="rounded-full border border-white/[0.12] bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-foreground/90"
-            >
-              {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
-            </span>
-          ))}
+          {items.map((it, i) => {
+            const brandIds =
+              it.components && it.components.length > 1
+                ? it.components.map((c) => c.brandId)
+                : it.primaryBrandId
+                ? [it.primaryBrandId]
+                : [];
+            return (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.06] py-0.5 pe-2.5 ps-1 text-[11px] font-medium text-foreground/90"
+              >
+                {brandIds.length > 1 ? (
+                  <BrandStack brandIds={brandIds} size="xs" max={3} />
+                ) : brandIds.length === 1 ? (
+                  <BrandMark brandId={brandIds[0]} size="xs" noRing />
+                ) : null}
+                {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
+              </span>
+            );
+          })}
         </div>
       )}
 

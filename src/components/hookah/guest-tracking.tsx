@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
+import { BrandMark, BrandStack } from "./brand-mark";
 import { useI18n } from "@/store/i18n";
 import { celebrate, haptic } from "@/lib/delight";
 import { motion } from "framer-motion";
@@ -375,8 +376,13 @@ function TrackedOrder({
   const est = estimateMinutes(order.itemCount);
   const isDone = order.status === "done";
 
-  let items: { qty: number; primaryBrandName: string; flavorLabel: string }[] =
-    [];
+  let items: {
+    qty: number;
+    primaryBrandName: string;
+    primaryBrandId?: string;
+    components?: { brandId: string }[];
+    flavorLabel: string;
+  }[] = [];
   try {
     const parsed = JSON.parse(order.itemsJson);
     if (Array.isArray(parsed)) items = parsed;
@@ -421,14 +427,27 @@ function TrackedOrder({
       {/* items summary */}
       {items.length > 0 && (
         <div className="relative mt-2.5 flex flex-wrap gap-1.5">
-          {items.slice(0, 4).map((it, i) => (
-            <span
-              key={i}
-              className="rounded-lg border border-white/[0.12] bg-white/[0.07] px-2 py-0.5 text-[11px] font-medium text-foreground/90"
-            >
-              {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
-            </span>
-          ))}
+          {items.slice(0, 4).map((it, i) => {
+            const brandIds =
+              it.components && it.components.length > 1
+                ? it.components.map((c) => c.brandId)
+                : it.primaryBrandId
+                ? [it.primaryBrandId]
+                : [];
+            return (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.12] bg-white/[0.07] py-0.5 pe-2 ps-1 text-[11px] font-medium text-foreground/90"
+              >
+                {brandIds.length > 1 ? (
+                  <BrandStack brandIds={brandIds} size="xs" max={3} />
+                ) : brandIds.length === 1 ? (
+                  <BrandMark brandId={brandIds[0]} size="xs" noRing />
+                ) : null}
+                {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
+              </span>
+            );
+          })}
         </div>
       )}
 

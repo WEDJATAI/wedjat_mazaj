@@ -14,6 +14,7 @@ import {
 } from "@/lib/catalog";
 import { useCart, computeTotals, splitGrams } from "@/store/cart";
 import { BrandCard } from "./brand-card";
+import { BrandMark, BrandStack } from "./brand-mark";
 import { ConfigSheet } from "./config-sheet";
 import { CartDrawer } from "./cart-drawer";
 import { CheckoutDialog } from "./checkout-dialog";
@@ -374,11 +375,7 @@ export function OrderScreen({
                           onClick={() => addFlavorQuick(brand, flavor)}
                           className="group glass flex w-full items-center gap-3 rounded-2xl p-3 text-start transition-all hover:border-primary/35 hover:shadow-[0_14px_36px_-16px_rgba(0,0,0,0.7)] active:scale-[0.99]"
                         >
-                          <span
-                            className={`grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-xl ${brand.accent}`}
-                          >
-                            {brand.emoji}
-                          </span>
+                          <BrandMark brandId={brand.id} size="md" />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold">
                               {brand.name} · {flavor}
@@ -406,9 +403,13 @@ export function OrderScreen({
                       key={p.id}
                       type="button"
                       onClick={() => addPreset(p.id)}
-                      className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-all hover:bg-primary/20 active:scale-95"
+                      className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 py-1.5 pe-3.5 ps-1.5 text-xs font-semibold text-primary transition-all hover:bg-primary/20 active:scale-95"
                     >
-                      <span className="text-base">{p.emoji}</span>
+                      <BrandStack
+                        brandIds={p.components.map((c) => c.brandId)}
+                        size="xs"
+                        max={2}
+                      />
                       {p.name}
                     </button>
                   ))}
@@ -532,8 +533,12 @@ export function OrderScreen({
                       className="glass group flex shrink-0 flex-col items-center gap-1 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35"
                       style={{ minWidth: 96 }}
                     >
-                      <span className="text-3xl transition-transform duration-300 group-hover:scale-110">
-                        {p.emoji}
+                      <span className="transition-transform duration-300 group-hover:scale-110">
+                        <BrandStack
+                          brandIds={p.components.map((c) => c.brandId)}
+                          size="md"
+                          max={2}
+                        />
                       </span>
                       <span className="text-center text-[11px] font-medium leading-tight">
                         {p.name}

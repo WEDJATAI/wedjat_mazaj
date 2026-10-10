@@ -19,6 +19,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { BrandMark } from "./brand-mark";
 import {
   Minus,
   Plus,
@@ -166,9 +167,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
             aria-hidden
           />
           <div className="flex items-center gap-3.5">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/[0.08] bg-white/[0.05] text-2xl ring-1 ring-primary/25">
-              {brand.emoji}
-            </span>
+            <BrandMark brandId={brand.id} size="lg" />
             <div className="min-w-0 leading-tight">
               <p className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-gold-soft">
                 {brand.origin}
@@ -425,7 +424,7 @@ function MixPicker({
               key={`${c.brandId}:${c.flavorName}:${i}`}
               className="glass flex items-center gap-2.5 rounded-xl px-3 py-1.5"
             >
-              <span className="text-lg">{c.emoji}</span>
+              <BrandMark brandId={c.brandId} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
                   {c.brandName} · {c.flavorName}
@@ -515,13 +514,13 @@ function FlavorPicker({
             type="button"
             onClick={() => setActiveBrand(b.id)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition-all duration-300",
+              "flex shrink-0 items-center gap-1.5 rounded-full border py-1 pe-3 ps-1.5 text-xs transition-all duration-300",
               activeBrand === b.id
                 ? "border-primary/40 bg-primary/10 text-primary ring-1 ring-primary/40"
                 : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:text-primary"
             )}
           >
-            <span>{b.emoji}</span>
+            <BrandMark brandId={b.id} size="xs" />
             {b.name}
           </button>
         ))}

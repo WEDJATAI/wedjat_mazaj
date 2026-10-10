@@ -26,6 +26,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "./brand-mark";
 import { toast } from "sonner";
 import { BRANDS, SUPPLIES, egp } from "@/lib/catalog";
 import { useBranchScope } from "@/hooks/use-branch-scope";
@@ -455,9 +456,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                       )}
                       <div className="relative flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-lg ring-1 ring-white/[0.08]">
-                            {brand?.emoji ?? "📦"}
-                          </span>
+                          <BrandMark brandId={r.brandId} size="md" />
                           <div>
                             <p className="font-semibold">{r.brandName}</p>
                             <p className="text-xs text-muted-foreground">
@@ -1208,7 +1207,7 @@ function ForecastSection() {
                 b.daysLeft != null && b.daysLeft <= 3 && "ring-1 ring-destructive/40"
               )}
             >
-              <span className="text-xl">{b.emoji}</span>
+              <BrandMark brandId={b.brandId} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{b.brandName}</p>
                 <p className="text-[11px] text-muted-foreground">

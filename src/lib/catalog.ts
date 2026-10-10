@@ -34,7 +34,7 @@ export const SHISHA_CATEGORIES: ShishaCategoryDef[] = [
     label: "Regular shisha",
     desc: "Mazaya · Al Fakher · Dandash · Nakhla · Salom · Kass",
     emoji: "🌿",
-    logo: "/images/brands/regular.png",
+    logo: "/images/brands/regular.jpg",
     brandIds: [
       "mazaya",
       "al-fakher",
@@ -132,7 +132,7 @@ export const BRANDS: Brand[] = [
       "Peach",
       "Guava",
     ],
-    logo: "/images/brands/mazaya.png",
+    logo: "/images/brands/mazaya.jpg",
     barcode: "MZ-001",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 85 },
@@ -181,7 +181,7 @@ export const BRANDS: Brand[] = [
     blurb: "Local classic with rich, traditional taste.",
     flavorTypes: ["fruits", "fruits-mix"],
     flavors: ["Double Apple", "Grape", "Mint", "Watermelon", "Lemon", "Peach"],
-    logo: "/images/brands/dandash.png",
+    logo: "/images/brands/dandash.jpg",
     barcode: "DN-003",
     packs: [
       { grams: 250, label: "250g pack", costEgp: 70 },
@@ -257,7 +257,7 @@ export const BRANDS: Brand[] = [
     blurb: "Light, budget-friendly sessions — 45 EGP flat.",
     flavorTypes: ["flat"],
     flavors: ["Standard", "Apple", "Grape", "Mint"],
-    logo: "/images/brands/salom.jpeg",
+    logo: "/images/brands/salom.jpg",
     barcode: "SL-006",
     packs: [{ grams: 250, label: "250g pack", costEgp: 35 }],
   },

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
+import { BrandMark } from "./brand-mark";
 import {
   EmptyState,
   Kicker,
@@ -246,9 +247,7 @@ export function ProfitPanel({ onSignOut }: { onSignOut: () => void }) {
                         <div className="glass relative flex h-full flex-col rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
-                              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-lg ring-1 ring-white/[0.08]">
-                                {b.emoji}
-                              </span>
+                              <BrandMark brandId={b.brandId} size="md" />
                               <div>
                                 <p className="font-semibold">{b.brandName}</p>
                                 <p className="text-xs text-muted-foreground">

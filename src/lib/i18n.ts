@@ -608,6 +608,45 @@ export interface Translations {
   landEnter: string;
   landMenuPeek: string;
   landMenuPeekSub: string;
+  // ── r59: WEDJAT RSM revenue share ─────────────────────────────
+  rsmTitle: string;
+  rsmSubtitle: string;
+  rsmRangeToday: string;
+  rsmRange7: string;
+  rsmRange30: string;
+  rsmRangeAll: string;
+  rsmShishaRevenue: string;
+  rsmShishaRevenueSub: string;
+  rsmCommission: string;
+  rsmCommissionSub: string;
+  rsmWedjatGross: string;
+  rsmWedjatGrossSub: string;
+  rsmPartnerShare: string;
+  rsmEffective: string;
+  rsmFormula: string;
+  rsmTaxNote: string;
+  rsmSeparationNote: string;
+  rsmGrossSales: string;
+  rsmDiscounts: string;
+  rsmOrders: string;
+  rsmHookahs: string;
+  rsmByBranch: string;
+  rsmByVenue: string;
+  rsmDailyTrend: string;
+  rsmSyncTitle: string;
+  rsmSynced: string;
+  rsmPending: string;
+  rsmFailed: string;
+  rsmRevoked: string;
+  rsmNoData: string;
+  rsmPlatformSection: string;
+  rsmPlatformSectionDesc: string;
+  rsmThBranch: string;
+  rsmThVenue: string;
+  rsmThRevenue: string;
+  rsmThCommission: string;
+  rsmThOurs: string;
+  rsmViewFull: string;
 }
 
 export const translations: Record<Lang, Partial<Translations>> = {
@@ -1238,6 +1277,47 @@ export const translations: Record<Lang, Partial<Translations>> = {
     landEnter: "Enter the lounge",
     landMenuPeek: "Tonight's houses",
     landMenuPeekSub: "Tap to open the full menu",
+    // ── r59: WEDJAT RSM revenue share ──
+    rsmTitle: "RSM · Revenue share",
+    rsmSubtitle: "WEDJAT gross profit on shisha",
+    rsmRangeToday: "Today",
+    rsmRange7: "7 days",
+    rsmRange30: "30 days",
+    rsmRangeAll: "All time",
+    rsmShishaRevenue: "Shisha revenue",
+    rsmShishaRevenueSub: "charged · after discounts",
+    rsmCommission: "Commission 12%",
+    rsmCommissionSub: "on shisha only",
+    rsmWedjatGross: "WEDJAT gross 40%",
+    rsmWedjatGrossSub: "our share of the commission",
+    rsmPartnerShare: "Partner share 60%",
+    rsmEffective: "Effective 4.8% of shisha sales",
+    rsmFormula: "Gross profit = shisha revenue × 12% × 40%",
+    rsmTaxNote:
+      "Tax & VAT are paid by the venue (the rented shisha corner) — never deducted from WEDJAT's share.",
+    rsmSeparationNote:
+      "The 12% is calculated on shisha, apart from the café/restaurant's other orders — food & beverages carry no shisha commission.",
+    rsmGrossSales: "Gross menu sales",
+    rsmDiscounts: "Discounts (BYO · loyalty)",
+    rsmOrders: "orders",
+    rsmHookahs: "hookahs",
+    rsmByBranch: "By branch",
+    rsmByVenue: "By venue",
+    rsmDailyTrend: "Daily trend",
+    rsmSyncTitle: "Wedjat RSM sync",
+    rsmSynced: "on checks",
+    rsmPending: "pending",
+    rsmFailed: "failed",
+    rsmRevoked: "revoked",
+    rsmNoData: "No shisha sales in this range yet.",
+    rsmPlatformSection: "RSM revenue share",
+    rsmPlatformSectionDesc: "WEDJAT gross today — 12% on shisha × our 40%",
+    rsmThBranch: "Branch",
+    rsmThVenue: "Venue",
+    rsmThRevenue: "Revenue",
+    rsmThCommission: "12%",
+    rsmThOurs: "Our 40%",
+    rsmViewFull: "Open the RSM dashboard",
   },
   ar: {
     mazaj: "مزاج",
@@ -1841,5 +1921,46 @@ export const translations: Record<Lang, Partial<Translations>> = {
     landEnter: "ادخل الصالة",
     landMenuPeek: "بيوت الليلة",
     landMenuPeekSub: "اضغط لفتح القائمة كاملة",
+    // ── r59: WEDJAT RSM revenue share ──
+    rsmTitle: "RSM · مشاركة الإيرادات",
+    rsmSubtitle: "إجمالي ربح وجدة من الشيشة",
+    rsmRangeToday: "اليوم",
+    rsmRange7: "٧ أيام",
+    rsmRange30: "٣٠ يومًا",
+    rsmRangeAll: "كل الفترات",
+    rsmShishaRevenue: "إيراد الشيشة",
+    rsmShishaRevenueSub: "المحصّل · بعد الخصومات",
+    rsmCommission: "العمولة ١٢٪",
+    rsmCommissionSub: "على الشيشة فقط",
+    rsmWedjatGross: "إجمالي وجدة ٤٠٪",
+    rsmWedjatGrossSub: "حصتنا من العمولة",
+    rsmPartnerShare: "حصة الشريك ٦٠٪",
+    rsmEffective: "المعدل الفعلي ٤٫٨٪ من مبيعات الشيشة",
+    rsmFormula: "إجمالي الربح = إيراد الشيشة × ١٢٪ × ٤٠٪",
+    rsmTaxNote:
+      "الضرائب وضريبة القيمة المضافة يتحملها المكان المؤجِّر لركن الشيشة — ولا تُخصم من حصة وجدة إطلاقًا.",
+    rsmSeparationNote:
+      "تُحسب عمولة الـ١٢٪ على الشيشة منفصلة عن باقي طلبات الكافيه أو المطعم — الأكل والمشروبات بلا عمولة شيشة.",
+    rsmGrossSales: "إجمالي مبيعات القائمة",
+    rsmDiscounts: "الخصومات (احضر معلك · الولاء)",
+    rsmOrders: "طلب",
+    rsmHookahs: "شيشة",
+    rsmByBranch: "حسب الفرع",
+    rsmByVenue: "حسب المكان",
+    rsmDailyTrend: "الاتجاه اليومي",
+    rsmSyncTitle: "مزامنة وجدة RSM",
+    rsmSynced: "على الفواتير",
+    rsmPending: "معلّق",
+    rsmFailed: "فاشل",
+    rsmRevoked: "ملغى",
+    rsmNoData: "لا مبيعات شيشة في هذه الفترة بعد.",
+    rsmPlatformSection: "مشاركة إيرادات RSM",
+    rsmPlatformSectionDesc: "إجمالي وجدة اليوم — ١٢٪ على الشيشة × حصتنا ٤٠٪",
+    rsmThBranch: "الفرع",
+    rsmThVenue: "المكان",
+    rsmThRevenue: "الإيراد",
+    rsmThCommission: "١٢٪",
+    rsmThOurs: "حصتنا ٤٠٪",
+    rsmViewFull: "افتح لوحة RSM",
   },
 };

@@ -16,6 +16,7 @@ import { useI18n } from "@/store/i18n";
 import { usePwa } from "@/store/pwa";
 import { BRANDS, egp } from "@/lib/catalog";
 import { QrCodeSvg } from "../qr-code";
+import { BrandMark } from "../brand-mark";
 import { Counter, Reveal, SectionKicker } from "./primitives";
 import { cn } from "@/lib/utils";
 
@@ -111,7 +112,7 @@ export function MenuPeek({ onOpen }: { onOpen: () => void }) {
                   </span>
                 )}
                 <span className="text-3xl" aria-hidden>
-                  {b.emoji}
+                  <BrandMark brandId={b.id} size="xl" />
                 </span>
                 <span className="mt-1 font-display text-base font-semibold leading-tight">
                   {b.name}

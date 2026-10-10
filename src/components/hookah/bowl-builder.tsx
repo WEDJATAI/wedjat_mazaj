@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import { queueOrder } from "@/lib/offline-queue";
 import { tierDef } from "@/lib/loyalty";
 import { AppHeader, EmptyState, GoldButton, ScreenShell } from "./kit/kit";
+import { BrandMark, BrandStack } from "./brand-mark";
 
 // --- types ---
 
@@ -506,8 +507,12 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                     className="glass group flex shrink-0 flex-col items-center gap-1 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35"
                     style={{ minWidth: 88 }}
                   >
-                    <span className="text-2xl transition-transform duration-300 group-hover:scale-110">
-                      {p.emoji}
+                    <span className="transition-transform duration-300 group-hover:scale-110">
+                      <BrandStack
+                        brandIds={p.components.map((c) => c.brandId)}
+                        size="sm"
+                        max={2}
+                      />
                     </span>
                     <span className="text-center text-[11px] font-medium leading-tight">
                       {p.name}
@@ -931,9 +936,12 @@ function BowlEditor({
           <div className="mb-5 flex flex-col items-center gap-3">
             <BowlViz components={draft.components} size={120} />
             <div className="text-center">
-              <p className="font-display text-lg font-bold text-gold-soft">
-                {brand?.emoji} {brand?.name}
-              </p>
+              <span className="inline-flex items-center gap-2">
+                {brand && <BrandMark brandId={brand.id} size="md" />}
+                <span className="font-display text-lg font-bold text-gold-soft">
+                  {brand?.name}
+                </span>
+              </span>
               <p className="text-xs text-muted-foreground">
                 {draft.components.length === 0
                   ? "Add flavors to fill the bowl"
@@ -1143,13 +1151,13 @@ function FlavorPickerModal({
             type="button"
             onClick={() => setActiveBrand(b.id)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition-all duration-300",
+              "flex shrink-0 items-center gap-1.5 rounded-full border py-1 pe-3 ps-1.5 text-xs transition-all duration-300",
               activeBrand === b.id
                 ? "border-primary/40 bg-primary/10 text-primary ring-1 ring-primary/40"
                 : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:text-primary"
             )}
           >
-            <span>{b.emoji}</span>
+            <BrandMark brandId={b.id} size="xs" />
             {b.name}
           </button>
         ))}

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, Trash2, Plus, Loader2, Wand2 } from "lucide-react";
+import { Sparkles, Send, Trash2, Loader2, Wand2 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { egp, getBrand, BOWL_PRESETS, MOLASSES_GRAMS } from "@/lib/catalog";
@@ -25,6 +25,7 @@ import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
 import { EASE, GoldButton, SheetGrip } from "./kit/kit";
+import { BrandStack } from "./brand-mark";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -366,8 +367,8 @@ export function SommelierSheet({
                             onClick={() => addPick(p)}
                             className="group glass flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_14px_36px_-16px_rgba(0,0,0,0.7)]"
                           >
-                            <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary transition-transform group-hover:scale-105">
-                              <Plus className="size-4" />
+                            <span className="shrink-0 transition-transform group-hover:scale-105">
+                              <BrandStack brandIds={p.brandIds} size="sm" max={3} />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-semibold">

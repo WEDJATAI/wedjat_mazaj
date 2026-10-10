@@ -17,7 +17,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { egp } from "@/lib/catalog";
+import { egp, getBrand } from "@/lib/catalog";
+import { BrandMark } from "./brand-mark";
 import { useI18n } from "@/store/i18n";
 import {
   EmptyState,
@@ -75,6 +76,46 @@ interface AnalyticsData {
 }
 
 const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => `${h}:00`);
+
+/** Custom recharts tick — brand logo chip + name for the top-brands axis. */
+function BrandTick({
+  x,
+  y,
+  payload,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+}) {
+  const brand = getBrand(payload?.value ?? "");
+  if (!brand) return null;
+  return (
+    <foreignObject
+      x={Math.max(0, Number(x ?? 0) - 82)}
+      y={Number(y ?? 0) - 11}
+      width={82}
+      height={22}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          fontSize: 11,
+          color: "#d6d3d1",
+          justifyContent: "flex-end",
+          paddingRight: 6,
+          lineHeight: "22px",
+        }}
+      >
+        <span style={{ fontSize: 11, whiteSpace: "nowrap", overflow: "hidden" }}>
+          {brand.name}
+        </span>
+        <BrandMark brandId={brand.id} size="xs" noRing />
+      </div>
+    </foreignObject>
+  );
+}
 
 export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
   const t = useI18n((s) => s.t);
@@ -376,11 +417,12 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
                             <XAxis type="number" hide />
                             <YAxis
                               type="category"
-                              dataKey="brandName"
-                              stroke="#a1a1aa"
-                              fontSize={11}
-                              width={78}
+                              dataKey="brandId"
+                              width={88}
                               tickLine={false}
+                              axisLine={false}
+                              tick={<BrandTick />}
+                              interval={0}
                             />
                             <Tooltip
                               cursor={{ fill: "rgba(245,158,11,0.06)" }}

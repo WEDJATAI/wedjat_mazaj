@@ -9,6 +9,7 @@ import { OrdersPanel } from "./orders-panel";
 import { EmployeesPanel } from "./employees-panel";
 import { PurchasesPanel } from "./purchases-panel";
 import { ProfitPanel } from "./profit-panel";
+import { RsmFinancePanel } from "./rsm-finance-panel";
 import { SyncPanel } from "./sync-panel";
 import { AnalyticsPanel } from "./analytics-panel";
 import { LoyaltyPanel } from "./loyalty-panel";
@@ -30,6 +31,7 @@ import {
   Users,
   ShoppingCart,
   TrendingUp,
+  Scale,
   RefreshCw,
   BarChart3,
   Crown,
@@ -202,6 +204,12 @@ export function EmployeeDashboard() {
         label: "Profit",
         icon: <TrendingUp className="size-5" />,
         render: (so) => <ProfitPanel onSignOut={so} />,
+      },
+      {
+        key: "rsm",
+        label: "RSM",
+        icon: <Scale className="size-5" />,
+        render: (so) => <RsmFinancePanel onSignOut={so} />,
       },
       {
         key: "analytics",

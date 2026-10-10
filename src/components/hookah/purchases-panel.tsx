@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BRANDS, SUPPLIES, egp, type PackOption } from "@/lib/catalog";
+import { BrandMark } from "./brand-mark";
 import {
   EmptyState,
   GoldButton,
@@ -361,7 +362,7 @@ function BuySheet({
                           : "border-white/[0.08] bg-white/[0.04] hover:border-primary/50"
                       )}
                     >
-                      <span className="text-xl">{b.emoji}</span>
+                      <BrandMark brandId={b.id} size="md" />
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{b.name}</p>
                         <p className="text-xs text-muted-foreground">

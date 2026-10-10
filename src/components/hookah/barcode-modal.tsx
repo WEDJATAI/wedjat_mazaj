@@ -15,6 +15,7 @@ import { ScanLine, Camera, Keyboard, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GoldButton } from "./kit/kit";
+import { BrandMark } from "./brand-mark";
 
 interface BarcodeModalProps {
   open: boolean;
@@ -290,7 +291,7 @@ export function BarcodeModal({ open, onOpenChange, onScan }: BarcodeModalProps) 
                   }}
                   className="glass flex items-center gap-2 rounded-xl p-2 text-start text-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_14px_36px_-16px_rgba(0,0,0,0.7)]"
                 >
-                  <span className="text-lg">{b.emoji}</span>
+                  <BrandMark brandId={b.id} size="md" />
                   <div className="min-w-0">
                     <p className="truncate font-medium">{b.name}</p>
                     <p className="font-display text-[11px] font-bold tabular-nums text-gold">

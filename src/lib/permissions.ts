@@ -49,6 +49,7 @@ export const ALL_PERMISSIONS = [
   "employees", // manage employees + permissions (super admin only)
   "purchases", // buy molasses packs / supply boxes (procurement)
   "profit", // profit dashboard (revenue, COGS, net profit)
+  "rsm", // r59: WEDJAT RSM revenue-share dashboard (12% × 40%)
   "sync", // Wedjat RSM sync status (admin+)
   "analytics", // R49 analytics dashboard (trends, peaks, staff, feedback)
   "loyalty", // R49 loyalty program members (admin+)
@@ -67,6 +68,10 @@ export const PERMISSION_META: Record<
   employees: { label: "Employees", desc: "Manage staff & permissions" },
   purchases: { label: "Purchases", desc: "Buy molasses packs & supplies" },
   profit: { label: "Profit", desc: "Revenue, COGS & net profit" },
+  rsm: {
+    label: "RSM",
+    desc: "WEDJAT revenue share — 12% on shisha × our 40%",
+  },
   sync: { label: "Sync", desc: "Wedjat RSM connection & sync status" },
   analytics: { label: "Analytics", desc: "Trends, peak hours, staff & feedback" },
   loyalty: { label: "Loyalty", desc: "Rewards members, points & tiers" },
@@ -87,6 +92,7 @@ export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
     "employees",
     "purchases",
     "profit",
+    "rsm",
     "sync",
     "analytics",
     "loyalty",
@@ -98,6 +104,7 @@ export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
     "requests",
     "purchases",
     "profit",
+    "rsm",
     "sync",
     "analytics",
     "loyalty",

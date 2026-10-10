@@ -21,6 +21,7 @@ import {
   Flame,
   Loader2,
   LogOut,
+  Landmark,
   MapPin,
   Pause,
   Plus,
@@ -48,6 +49,8 @@ import { cn } from "@/lib/utils";
 import type { Lang } from "@/lib/i18n";
 import { useI18n } from "@/store/i18n";
 import { useSession } from "@/store/session";
+import { computeRsmGrossProfit } from "@/lib/rsm-finance";
+import { RsmFinanceSection } from "./rsm-finance-panel";
 import {
   AppHeader,
   EmptyState,
@@ -306,7 +309,7 @@ export function PlatformConsole({ onSignOut }: { onSignOut: () => void }) {
         ) : (
           <>
             {/* the platform pulse */}
-            <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <StaggerItem>
                 <StatTile
                   key={`active-${statsEpoch}`}
@@ -339,7 +342,19 @@ export function PlatformConsole({ onSignOut }: { onSignOut: () => void }) {
                   label={t("todayRevenue")}
                 />
               </StaggerItem>
+              <StaggerItem>
+                <StatTile
+                  key={`wedjat-${statsEpoch}`}
+                  className="ring-1 ring-primary/25"
+                  icon={<Landmark className="size-4" />}
+                  text={egp(computeRsmGrossProfit(stats.revenue).wedjatGross, lang)}
+                  label={t("rsmWedjatGross")}
+                />
+              </StaggerItem>
             </Stagger>
+
+            {/* r59 — the full WEDJAT RSM revenue-share dashboard */}
+            <RsmFinanceSection employeeId={employeeId ?? ""} />
 
             {/* venues */}
             <section className="mt-8">

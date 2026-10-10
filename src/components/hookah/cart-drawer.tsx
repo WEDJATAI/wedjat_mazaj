@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/store/i18n";
 import { EmptyState, GoldButton, Kicker } from "./kit/kit";
+import { BrandMark, BrandStack } from "./brand-mark";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
 
@@ -240,14 +241,15 @@ export function CartDrawer({ open, onOpenChange, onCheckout, onAmended }: CartDr
                     className="glass rounded-2xl p-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]"
                   >
                     <div className="flex items-start gap-3">
-                      <span
-                        className={cn(
-                          "grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-xl",
-                          it.accent
-                        )}
-                      >
-                        {it.emoji}
-                      </span>
+                      {it.components.length > 1 ? (
+                        <BrandStack
+                          brandIds={it.components.map((c) => c.brandId)}
+                          size="sm"
+                          className="mt-0.5"
+                        />
+                      ) : (
+                        <BrandMark brandId={it.primaryBrandId} size="md" />
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
