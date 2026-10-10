@@ -28,6 +28,9 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BRANDS, SUPPLIES, egp } from "@/lib/catalog";
+import { useBranchScope } from "@/hooks/use-branch-scope";
+import { useI18n } from "@/store/i18n";
+import type { EmployeeBranch } from "@/store/session";
 import {
   EASE,
   GoldButton,
@@ -45,6 +48,8 @@ interface InventoryRow {
   stockGrams: number;
   lowStockThreshold: number;
   updatedAt: string;
+  /** r57 — all-branches scope: per-branch breakdown of the total */
+  branches?: { branchId: string; branchName: string; branchNameAr?: string | null; stockGrams: number }[];
 }
 
 interface SupplyRow {
@@ -57,6 +62,8 @@ interface SupplyRow {
   cost: number;
   emoji: string;
   updatedAt: string;
+  /** r57 — all-branches scope: per-branch breakdown of the total */
+  branches?: { branchId: string; branchName: string; branchNameAr?: string | null; stock: number }[];
 }
 
 interface FlavorRow {
@@ -117,6 +124,13 @@ function StockMeter({
 }
 
 export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
+  const { branchId, branchParam, branchName, branches } = useBranchScope();
+  const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
+  // r57 — "all" = venue-admin aggregate scope → total inventory matrix
+  const isAllScope = branchParam === "all";
+  const scopeLabel = branchName ?? t("allBranches");
+
   const [rows, setRows] = React.useState<InventoryRow[]>([]);
   const [supplies, setSupplies] = React.useState<SupplyRow[]>([]);
   const [flavors, setFlavors] = React.useState<FlavorRow[]>([]);
@@ -129,28 +143,32 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
+      const q = `?branchId=${encodeURIComponent(branchParam)}`;
       const [invRes, supRes, flavRes] = await Promise.all([
-        fetch("/api/inventory"),
-        fetch("/api/supplies"),
-        fetch("/api/flavor-stock"),
+        fetch(`/api/inventory${q}`),
+        fetch(`/api/supplies${q}`),
+        fetch(`/api/flavor-stock${q}`),
       ]);
       const invData = await invRes.json();
       const supData = await supRes.json();
       const flavData = await flavRes.json();
       if (invData.ok) {
         const byId = new Map(invData.items.map((r: InventoryRow) => [r.brandId, r]));
+        // spread the fetched row over the catalog default so the row always
+        // carries an id (the all-scope aggregate omits it) + branches[]
         const merged = BRANDS.map(
           (b) =>
-            byId.get(b.id) ?? {
+            ({
               id: b.id,
               brandId: b.id,
               brandName: b.name,
               stockGrams: 0,
               lowStockThreshold: 120,
               updatedAt: new Date().toISOString(),
-            }
+              ...(byId.get(b.id) ?? {}),
+            }) as InventoryRow
         );
-        setRows(merged as InventoryRow[]);
+        setRows(merged);
       } else {
         toast.error("Could not load inventory");
       }
@@ -158,7 +176,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
         const byKey = new Map(supData.items.map((r: SupplyRow) => [r.key, r]));
         const mergedSup = SUPPLIES.map(
           (s) =>
-            byKey.get(s.key) ?? {
+            ({
               id: s.key,
               key: s.key,
               name: s.name,
@@ -168,9 +186,10 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
               cost: s.cost,
               emoji: s.emoji,
               updatedAt: new Date().toISOString(),
-            }
+              ...(byKey.get(s.key) ?? {}),
+            }) as SupplyRow
         );
-        setSupplies(mergedSup as SupplyRow[]);
+        setSupplies(mergedSup);
       } else {
         toast.error("Could not load supplies");
       }
@@ -182,7 +201,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [branchParam]);
 
   React.useEffect(() => {
     load();
@@ -209,7 +228,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                 Inventory
               </h1>
               <p className="-mt-0.5 truncate text-[11px] text-muted-foreground">
-                Molasses stock · auto-deducted on order
+                {`Molasses stock · auto-deducted on order · ${scopeLabel}`}
               </p>
             </div>
             <div className="ms-auto flex shrink-0 items-center gap-2">
@@ -266,6 +285,16 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
             />
             <WarnStatTile value={lowCount} label="Low stock" />
           </div>
+
+          {/* r57 — all-branches aggregate: the total inventory matrix */}
+          {isAllScope && (
+            <div className="mb-8">
+              <Kicker>{t("invTotalAll")}</Kicker>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {t("invMatrixHint")}
+              </p>
+            </div>
+          )}
 
           {/* Supplies section */}
           <section className="mb-8">
@@ -342,6 +371,34 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                           </div>
                           <StockMeter pct={pct} low={low} delay={i * 0.05} />
                         </div>
+                        {/* r57 matrix — per-branch breakdown chips */}
+                        {isAllScope && (s.branches?.length ?? 0) > 0 && (
+                          <div className="relative mt-3">
+                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                              {t("invByBranch")}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {s.branches?.map((b) => {
+                                const bLow =
+                                  b.stock <= (s.lowStockThreshold || 120);
+                                return (
+                                  <span
+                                    key={`${s.key}-${b.branchId}`}
+                                    className={cn(
+                                      "rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                                      bLow
+                                        ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                                        : "border-white/[0.12] bg-white/[0.06] text-foreground/80"
+                                    )}
+                                  >
+                                    {(lang === "ar" && b.branchNameAr) || b.branchName} · {Math.round(b.stock)}{" "}
+                                    {s.unit}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -423,6 +480,34 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                         <StockMeter pct={pct} low={low} delay={i * 0.04} />
                       </div>
 
+                      {/* r57 matrix — per-branch breakdown chips */}
+                      {isAllScope && (r.branches?.length ?? 0) > 0 && (
+                        <div className="relative mt-3">
+                          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                            {t("invByBranch")}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {r.branches?.map((b) => {
+                              const bLow =
+                                b.stockGrams <= (r.lowStockThreshold || 120);
+                              return (
+                                <span
+                                  key={`${r.brandId}-${b.branchId}`}
+                                  className={cn(
+                                    "rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                                    bLow
+                                      ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                                      : "border-white/[0.12] bg-white/[0.06] text-foreground/80"
+                                  )}
+                                >
+                                  {(lang === "ar" && b.branchNameAr) || b.branchName} · {Math.round(b.stockGrams)}g
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -448,7 +533,14 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                         <span>{expandedBrand === r.brandId ? "−" : "+"}</span>
                       </button>
                       {expandedBrand === r.brandId && (
-                        <ul className="relative mt-2 space-y-1">
+                        <div className="relative mt-2">
+                          {/* r57 — the all-scope list is summed across branches */}
+                          {isAllScope && (
+                            <p className="mb-1.5 px-1 text-[11px] text-muted-foreground">
+                              {t("invMatrixHint")}
+                            </p>
+                          )}
+                          <ul className="space-y-1">
                           {flavors
                             .filter((f) => f.brandIdRaw === r.brandId)
                             .map((f) => {
@@ -480,7 +572,8 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                                 </li>
                               );
                             })}
-                        </ul>
+                          </ul>
+                        </div>
                       )}
                     </div>
                   </StaggerItem>
@@ -502,17 +595,23 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
         </footer>
       </div>
 
+      {/* r57 — restock always targets a concrete branch: in the all-scope
+          the sheets show a branch picker (submit gated until one is picked) */}
       <RestockSheet
         row={restockBrand}
         open={!!restockBrand}
         onOpenChange={(o) => !o && setRestockBrand(null)}
         onDone={load}
+        branchId={branchId}
+        branches={isAllScope ? branches : []}
       />
       <RestockSupplySheet
         row={restockSupply}
         open={!!restockSupply}
         onOpenChange={(o) => !o && setRestockSupply(null)}
         onDone={load}
+        branchId={branchId}
+        branches={isAllScope ? branches : []}
       />
       <RestockFlavorSheet
         row={restockFlavor}
@@ -569,22 +668,89 @@ function WarnStatTile({ value, label }: { value: number; label: string }) {
   );
 }
 
+/* r57 — branch radio picker. The restock APIs need a concrete branchId;
+ * the "all" scope never restocks directly, so the all-view sheets gate
+ * submit until a branch is picked. */
+function BranchPicker({
+  branches,
+  value,
+  onChange,
+}: {
+  branches: EmployeeBranch[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
+  if (branches.length === 0) return null;
+  return (
+    <div>
+      <Label className="mb-2 block text-xs font-medium text-muted-foreground">
+        {t("chooseBranch")}
+      </Label>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {branches.map((b) => {
+          const selected = value === b.id;
+          return (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => onChange(b.id)}
+              aria-pressed={selected}
+              className={cn(
+                "flex min-h-11 items-center gap-2.5 rounded-xl px-3.5 text-start text-sm font-medium transition-all active:scale-[0.98]",
+                selected
+                  ? "border border-primary/50 bg-primary/10 text-primary ring-1 ring-primary/40"
+                  : "glass text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span
+                className={cn(
+                  "grid size-4 shrink-0 place-items-center rounded-full border",
+                  selected ? "border-primary" : "border-white/25"
+                )}
+                aria-hidden
+              >
+                {selected && <span className="size-2 rounded-full bg-primary" />}
+              </span>
+              <span className="truncate">
+                {(lang === "ar" && b.nameAr) || b.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function RestockSheet({
   row,
   open,
   onOpenChange,
   onDone,
+  branchId,
+  branches,
 }: {
   row: InventoryRow | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onDone: () => void;
+  /** concrete-scope branch — its id is sent with the restock */
+  branchId: string | null;
+  /** all-scope: assignable branches (non-empty → picker, gated submit) */
+  branches: EmployeeBranch[];
 }) {
   const [grams, setGrams] = React.useState(500);
   const [saving, setSaving] = React.useState(false);
+  const [branchSel, setBranchSel] = React.useState("");
+  const needBranch = branches.length > 0;
 
   React.useEffect(() => {
-    if (open) setGrams(500);
+    if (open) {
+      setGrams(500);
+      setBranchSel("");
+    }
   }, [open]);
 
   if (!row) return null;
@@ -595,7 +761,11 @@ function RestockSheet({
       const res = await fetch("/api/inventory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brandId: row.brandId, addGrams: grams }),
+        body: JSON.stringify({
+          brandId: row.brandId,
+          addGrams: grams,
+          branchId: branchSel || branchId,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -632,6 +802,15 @@ function RestockSheet({
         </SheetHeader>
 
         <div className="px-4 pb-2">
+          {needBranch && (
+            <div className="mb-4">
+              <BranchPicker
+                branches={branches}
+                value={branchSel}
+                onChange={setBranchSel}
+              />
+            </div>
+          )}
           <Label className="mb-2 block text-xs font-medium text-muted-foreground">
             Amount (grams)
           </Label>
@@ -668,7 +847,7 @@ function RestockSheet({
           <GoldButton
             size="lg"
             className="w-full"
-            disabled={saving}
+            disabled={saving || (needBranch && !branchSel)}
             onClick={submit}
           >
             {saving ? "Saving…" : `Add ${grams}g`}
@@ -684,17 +863,28 @@ function RestockSupplySheet({
   open,
   onOpenChange,
   onDone,
+  branchId,
+  branches,
 }: {
   row: SupplyRow | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onDone: () => void;
+  /** concrete-scope branch — its id is sent with the restock */
+  branchId: string | null;
+  /** all-scope: assignable branches (non-empty → picker, gated submit) */
+  branches: EmployeeBranch[];
 }) {
   const [amount, setAmount] = React.useState(50);
   const [saving, setSaving] = React.useState(false);
+  const [branchSel, setBranchSel] = React.useState("");
+  const needBranch = branches.length > 0;
 
   React.useEffect(() => {
-    if (open) setAmount(50);
+    if (open) {
+      setAmount(50);
+      setBranchSel("");
+    }
   }, [open]);
 
   if (!row) return null;
@@ -705,7 +895,11 @@ function RestockSupplySheet({
       const res = await fetch("/api/supplies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: row.key, addAmount: amount }),
+        body: JSON.stringify({
+          key: row.key,
+          addAmount: amount,
+          branchId: branchSel || branchId,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -742,6 +936,15 @@ function RestockSupplySheet({
         </SheetHeader>
 
         <div className="px-4 pb-2">
+          {needBranch && (
+            <div className="mb-4">
+              <BranchPicker
+                branches={branches}
+                value={branchSel}
+                onChange={setBranchSel}
+              />
+            </div>
+          )}
           <Label className="mb-2 block text-xs font-medium text-muted-foreground">
             Amount ({row.unit})
           </Label>
@@ -775,7 +978,7 @@ function RestockSupplySheet({
           <GoldButton
             size="lg"
             className="w-full"
-            disabled={saving}
+            disabled={saving || (needBranch && !branchSel)}
             onClick={submit}
           >
             {saving ? "Saving…" : `Add ${amount} ${row.unit}`}

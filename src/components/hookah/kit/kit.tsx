@@ -276,7 +276,7 @@ export function AppHeader({
                 {title ?? "Mazaj"}
               </p>
               {subtitle && (
-                <p className="-mt-0.5 truncate text-[11px] text-muted-foreground">
+                <p className="-mt-0.5 truncate text-[11px] font-medium text-foreground/75">
                   {subtitle}
                 </p>
               )}
@@ -294,7 +294,7 @@ export function AppHeader({
                 {title}
               </h1>
               {subtitle && (
-                <p className="-mt-0.5 truncate text-[11px] text-muted-foreground">
+                <p className="-mt-0.5 truncate text-[11px] font-medium text-foreground/75">
                   {subtitle}
                 </p>
               )}
@@ -441,7 +441,7 @@ export function TabBar({
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "relative flex min-w-[64px] shrink-0 flex-1 flex-col items-center gap-0.5 px-1 py-2.5 text-[11px] font-medium transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                isActive ? "text-primary" : "text-foreground/70 hover:text-foreground"
               )}
             >
               {isActive && (
@@ -597,7 +597,7 @@ export function StatTile({
       <p className="font-display relative text-2xl font-bold text-gold">
         {text ?? `${display}${suffix}`}
       </p>
-      <p className="relative mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+      <p className="relative mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/75">
         {label}
       </p>
     </div>

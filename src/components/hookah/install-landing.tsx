@@ -69,12 +69,21 @@ function detectInAppBrowser(): boolean {
 function detectInstalled(): boolean {
   if (typeof window === "undefined") return false;
   if (isNativeApp()) return true; // inside the installed APK — it IS the app
-  return (
+  if (
     window.matchMedia?.("(display-mode: standalone)").matches ||
     window.matchMedia?.("(display-mode: fullscreen)").matches ||
     (window.navigator as unknown as { standalone?: boolean }).standalone ===
       true
-  );
+  ) {
+    return true;
+  }
+  // r57: this browser completed an install before (appinstalled) — the
+  // QR landing is moot for it, same as for a standalone launch
+  try {
+    return window.localStorage.getItem("mazaj:app-installed") === "1";
+  } catch {
+    return false;
+  }
 }
 
 /**

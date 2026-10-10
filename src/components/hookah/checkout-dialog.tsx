@@ -52,6 +52,8 @@ interface CheckoutDialogProps {
   defaultTableId?: number | null;
   /** id of a saved favorite mix applied to this order (optional) */
   favoriteMixId?: string | null;
+  /** r57: the branch receiving this order (stock deducts from its jars) */
+  branchId?: string | null;
   /** R49: called with the placed order id — lets the guest flow open
    * the live tracking view straight from the confirmation. */
   onOrderPlaced?: (orderId: string) => void;
@@ -74,6 +76,7 @@ interface PlaceOrderPayload {
   orderedByName: string;
   employeeId?: string | null;
   favoriteMixId?: string | null;
+  branchId?: string | null;
   loyaltyPhone?: string;
   redeemPoints?: number | null;
 }
@@ -110,6 +113,7 @@ export function CheckoutDialog({
   defaultTable,
   defaultTableId,
   favoriteMixId,
+  branchId,
   onOrderPlaced,
 }: CheckoutDialogProps) {
   const t = useI18n((s) => s.t);
@@ -218,6 +222,7 @@ export function CheckoutDialog({
       orderedByName,
       employeeId: employeeId ?? null,
       favoriteMixId: favoriteMixId ?? null,
+      branchId: branchId ?? null,
       loyaltyPhone:
         phone.trim().length >= 5 && (member || isNewMember)
           ? phone.trim()
@@ -560,7 +565,7 @@ export function CheckoutDialog({
               )}
 
               <div className="glass rounded-2xl p-3.5 text-sm">
-                <div className="flex justify-between text-muted-foreground">
+                <div className="flex justify-between font-medium text-foreground/85">
                   <span>{t("subtotal")}</span>
                   <span className="tabular-nums">{egp(totals.subtotal)}</span>
                 </div>
@@ -590,7 +595,7 @@ export function CheckoutDialog({
                   </span>
                 </div>
                 {(member || isNewMember) && earnPreview > 0 && (
-                  <p className="mt-1 text-end text-[11px] text-muted-foreground">
+                  <p className="mt-1 text-end text-[11px] font-medium text-foreground/80">
                     +{earnPreview} {t("ptsOnOrder")}
                   </p>
                 )}
@@ -632,7 +637,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+      <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground/85">
         {icon}
         {label}
       </Label>

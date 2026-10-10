@@ -23,9 +23,12 @@ import {
   Pencil,
   Loader2,
   Crown,
+  MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useBranchScope } from "@/hooks/use-branch-scope";
+import { useI18n } from "@/store/i18n";
 import {
   ROLES,
   ALL_PERMISSIONS,
@@ -52,10 +55,19 @@ interface EmployeeRow {
   permissions: Permission[];
   active: boolean;
   createdAt: string;
+  /** r57 — multi-tenant scope of this staff member */
+  venueId: string | null;
+  /** the branch they're pinned to (null = floats across the venue) */
+  branchId: string | null;
+  branchName: string | null;
 }
 
 /** Gold-ring role pills (Midnight Ember). */
 const ROLE_BADGE_CLS: Record<string, string> = {
+  platform_admin:
+    "rounded-full border-transparent bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/50",
+  venue_admin:
+    "rounded-full border-transparent bg-primary/15 text-primary ring-1 ring-primary/45",
   super_admin:
     "rounded-full border-transparent bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/50",
   admin: "rounded-full border-transparent bg-primary/15 text-primary ring-1 ring-primary/45",
@@ -266,10 +278,14 @@ function EmployeeCard({
   onToggle: () => void;
   onRemove: () => void;
 }) {
+  const t = useI18n((s) => s.t);
   const perms =
     emp.permissions.length > 0
       ? emp.permissions
       : resolvePermissions(emp.role, null);
+  // r57 — branch chip: their branch, or "All branches" when they float
+  const branchChip =
+    emp.branchName ?? (emp.venueId ? t("allBranches") : null);
   return (
     <div
       className={cn(
@@ -294,6 +310,11 @@ function EmployeeCard({
             <p className="mt-0.5 font-mono text-[11px] tracking-wider text-muted-foreground">
               PIN {emp.pin}
             </p>
+            {branchChip && (
+              <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-foreground/80">
+                <MapPin className="size-3" /> {branchChip}
+              </span>
+            )}
           </div>
         </div>
         <Badge
@@ -352,12 +373,17 @@ function EditSheet({
   onOpenChange: (o: boolean) => void;
   onDone: () => void;
 }) {
+  const { branches } = useBranchScope();
+  const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
   const isNew = employee === "new";
   const existing = !isNew ? (employee as EmployeeRow | null) : null;
   const [name, setName] = React.useState("");
   const [pin, setPin] = React.useState("");
   const [role, setRole] = React.useState<Role>("employee");
   const [perms, setPerms] = React.useState<Permission[]>([]);
+  // r57 — branch assignment ("" = floats across all branches of the venue)
+  const [branchSel, setBranchSel] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
@@ -366,6 +392,7 @@ function EditSheet({
       setPin("");
       setRole("employee");
       setPerms(resolvePermissions("employee", null));
+      setBranchSel("");
     } else if (existing) {
       setName(existing.name);
       setPin(existing.pin);
@@ -375,6 +402,7 @@ function EditSheet({
           ? existing.permissions
           : resolvePermissions(existing.role, null)
       );
+      setBranchSel(existing.branchId ?? "");
     }
   }, [employee, isNew, existing]);
 
@@ -400,10 +428,23 @@ function EditSheet({
     try {
       const url = isNew ? "/api/employees" : `/api/employees/${existing!.id}`;
       const method = isNew ? "POST" : "PATCH";
+      const body: {
+        name: string;
+        pin: string;
+        permissions: Permission[];
+        role?: Role;
+        branchId?: string;
+      } = { name: name.trim(), pin, permissions: perms };
+      // only send the role when it actually changed — the PATCH schema only
+      // accepts the lounge roles, so an unchanged venue/platform admin must
+      // not re-send theirs
+      if (role !== existing?.role) body.role = role;
+      // r57 — branch assignment ("" = float → omitted → null server-side)
+      if (branchSel) body.branchId = branchSel;
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), pin, role, permissions: perms }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed");
@@ -500,6 +541,78 @@ function EditSheet({
               })}
             </div>
           </div>
+
+          {/* r57 — branch assignment: pin to one branch or float */}
+          {branches.length > 0 && (
+            <div className="space-y-2">
+              <Label className={fieldLabelCls}>{t("branchLabel")}</Label>
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBranchSel("")}
+                  aria-pressed={branchSel === ""}
+                  className={cn(
+                    "flex items-start gap-3 rounded-2xl p-3.5 text-start transition-all duration-300 active:scale-[0.99]",
+                    branchSel === ""
+                      ? "border border-primary/50 bg-primary/10 ring-1 ring-primary/40"
+                      : "border border-white/[0.08] bg-white/[0.03] hover:border-primary/35 hover:bg-white/[0.05]"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                      branchSel === "" ? "border-primary" : "border-white/25"
+                    )}
+                    aria-hidden
+                  >
+                    {branchSel === "" && (
+                      <span className="size-2 rounded-full bg-primary" />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{t("allBranches")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("allBranchesDesc")}
+                    </p>
+                  </div>
+                </button>
+                {branches.map((b) => {
+                  const selected = branchSel === b.id;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setBranchSel(b.id)}
+                      aria-pressed={selected}
+                      className={cn(
+                        "flex items-start gap-3 rounded-2xl p-3.5 text-start transition-all duration-300 active:scale-[0.99]",
+                        selected
+                          ? "border border-primary/50 bg-primary/10 ring-1 ring-primary/40"
+                          : "border border-white/[0.08] bg-white/[0.03] hover:border-primary/35 hover:bg-white/[0.05]"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                          selected ? "border-primary" : "border-white/25"
+                        )}
+                        aria-hidden
+                      >
+                        {selected && (
+                          <span className="size-2 rounded-full bg-primary" />
+                        )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">
+                          {(lang === "ar" && b.nameAr) || b.name}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="ember-hairline" aria-hidden />
 

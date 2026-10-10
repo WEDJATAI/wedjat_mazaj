@@ -13,6 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useI18n } from "@/store/i18n";
+import { usePwa } from "@/store/pwa";
 import { BRANDS, egp } from "@/lib/catalog";
 import { QrCodeSvg } from "../qr-code";
 import { Counter, Reveal, SectionKicker } from "./primitives";
@@ -499,6 +500,8 @@ export function AppShowcase({
   onGetApp: () => void;
 }) {
   const t = useI18n((s) => s.t);
+  // r57: installed devices never see the install CTA / QR
+  const installed = usePwa((s) => s.installed);
   const [origin, setOrigin] = React.useState("https://wmazaj.vercel.app");
   React.useEffect(() => {
     setOrigin(window.location.origin);
@@ -536,23 +539,27 @@ export function AppShowcase({
             </ul>
           </Reveal>
           <Reveal delay={0.32} className="mt-9 flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              onClick={onGetApp}
-              className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-[oklch(0.85_0.13_72)] to-[oklch(0.72_0.14_60)] px-7 py-3 text-sm font-bold uppercase tracking-wider text-[oklch(0.17_0.03_50)] transition-transform duration-300 hover:scale-[1.03] active:scale-[0.98]"
-            >
-              {t("getApp")}
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
-            </button>
-            {/* mini QR */}
-            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.96] p-2 pr-4">
-              <QrCodeSvg text={installUrl} size={56} />
-              <div className="text-[0.6rem] font-semibold uppercase leading-relaxed tracking-wider text-stone-600">
-                Scan to
-                <br />
-                install
-              </div>
-            </div>
+            {!installed && (
+              <>
+                <button
+                  type="button"
+                  onClick={onGetApp}
+                  className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-[oklch(0.85_0.13_72)] to-[oklch(0.72_0.14_60)] px-7 py-3 text-sm font-bold uppercase tracking-wider text-[oklch(0.17_0.03_50)] transition-transform duration-300 hover:scale-[1.03] active:scale-[0.98]"
+                >
+                  {t("getApp")}
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
+                </button>
+                {/* mini QR */}
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.96] p-2 pr-4">
+                  <QrCodeSvg text={installUrl} size={56} />
+                  <div className="text-[0.6rem] font-semibold uppercase leading-relaxed tracking-wider text-stone-600">
+                    Scan to
+                    <br />
+                    install
+                  </div>
+                </div>
+              </>
+            )}
           </Reveal>
         </div>
 

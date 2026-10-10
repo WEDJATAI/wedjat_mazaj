@@ -4,6 +4,7 @@ import * as React from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, QrCode } from "lucide-react";
 import { useI18n } from "@/store/i18n";
+import { usePwa } from "@/store/pwa";
 import { EmberCanvas } from "./ember-canvas";
 import { Magnetic, WordReveal } from "./primitives";
 
@@ -26,6 +27,8 @@ export function LandingHero({
 }) {
   const t = useI18n((s) => s.t);
   const lang = useI18n((s) => s.lang);
+  // r57: installed devices never see the "Get the app" CTA
+  const installed = usePwa((s) => s.installed);
   const ref = React.useRef<HTMLElement>(null);
 
   const { scrollYProgress } = useScroll({
@@ -130,16 +133,18 @@ export function LandingHero({
             </button>
           </Magnetic>
 
-          <Magnetic>
-            <button
-              type="button"
-              onClick={onGetApp}
-              className="glass group inline-flex items-center gap-2.5 rounded-full px-7 py-3.5 text-sm font-semibold text-foreground/90 transition-all duration-300 hover:border-primary/50 hover:text-primary"
-            >
-              <QrCode className="size-4 text-primary" />
-              {t("getApp")}
-            </button>
-          </Magnetic>
+          {!installed && (
+            <Magnetic>
+              <button
+                type="button"
+                onClick={onGetApp}
+                className="glass group inline-flex items-center gap-2.5 rounded-full px-7 py-3.5 text-sm font-semibold text-foreground/90 transition-all duration-300 hover:border-primary/50 hover:text-primary"
+              >
+                <QrCode className="size-4 text-primary" />
+                {t("getApp")}
+              </button>
+            </Magnetic>
+          )}
         </motion.div>
       </motion.div>
 

@@ -25,12 +25,14 @@ export async function PATCH(
     // id may be a real DB row id OR a composite "brandIdRaw:flavorName" fallback.
     let row = await db.flavorStock.findUnique({ where: { id } });
     if (!row) {
-      // try composite key
+      // try composite key (r57: unique is now [brandId(InventoryItem), flavorName],
+      // so resolve via the catalog raw id + the row's parent inventory item —
+      // first matching row across branches; UI passes real row ids anyway)
       const [brandIdRaw, ...flavorParts] = id.split(":");
       const flavorName = flavorParts.join(":");
       if (brandIdRaw && flavorName) {
-        row = await db.flavorStock.findUnique({
-          where: { brandIdRaw_flavorName: { brandIdRaw, flavorName } },
+        row = await db.flavorStock.findFirst({
+          where: { brandIdRaw, flavorName },
         });
       }
     }

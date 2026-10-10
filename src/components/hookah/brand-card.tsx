@@ -65,7 +65,7 @@ export function BrandCard({ brand, inCart, onSelect, index = 0 }: BrandCardProps
             <h3 className="font-display text-lg font-bold leading-tight text-gold-soft">
               {brand.name}
             </h3>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground/80">
               {brand.origin}
             </p>
           </div>
@@ -84,13 +84,13 @@ export function BrandCard({ brand, inCart, onSelect, index = 0 }: BrandCardProps
         )}
       </div>
 
-      <p className="relative mt-2.5 line-clamp-1 text-sm text-muted-foreground">
+      <p className="relative mt-2.5 line-clamp-1 text-sm text-foreground/85">
         {brand.blurb}
       </p>
 
       <div className="relative mt-3 flex items-end justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/75">
             From
           </p>
           <p className="font-display text-2xl font-bold" style={{ color }}>
@@ -113,17 +113,17 @@ export function BrandCard({ brand, inCart, onSelect, index = 0 }: BrandCardProps
       {/* flavor type chips */}
       <div className="relative mt-3 flex flex-wrap gap-1.5">
         {brand.flavorTypes.includes("fruits") && (
-          <span className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2.5 py-0.5 text-[10px] text-muted-foreground">
+          <span className="rounded-full border border-white/[0.12] bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-semibold text-foreground/85">
             Fruits · {egp(brand.pricing.fruits ?? 0)}
           </span>
         )}
         {brand.flavorTypes.includes("fruits-mix") && (
-          <span className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2.5 py-0.5 text-[10px] text-muted-foreground">
+          <span className="rounded-full border border-white/[0.12] bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-semibold text-foreground/85">
             Mix · {egp(brand.pricing.fruitsMix ?? 0)}
           </span>
         )}
         {brand.flavorTypes.includes("flat") && (
-          <span className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2.5 py-0.5 text-[10px] text-muted-foreground">
+          <span className="rounded-full border border-white/[0.12] bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-semibold text-foreground/85">
             20g · flat
           </span>
         )}

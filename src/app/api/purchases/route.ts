@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolveBranchScope } from "@/lib/branch-scope";
 import { z } from "zod";
 import { BRANDS, SUPPLIES, getBrand, getSupply } from "@/lib/catalog";
 
@@ -27,6 +28,8 @@ const CreateSchema = z.object({
   packCount: z.number().int().positive().max(1000),
   unitCost: z.number().positive(),
   buyerName: z.string().trim().max(80).optional().nullable(),
+  // r57: the branch this purchase restocks (optional — defaults to flagship)
+  branchId: z.string().trim().optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
@@ -45,6 +48,11 @@ export async function POST(req: NextRequest) {
     const { kind, refId, gramsOrUnits, packCount, unitCost, buyerName } =
       parsed.data;
     const totalCost = Math.round(unitCost * packCount * 100) / 100;
+
+    // r57: which branch receives this purchase's stock
+    const { branchId: purchaseBranchId } = await resolveBranchScope(
+      parsed.data.branchId ?? null
+    );
 
     // Validate + build display name
     let name = "";
@@ -80,17 +88,18 @@ export async function POST(req: NextRequest) {
           unitCost,
           totalCost,
           buyerName: buyerName || null,
+          branchId: purchaseBranchId,
         },
       });
 
       if (kind === "molasses") {
         const addGrams = gramsOrUnits * packCount;
-        const existing = await tx.inventoryItem.findUnique({
-          where: { brandId: refId },
+        const existing = await tx.inventoryItem.findFirst({
+          where: { brandId: refId, branchId: purchaseBranchId },
         });
         if (existing) {
           await tx.inventoryItem.update({
-            where: { brandId: refId },
+            where: { id: existing.id },
             data: { stockGrams: { increment: addGrams } },
           });
         } else {
@@ -101,17 +110,18 @@ export async function POST(req: NextRequest) {
               brandName: brand.name,
               stockGrams: addGrams,
               lowStockThreshold: 120,
+              branchId: purchaseBranchId,
             },
           });
         }
       } else {
         const addUnits = gramsOrUnits * packCount;
-        const existing = await tx.supplyItem.findUnique({
-          where: { key: refId },
+        const existing = await tx.supplyItem.findFirst({
+          where: { key: refId, branchId: purchaseBranchId },
         });
         if (existing) {
           await tx.supplyItem.update({
-            where: { key: refId },
+            where: { id: existing.id },
             data: { stock: { increment: addUnits } },
           });
         } else {
@@ -125,6 +135,7 @@ export async function POST(req: NextRequest) {
               stock: addUnits,
               lowStockThreshold: supply.lowThreshold,
               cost: supply.cost,
+              branchId: purchaseBranchId,
             },
           });
         }

@@ -9,6 +9,10 @@ interface PwaState {
   online: boolean;
   /** running as an installed standalone app */
   standalone: boolean;
+  /** r57: the app is ALREADY installed on this device (standalone, native
+   *  APK, or this browser recorded `appinstalled`) — every "download the
+   *  app" CTA hides so installed users never see install prompts again */
+  installed: boolean;
   /** detected device platform */
   platform: InstallPlatform;
   /** beforeinstallprompt captured → native install available */
@@ -27,6 +31,7 @@ interface PwaState {
 
   setOnline: (v: boolean) => void;
   setStandalone: (v: boolean) => void;
+  setInstalled: (v: boolean) => void;
   setPlatform: (p: InstallPlatform) => void;
   setCanInstall: (v: boolean) => void;
   setGetAppOpen: (v: boolean) => void;
@@ -36,9 +41,34 @@ interface PwaState {
   setSyncing: (v: boolean) => void;
 }
 
+/** r57: persisted marker — this browser once completed an install. Hides
+ *  download CTAs on subsequent visits (even in a regular tab). Cleared if
+ *  the browser later reports the PWA installable again (uninstalled). */
+const INSTALLED_KEY = "mazaj:app-installed";
+
+export function readInstalledFlag(): boolean {
+  if (typeof window === "undefined") return false;
+  if (detectStandalone() || isNativeApp()) return true;
+  try {
+    return window.localStorage.getItem(INSTALLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function persistInstalledFlag(v: boolean) {
+  try {
+    if (v) window.localStorage.setItem(INSTALLED_KEY, "1");
+    else window.localStorage.removeItem(INSTALLED_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export const usePwa = create<PwaState>()((set) => ({
   online: true,
   standalone: false,
+  installed: false,
   platform: "other",
   canInstall: false,
   getAppOpen: false,
@@ -48,6 +78,7 @@ export const usePwa = create<PwaState>()((set) => ({
   syncing: false,
   setOnline: (online) => set({ online }),
   setStandalone: (standalone) => set({ standalone }),
+  setInstalled: (installed) => set({ installed }),
   setPlatform: (platform) => set({ platform }),
   setCanInstall: (canInstall) => set({ canInstall }),
   setGetAppOpen: (getAppOpen) => set({ getAppOpen }),

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Download, X, Loader2 } from "lucide-react";
 import { installPromptRef, usePwa } from "@/store/pwa";
 import { useI18n } from "@/store/i18n";
+import { useSession } from "@/store/session";
 import { INSTALL_LANDING_SESSION_KEY } from "./install-landing";
 
 const DISMISS_KEY = "mazaj:install-dismissed-at";
@@ -20,11 +21,16 @@ export function InstallBanner() {
   const t = useI18n((s) => s.t);
   const canInstall = usePwa((s) => s.canInstall);
   const standalone = usePwa((s) => s.standalone);
+  const installed = usePwa((s) => s.installed);
   const platform = usePwa((s) => s.platform);
   const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
   const getAppOpen = usePwa((s) => s.getAppOpen);
   const landingOpen = usePwa((s) => s.installLandingOpen);
   const marketingLanding = usePwa((s) => s.marketingLandingActive);
+  // r57: the staff suite is an operational surface — the install banner
+  // must never float over the queue/inventory panels (it was covering
+  // cards at the bottom of the screen). Staff devices aren't the funnel.
+  const role = useSession((s) => s.role);
 
   const [visible, setVisible] = React.useState(false);
   const [installing, setInstalling] = React.useState(false);
@@ -80,7 +86,8 @@ export function InstallBanner() {
     }
   };
 
-  if (standalone || getAppOpen || landingOpen || marketingLanding) return null;
+  if (standalone || installed || role === "employee" || getAppOpen || landingOpen || marketingLanding)
+    return null;
 
   return (
     <AnimatePresence>

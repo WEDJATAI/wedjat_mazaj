@@ -54,7 +54,7 @@ const GOLD_FILL =
   "border-transparent bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] text-[oklch(0.17_0.03_50)] shadow-[0_10px_26px_-10px_oklch(0.72_0.145_60/0.6)]";
 
 const GLASS_PILL =
-  "border-white/[0.08] bg-white/[0.04] text-foreground hover:border-primary/40 hover:bg-white/[0.07] hover:text-primary";
+  "border-white/[0.14] bg-white/[0.06] font-semibold text-foreground/95 hover:border-primary/40 hover:bg-white/[0.09] hover:text-primary";
 
 interface ConfigSheetProps {
   brand: Brand | null;
@@ -359,7 +359,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
         {/* ── sticky footer: live price + gold CTA ── */}
         <div className="sticky bottom-0 z-10 border-t border-white/[0.08] bg-[oklch(0.175_0.015_60/0.95)] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-2xl">
           <div className="mb-3 flex items-baseline justify-between">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-foreground/80">
               {t("lineTotal")}
             </span>
             <span className="font-display text-2xl font-bold tabular-nums text-gold">
@@ -403,7 +403,7 @@ function MixPicker({
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-foreground">
           {t("mixFlavors")}{" "}
-          <span className="text-muted-foreground">
+          <span className="text-foreground/75">
             ({components.length} {t("selectedWord")})
           </span>
         </p>
@@ -415,7 +415,7 @@ function MixPicker({
         </Badge>
       </div>
 
-      <p className="text-xs text-muted-foreground">{t("mixAcrossBrands")}</p>
+      <p className="text-xs text-foreground/75">{t("mixAcrossBrands")}</p>
 
       {/* Selected components */}
       {components.length > 0 ? (
@@ -430,7 +430,7 @@ function MixPicker({
                 <p className="truncate text-sm font-medium">
                   {c.brandName} · {c.flavorName}
                 </p>
-                <p className="text-[11px] tabular-nums text-muted-foreground">
+                <p className="text-[11px] font-medium tabular-nums text-foreground/75">
                   {grams[i]?.toFixed(2)}g
                 </p>
               </div>
@@ -446,7 +446,7 @@ function MixPicker({
           ))}
         </ul>
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-4 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-4 text-center text-sm font-medium text-foreground/80">
           {t("mixEmpty")}
         </div>
       )}
@@ -527,7 +527,7 @@ function FlavorPicker({
         ))}
       </div>
 
-      <p className="mb-2 text-xs text-muted-foreground">
+      <p className="mb-2 text-xs font-medium text-foreground/80">
         {brand.name} {t("flavorsOf")}
       </p>
       <div className="flex flex-wrap gap-2">
@@ -555,7 +555,7 @@ function FlavorPicker({
       <button
         type="button"
         onClick={onClose}
-        className="mt-3 flex min-h-11 w-full items-center justify-center rounded-xl text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="mt-3 flex min-h-11 w-full items-center justify-center rounded-xl text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
       >
         {t("closeBtn")}
       </button>

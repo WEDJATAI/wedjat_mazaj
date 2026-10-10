@@ -38,6 +38,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBranchScope } from "@/hooks/use-branch-scope";
 import { toast } from "sonner";
 import { queueOrder } from "@/lib/offline-queue";
 import { tierDef } from "@/lib/loyalty";
@@ -126,6 +127,8 @@ interface BowlBuilderProps {
 }
 
 export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilderProps) {
+  // r57: orders created here belong to the employee's working branch
+  const { branchId: workingBranchId } = useBranchScope();
   const [bowls, setBowls] = React.useState<Bowl[]>([]);
   const [editing, setEditing] = React.useState<Bowl | null>(null);
   const [customerName, setCustomerName] = React.useState("");
@@ -299,6 +302,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             source: "employee",
             orderedByName,
             employeeId,
+            branchId: workingBranchId ?? undefined,
             loyaltyPhone: loyaltyPhone.trim() || undefined,
           },
           `${orderedByName} · Table ${table.trim()} · ${egp(total)}`

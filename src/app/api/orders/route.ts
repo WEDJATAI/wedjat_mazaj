@@ -15,6 +15,7 @@ import {
   supplyConsumption,
 } from "@/lib/catalog";
 import { pushOrderToWedjat, pushAvailabilityToWedjat } from "@/lib/wedjat";
+import { resolveBranchScope } from "@/lib/branch-scope";
 import {
   pointsEarnedOn,
   redeemDiscount,
@@ -70,6 +71,8 @@ const CreateOrderSchema = z.object({
   // validated + applied SERVER-SIDE (client totals are never trusted).
   loyaltyPhone: z.string().trim().max(20).optional().or(z.literal("")),
   redeemPoints: z.number().int().nonnegative().max(100000).optional().nullable(),
+  // r57: the branch receiving this order (stock deducts from ITS jars)
+  branchId: z.string().trim().optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
@@ -88,6 +91,11 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data;
+
+    // r57: which branch receives (and stock-deducts) this order
+    const { branchId: effectiveBranchId } = await resolveBranchScope(
+      data.branchId ?? null
+    );
 
     // --- Validate every component brandId exists in the catalog ---
     for (const it of data.items) {
@@ -206,7 +214,10 @@ export async function POST(req: NextRequest) {
 
     // --- Validate molasses stock (brand + per-flavor) ---
     const inventoryRows = await db.inventoryItem.findMany({
-      where: { brandId: { in: [...molassesDeductions.keys()] } },
+      where: {
+        brandId: { in: [...molassesDeductions.keys()] },
+        branchId: effectiveBranchId,
+      },
     });
     const short: { name: string; need: number; have: number }[] = [];
     for (const row of inventoryRows) {
@@ -231,6 +242,8 @@ export async function POST(req: NextRequest) {
           brandIdRaw: k.brandIdRaw,
           flavorName: k.flavorName,
         })),
+        // r57: only this branch's flavor jars count
+        brand: { branchId: effectiveBranchId },
       },
     });
     const shortFlavors: { name: string; need: number; have: number }[] = [];
@@ -265,7 +278,10 @@ export async function POST(req: NextRequest) {
 
     // --- Validate supply stock ---
     const supplyRows = await db.supplyItem.findMany({
-      where: { key: { in: supplyDeductions.map((d) => d.key) } },
+      where: {
+        key: { in: supplyDeductions.map((d) => d.key) },
+        branchId: effectiveBranchId,
+      },
     });
     const shortSupplies: { name: string; need: number; have: number }[] = [];
     for (const d of supplyDeductions) {
@@ -342,6 +358,7 @@ export async function POST(req: NextRequest) {
           assignment,
           assignedToName,
           assignedToId,
+          branchId: effectiveBranchId,
           cogs: finalCogs,
           molassesCost: cogs.molassesCost,
           suppliesCost: Math.round((cogs.suppliesCost + addonCost) * 100) / 100,
@@ -440,10 +457,12 @@ export async function POST(req: NextRequest) {
 
       // deduct add-on supply stock (e.g. 1 medical hose per order)
       for (const k of validAddons) {
-        const existing = await tx.supplyItem.findUnique({ where: { key: k } });
+        const existing = await tx.supplyItem.findFirst({
+          where: { key: k, branchId: effectiveBranchId },
+        });
         if (existing) {
           await tx.supplyItem.update({
-            where: { key: k },
+            where: { id: existing.id },
             data: { stock: { decrement: 1 } },
           });
         }
@@ -451,10 +470,15 @@ export async function POST(req: NextRequest) {
 
       // deduct molasses brand totals
       for (const [brandId, grams] of molassesDeductions) {
-        await tx.inventoryItem.update({
-          where: { brandId },
-          data: { stockGrams: { decrement: grams } },
+        const row = await tx.inventoryItem.findFirst({
+          where: { brandId, branchId: effectiveBranchId },
         });
+        if (row) {
+          await tx.inventoryItem.update({
+            where: { id: row.id },
+            data: { stockGrams: { decrement: grams } },
+          });
+        }
       }
 
       // deduct per-flavor subtypes (upsert so missing rows are seeded first)
@@ -487,12 +511,12 @@ export async function POST(req: NextRequest) {
 
       // deduct supplies (upsert so missing rows are created then decremented)
       for (const d of supplyDeductions) {
-        const existing = await tx.supplyItem.findUnique({
-          where: { key: d.key },
+        const existing = await tx.supplyItem.findFirst({
+          where: { key: d.key, branchId: effectiveBranchId },
         });
         if (existing) {
           await tx.supplyItem.update({
-            where: { key: d.key },
+            where: { id: existing.id },
             data: { stock: { decrement: d.amount } },
           });
         } else {
@@ -508,6 +532,7 @@ export async function POST(req: NextRequest) {
                 lowStockThreshold: def.lowThreshold,
                 cost: def.cost,
                 sellPrice: def.sellPrice,
+                branchId: effectiveBranchId,
               },
             });
           }
@@ -623,11 +648,32 @@ export async function GET(req: NextRequest) {
         .slice(0, 50);
       return NextResponse.json({ ok: true, orders });
     }
+    // r57: ?branchId= scopes the staff queue (absent/"all" = every branch)
+    const branchParam = req.nextUrl.searchParams.get("branchId");
+    const scoped = branchParam && branchParam !== "all" ? branchParam : null;
     const orders = await db.order.findMany({
+      where: scoped ? { branchId: scoped } : undefined,
       orderBy: { createdAt: "desc" },
       take: 50,
     });
-    return NextResponse.json({ ok: true, orders });
+    // attach branch names for the queue cards (admin all-branches view)
+    const branchIds = [...new Set(orders.map((o) => o.branchId).filter(Boolean))] as string[];
+    const branches = branchIds.length
+      ? await db.branch.findMany({
+          where: { id: { in: branchIds } },
+          select: { id: true, name: true, nameAr: true },
+        })
+      : [];
+    const branchName = new Map(branches.map((b) => [b.id, b.name]));
+    const branchNameAr = new Map(branches.map((b) => [b.id, b.nameAr]));
+    return NextResponse.json({
+      ok: true,
+      orders: orders.map((o) => ({
+        ...o,
+        branchName: o.branchId ? branchName.get(o.branchId) ?? null : null,
+        branchNameAr: o.branchId ? branchNameAr.get(o.branchId) ?? null : null,
+      })),
+    });
   } catch (err) {
     console.error("list orders error", err);
     return NextResponse.json(

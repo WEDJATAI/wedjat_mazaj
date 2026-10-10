@@ -10,137 +10,209 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Employee {
+// ── r57 multi-tenant platform ───────────────────────────────────────────
+// A Venue is a café/restaurant/hookah-lounge onboarded onto the Mazaj
+// platform by the platform super admin. A Venue owns one or more Branches;
+// every operational record (orders, stock, requests, staff) is scoped to a
+// Branch, while venue admins can aggregate across all of them.
+model Venue {
   id        String   @id @default(cuid())
   name      String
-  pin       String   @unique
-  role      String   @default("employee") // super_admin | admin | employee
+  nameAr    String?
+  slug      String   @unique
+  kind      String   @default("hookah") // hookah | cafe | restaurant
+  status    String   @default("active") // pending | active | suspended
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches Branch[]
+}
+
+model Branch {
+  id         String   @id @default(cuid())
+  venueId    String
+  venue      Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name       String
+  nameAr     String?
+  slug       String   @unique
+  address    String?
+  phone      String?
+  isFlagship Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  employees Employee[]
+  inventory InventoryItem[]
+  supplies  SupplyItem[]
+  orders    Order[]
+  requests  ServiceRequest[]
+  favorites FavoriteMix[]
+  purchases Purchase[]
+}
+
+model Employee {
+  id          String   @id @default(cuid())
+  name        String
+  pin         String   @unique
+  // r57 roles: platform_admin (the platform owner console) |
+  // super_admin | venue_admin (multi-branch owner of one venue) |
+  // admin | employee
+  role        String   @default("employee")
   // Comma-separated permission keys (see src/lib/permissions.ts).
   // Empty/null => use role defaults.
-  permissions String  @default("")
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  permissions String   @default("")
+  active      Boolean  @default(true)
+  // Multi-tenant scope: platform_admin has no venue; venue_admin/super_admin
+  // may float across their venue's branches (branchId = null);
+  // a branch employee is pinned to one branch.
+  venueId     String?
+  branchId    String?
+  createdAt   DateTime @default(now())
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 }
 
 model InventoryItem {
   id                String   @id @default(cuid())
-  brandId           String   @unique
+  brandId           String
   brandName         String
   stockGrams        Float
   lowStockThreshold Float    @default(100)
+  // r57: stock is per-BRANCH (each branch keeps its own jars)
+  branchId          String?
   updatedAt         DateTime @updatedAt
 
+  branch  Branch?       @relation(fields: [branchId], references: [id], onDelete: Cascade)
   flavors FlavorStock[]
+
+  @@unique([branchId, brandId])
 }
 
 // Per-flavor stock subtype (exact grams of each flavor within a brand).
 model FlavorStock {
-  id                String   @id @default(cuid())
+  id                String        @id @default(cuid())
   brand             InventoryItem @relation(fields: [brandId], references: [id], onDelete: Cascade)
   brandId           String
-  brandIdRaw        String   // catalog brandId (e.g. "mazaya") for lookups
+  brandIdRaw        String // catalog brandId (e.g. "mazaya") for lookups
   brandName         String
   flavorName        String
   stockGrams        Float
-  lowStockThreshold Float    @default(60)
-  updatedAt         DateTime @updatedAt
+  lowStockThreshold Float         @default(60)
+  updatedAt         DateTime      @updatedAt
 
-  @@unique([brandIdRaw, flavorName])
+  @@unique([brandId, flavorName])
 }
 
 // Consumable supplies (coal, foil, hose, …). Tracked in their own unit, auto-deducted on order.
 model SupplyItem {
   id                String   @id @default(cuid())
-  key               String   @unique // regular_coal | cubed_coal | foil | medical_hose | ...
+  key               String // regular_coal | cubed_coal | foil | medical_hose | ...
   name              String
-  unit              String   // pcs | sheets | ...
+  unit              String // pcs | sheets | ...
   stock             Float
   lowStockThreshold Float    @default(20)
   cost              Float    @default(0) // EGP per unit (business cost)
   sellPrice         Float    @default(0) // EGP charged to client when chosen as add-on
   emoji             String   @default("📦")
+  // r57: supplies are per-BRANCH
+  branchId          String?
   updatedAt         DateTime @updatedAt
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, key])
 }
 
 model ServiceRequest {
-  id              String   @id @default(cuid())
-  type            String   @default("call_shisha_man") // call_shisha_man | coal_request | ...
-  guestName       String?
-  table           String?
-  note            String?
-  status          String   @default("pending") // pending | acknowledged | done
-  createdAt       DateTime @default(now())
-  acknowledgedAt  DateTime?
+  id             String    @id @default(cuid())
+  type           String    @default("call_shisha_man") // call_shisha_man | coal_request | ...
+  guestName      String?
+  table          String?
+  note           String?
+  status         String    @default("pending") // pending | acknowledged | done
+  // r57: the branch this call belongs to
+  branchId       String?
+  createdAt      DateTime  @default(now())
+  acknowledgedAt DateTime?
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 }
 
 // A guest's saved favorite mix (their go-to bowl).
 model FavoriteMix {
-  id          String   @id @default(cuid())
-  guestName   String
-  label       String
+  id             String   @id @default(cuid())
+  guestName      String
+  label          String
   componentsJson String // serialized FlavorComponent[]
-  createdAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
+  branch         Branch?  @relation(fields: [branchId], references: [id])
+  branchId       String?
 }
 
 model Order {
-  id            String   @id @default(cuid())
-  customerName  String?
-  phone         String?
-  table         String?
-  notes         String?
-  itemsJson     String
-  subtotal      Float
-  discount      Float    @default(0)
-  total         Float
-  bogo          Boolean  @default(false)
-  ownType       String?
-  itemCount     Int      @default(0)
-  status        String   @default("pending") // pending | preparing | done
-  source        String   @default("employee") // employee | guest_scan | guest_call
+  id               String    @id @default(cuid())
+  customerName     String?
+  phone            String?
+  table            String?
+  notes            String?
+  itemsJson        String
+  subtotal         Float
+  discount         Float     @default(0)
+  total            Float
+  bogo             Boolean   @default(false)
+  ownType          String?
+  itemCount        Int       @default(0)
+  status           String    @default("pending") // pending | preparing | done
+  source           String    @default("employee") // employee | guest_scan | guest_call
+  // r57: the branch that received (and stock-deducted) this order
+  branchId         String?
   // R49 loyalty: the member this order earned/redeemed points for, and the
   // discount applied from redeemed points (server-validated, never trusted
   // from the client).
-  loyaltyMemberId String?
-  pointsEarned    Int      @default(0)
-  pointsRedeemed  Int      @default(0)
-  loyaltyDiscount Float    @default(0)
+  loyaltyMemberId  String?
+  pointsEarned     Int       @default(0)
+  pointsRedeemed   Int       @default(0)
+  loyaltyDiscount  Float     @default(0)
   // R49 guest feedback: 1–5 stars + optional comment, submitted by the
   // guest from the live tracking view once the order is done.
-  rating          Int?
-  ratingComment   String?
-  ratedAt         DateTime?
-  orderedByName String?
-  employeeId    String?
-  favoriteMixId String?
+  rating           Int?
+  ratingComment    String?
+  ratedAt          DateTime?
+  orderedByName    String?
+  employeeId       String?
+  favoriteMixId    String?
   // Order-receiving workflow:
   //  - "unassigned": guest self-order awaiting an employee to confirm
   //  - "assigned":   an employee has claimed/confirmed it (assignedToName set)
   //  - null:        employee-created orders are immediately theirs
-  assignment    String?  // unassigned | assigned
-  assignedToName String?
-  assignedToId   String?
+  assignment       String? // unassigned | assigned
+  assignedToName   String?
+  assignedToId     String?
   // Profitability (computed server-side at order time)
-  cogs          Float    @default(0) // cost of goods sold (molasses + supplies)
-  molassesCost  Float    @default(0)
-  suppliesCost  Float    @default(0)
-  netProfit     Float    @default(0) // total - cogs
-  marginPct     Float    @default(0) // netProfit / total * 100
+  cogs             Float     @default(0) // cost of goods sold (molasses + supplies)
+  molassesCost     Float     @default(0)
+  suppliesCost     Float     @default(0)
+  netProfit        Float     @default(0) // total - cogs
+  marginPct        Float     @default(0) // netProfit / total * 100
   // R46: sellable add-ons chosen with the order (JSON string array, e.g.
   // ["medical_hose"]) — needed to re-push the exact check lines on retry.
-  addonsJson    String?
+  addonsJson       String?
   // Wedjat RSM sync tracking
-  wedjatOrderId Int?     // the order ID in Wedjat RSM (null = not synced)
-  wedjatSyncStatus String @default("pending") // pending | synced | failed | revoked
-  wedjatRevokedBy String? // name of the Wedjat employee who revoked it
-  wedjatRevokedAt DateTime?
+  wedjatOrderId    Int? // the order ID in Wedjat RSM (null = not synced)
+  wedjatSyncStatus String    @default("pending") // pending | synced | failed | revoked
+  wedjatRevokedBy  String? // name of the Wedjat employee who revoked it
+  wedjatRevokedAt  DateTime?
   // R46: the NUMERIC Wedjat RSM table id (table NAMES repeat across the
   // restaurant's floors, so the id is the only unambiguous reference).
   // Captured from the POS "Order Shisha" button URL (?tableId=) or the
   // employee table picker, stored on the order and echoed to the RSM
   // webhook so items land on the RIGHT table's check.
-  wedjatTableId Int?
-  createdAt     DateTime @default(now())
+  wedjatTableId    Int?
+  createdAt        DateTime  @default(now())
 
+  branch   Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
   comments OrderComment[]
 }
 
@@ -172,13 +244,13 @@ model LoyaltyMember {
 
 // Audit trail for every points movement (earn / redeem / bonus / adjustment).
 model PointsLedger {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   member    LoyaltyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
   memberId  String
   orderId   String?
   delta     Int
-  reason    String   // order_earn | redeem | signup_bonus | adjustment
-  createdAt DateTime @default(now())
+  reason    String // order_earn | redeem | signup_bonus | adjustment
+  createdAt DateTime      @default(now())
 }
 
 // R53 web push — a phone/browser subscribed to order-status notifications.
@@ -188,9 +260,9 @@ model PointsLedger {
 model PushSubscription {
   id        String   @id @default(cuid())
   endpoint  String   @unique // the push service URL (browser-managed)
-  p256dh    String   // subscription.keys.p256dh
-  auth      String   // subscription.keys.auth
-  guestName String   // guest identity for matching to orders
+  p256dh    String // subscription.keys.p256dh
+  auth      String // subscription.keys.auth
+  guestName String // guest identity for matching to orders
   platform  String   @default("web") // web | android | ios
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -198,18 +270,22 @@ model PushSubscription {
 
 // A procurement purchase: buying molasses packs or supply boxes to restock.
 model Purchase {
-  id          String   @id @default(cuid())
+  id           String   @id @default(cuid())
   // What was bought: "molasses" (brand pack) or "supply" (coal/foil/hose box)
-  kind        String   // molasses | supply
+  kind         String // molasses | supply
   // For molasses: catalog brandId. For supply: supply key (regular_coal, ...).
-  refId       String
-  name        String   // display name, e.g. "Mazaya · 250g pack"
+  refId        String
+  name         String // display name, e.g. "Mazaya · 250g pack"
   // Pack details
-  gramsOrUnits Float   // grams (molasses) or units (supply) per pack
-  packCount   Int      // how many packs were bought
-  unitCost    Float    // EGP per pack
-  totalCost   Float    // EGP total (unitCost * packCount)
+  gramsOrUnits Float // grams (molasses) or units (supply) per pack
+  packCount    Int // how many packs were bought
+  unitCost     Float // EGP per pack
+  totalCost    Float // EGP total (unitCost * packCount)
   // Optional: who recorded the purchase
-  buyerName   String?
-  createdAt   DateTime @default(now())
+  buyerName    String?
+  // r57: which branch this purchase restocks
+  branchId     String?
+  createdAt    DateTime @default(now())
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 }

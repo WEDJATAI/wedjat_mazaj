@@ -6,6 +6,9 @@ import {
   detectPlatform,
   detectStandalone,
   installPromptRef,
+  readInstalledFlag,
+  persistInstalledFlag,
+  isNativeApp,
 } from "@/store/pwa";
 import {
   flushQueue,
@@ -13,6 +16,10 @@ import {
   registerBackgroundSync,
   subscribeQueue,
 } from "@/lib/offline-queue";
+import {
+  flushRequestQueue,
+  queuedRequestCount,
+} from "@/lib/request-queue";
 import { refreshSubscriptionAfterChange } from "@/lib/push-client";
 import { GetAppSheet } from "./get-app-sheet";
 import { InstallBanner } from "./install-banner";
@@ -37,6 +44,7 @@ import { toast } from "sonner";
 export function PwaManager() {
   const setOnline = usePwa((s) => s.setOnline);
   const setStandalone = usePwa((s) => s.setStandalone);
+  const setInstalled = usePwa((s) => s.setInstalled);
   const setPlatform = usePwa((s) => s.setPlatform);
   const setCanInstall = usePwa((s) => s.setCanInstall);
   const setQueuedCount = usePwa((s) => s.setQueuedCount);
@@ -124,7 +132,11 @@ export function PwaManager() {
   // --- platform / standalone / install-prompt detection ----------------
   React.useEffect(() => {
     setPlatform(detectPlatform());
-    setStandalone(detectStandalone());
+    const standalone = detectStandalone();
+    setStandalone(standalone);
+    // r57: installed = standalone | native APK | this browser completed an
+    // install before — gates every "download the app" CTA
+    setInstalled(standalone || isNativeApp() || readInstalledFlag());
     setOnline(navigator.onLine);
     void queuedCount().then(setQueuedCount);
 
@@ -132,16 +144,28 @@ export function PwaManager() {
       e.preventDefault();
       installPromptRef.current = e as typeof installPromptRef.current;
       setCanInstall(true);
+      // the browser says the PWA is installable again → not installed in
+      // this browser; drop the stale persisted marker (if any)
+      if (!standalone && !isNativeApp()) {
+        persistInstalledFlag(false);
+        setInstalled(false);
+      }
     };
     const onInstalled = () => {
       installPromptRef.current = null;
       setCanInstall(false);
       setStandalone(true);
+      setInstalled(true);
+      persistInstalledFlag(true);
       // installed apps: ask the browser to keep our offline data safe
       void navigator.storage?.persist?.().catch(() => {});
     };
     const onDisplayMode = (e: MediaQueryListEvent) => {
-      if (e.matches) setStandalone(true);
+      if (e.matches) {
+        setStandalone(true);
+        setInstalled(true);
+        persistInstalledFlag(true);
+      }
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
@@ -159,7 +183,49 @@ export function PwaManager() {
       window.removeEventListener("appinstalled", onInstalled);
       mq.removeEventListener?.("change", onDisplayMode);
     };
-  }, [setPlatform, setStandalone, setOnline, setCanInstall, setQueuedCount]);
+  }, [setPlatform, setStandalone, setInstalled, setOnline, setCanInstall, setQueuedCount]);
+
+  // --- r57: resilient Call/Coal replay -----------------------------------
+  // queued service requests (cloud unreachable / offline) retry on
+  // reconnect, on app focus, and on a slow 45s tick — the guest always
+  // gets their coal even when the cloud blinks
+  React.useEffect(() => {
+    let busy = false;
+    let lastAnnounced = 0;
+    const runFlush = async (announce: boolean) => {
+      if (busy) return;
+      if (!navigator.onLine) return;
+      if ((await queuedRequestCount()) === 0) return;
+      busy = true;
+      try {
+        const delivered = await flushRequestQueue();
+        if (delivered > 0 && announce && Date.now() - lastAnnounced > 4000) {
+          lastAnnounced = Date.now();
+          toast.success(
+            delivered === 1
+              ? "Call delivered ✓"
+            : `${delivered} requests delivered ✓`,
+            { description: "The lounge received your request(s)." }
+          );
+        }
+      } finally {
+        busy = false;
+      }
+    };
+    const onOnline = () => setTimeout(() => runFlush(true), 800);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") runFlush(true);
+    };
+    const tick = setInterval(() => runFlush(true), 45000);
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    runFlush(false); // replay anything queued in a previous session
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(tick);
+    };
+  }, []);
 
   // --- queue length tracking --------------------------------------------
   React.useEffect(() => {

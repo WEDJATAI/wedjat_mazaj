@@ -25,6 +25,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { egp } from "@/lib/catalog";
+import { useBranchScope } from "@/hooks/use-branch-scope";
+import { useI18n } from "@/store/i18n";
 import {
   Sheet,
   SheetContent,
@@ -55,6 +57,9 @@ interface OrderRow {
   assignment: string | null; // unassigned | assigned | null
   assignedToName: string | null;
   createdAt: string;
+  /** r57 — the branch this order belongs to (set in the all-branches scope) */
+  branchName?: string | null;
+  branchNameAr?: string | null;
 }
 
 interface Comment {
@@ -156,6 +161,12 @@ function HeaderPill({
 
 export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
   const employee = useSession((s) => s.employee);
+  const { branchParam, branchName } = useBranchScope();
+  const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
+  // r57 — "all" = every branch of the venue; show a branch chip per order
+  const scopeAll = branchParam === "all";
+  const scopeLabel = branchName ?? t("allBranches");
   const [orders, setOrders] = React.useState<OrderRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [commentsFor, setCommentsFor] = React.useState<OrderRow | null>(null);
@@ -163,7 +174,9 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/orders");
+      const res = await fetch(
+        `/api/orders?branchId=${encodeURIComponent(branchParam)}`
+      );
       const data = await res.json();
       if (data.ok) setOrders(data.orders);
       else toast.error("Could not load orders");
@@ -172,7 +185,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [branchParam]);
 
   React.useEffect(() => {
     load();
@@ -249,7 +262,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
         <AppHeader
           icon={<ScrollText className="size-5" />}
           title="Queue"
-          subtitle="Active sessions & history"
+          subtitle={`Active sessions & history · ${scopeLabel}`}
           actions={
             <>
               {incoming.length > 0 && (
@@ -331,6 +344,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
                       <OrderCard
                         order={o}
                         highlight
+                        showBranch={scopeAll}
                         onClaim={() => claimOrder(o)}
                         onComments={() => setCommentsFor(o)}
                       />
@@ -344,6 +358,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
                     <StaggerItem key={o.id}>
                       <OrderCard
                         order={o}
+                        showBranch={scopeAll}
                         onStatus={(s) => setStatus(o, s)}
                         onComments={() => setCommentsFor(o)}
                       />
@@ -357,6 +372,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
                     <StaggerItem key={o.id}>
                       <OrderCard
                         order={o}
+                        showBranch={scopeAll}
                         onComments={() => setCommentsFor(o)}
                       />
                     </StaggerItem>
@@ -369,6 +385,7 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
                     <StaggerItem key={o.id}>
                       <OrderCard
                         order={o}
+                        showBranch={scopeAll}
                         onComments={() => setCommentsFor(o)}
                       />
                     </StaggerItem>
@@ -434,13 +451,17 @@ function OrderCard({
   onComments,
   onClaim,
   highlight,
+  showBranch,
 }: {
   order: OrderRow;
   onStatus?: (status: string) => void;
   onComments: () => void;
   onClaim?: () => void;
   highlight?: boolean;
+  /** r57 — all-branches scope: render the branch chip when present */
+  showBranch?: boolean;
 }) {
+  const lang = useI18n((s) => s.lang);
   const items = parseItems(order.itemsJson);
   const meta = STATUS_META[order.status] ?? STATUS_META.pending;
   const isUnassigned = order.assignment === "unassigned";
@@ -505,10 +526,15 @@ function OrderCard({
               </Badge>
             )}
           </div>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground/80">
             {order.table && (
               <span className="flex items-center gap-1">
                 <MapPin className="size-3" /> {order.table}
+              </span>
+            )}
+            {showBranch && order.branchName && (
+              <span className="flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-foreground/80">
+                <MapPin className="size-3" /> {(lang === "ar" && order.branchNameAr) || order.branchName}
               </span>
             )}
             <span className="flex items-center gap-1 tabular-nums">
@@ -521,7 +547,7 @@ function OrderCard({
           </div>
         </div>
         <div className="shrink-0 text-end">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/75">
             {order.itemCount} hookah{order.itemCount > 1 ? "s" : ""}
           </p>
           <p className="font-display text-xl font-bold tabular-nums text-gold">
@@ -535,7 +561,7 @@ function OrderCard({
           {items.map((it, i) => (
             <span
               key={i}
-              className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2.5 py-1 text-[11px] text-foreground/75"
+              className="rounded-full border border-white/[0.12] bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-foreground/90"
             >
               {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
             </span>

@@ -1,13 +1,28 @@
 // Role + permission definitions for employee access control.
 //
-// Three roles: super_admin, admin, employee.
-// Super admin can customize which tabs each employee sees via `permissions`.
-// Permissions are stored as a comma-separated string on the Employee record
-// (empty = fall back to the role's default permission set).
+// r57 roles: platform_admin (platform owner console — onboards venues),
+// venue_admin (owner of one multi-branch venue), super_admin, admin,
+// employee. Permissions are stored as a comma-separated string on the
+// Employee record (empty = fall back to the role's default set).
 
-export type Role = "super_admin" | "admin" | "employee";
+export type Role =
+  | "platform_admin"
+  | "venue_admin"
+  | "super_admin"
+  | "admin"
+  | "employee";
 
 export const ROLES: { value: Role; label: string; desc: string }[] = [
+  {
+    value: "platform_admin",
+    label: "Platform owner",
+    desc: "Super admin of the whole platform — onboards & connects venues",
+  },
+  {
+    value: "venue_admin",
+    label: "Venue admin",
+    desc: "Owner of one venue — all branches, total inventory, staff",
+  },
   {
     value: "super_admin",
     label: "Super admin",
@@ -58,8 +73,24 @@ export const PERMISSION_META: Record<
 };
 
 // Default permission set per role.
+// r57: platform_admin sees the Platform Console instead of the lounge
+// tabs (empty = the console is their whole dashboard); venue_admin gets
+// the full operational set across every branch of their venue.
 export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
+  platform_admin: [],
   super_admin: [...ALL_PERMISSIONS],
+  venue_admin: [
+    "queue",
+    "new_order",
+    "inventory",
+    "requests",
+    "employees",
+    "purchases",
+    "profit",
+    "sync",
+    "analytics",
+    "loyalty",
+  ],
   admin: [
     "queue",
     "new_order",
@@ -112,5 +143,5 @@ export function hasPermission(
 }
 
 export function isSuperAdmin(role: string): boolean {
-  return role === "super_admin";
+  return role === "super_admin" || role === "platform_admin";
 }

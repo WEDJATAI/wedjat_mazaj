@@ -344,7 +344,7 @@ function TrackedOrder({
             {order.itemCount} {order.itemCount > 1 ? t("bowls") : t("bowl")}
             {order.table ? ` · ${order.table}` : ""}
           </p>
-          <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+          <p className="mt-0.5 text-xs font-medium tabular-nums text-foreground/80">
             #{order.id.slice(-6).toUpperCase()} · {timeAgoText}
           </p>
         </div>
@@ -359,7 +359,7 @@ function TrackedOrder({
           {items.slice(0, 4).map((it, i) => (
             <span
               key={i}
-              className="rounded-lg border border-white/[0.06] bg-white/[0.05] px-2 py-0.5 text-[11px] text-muted-foreground"
+              className="rounded-lg border border-white/[0.12] bg-white/[0.07] px-2 py-0.5 text-[11px] font-medium text-foreground/90"
             >
               {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
             </span>
@@ -408,7 +408,7 @@ function TrackedOrder({
                   <span
                     className={cn(
                       "text-[10px] font-medium transition-colors duration-500",
-                      reached ? "text-primary" : "text-muted-foreground"
+                      reached ? "text-primary" : "text-foreground/75"
                     )}
                   >
                     {t(key)}

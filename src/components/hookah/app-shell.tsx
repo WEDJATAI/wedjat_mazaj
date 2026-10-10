@@ -5,6 +5,7 @@ import { useSession } from "@/store/session";
 import { Landing } from "./landing/landing";
 import { EmployeeDashboard } from "./employee-dashboard";
 import { GuestOrder } from "./guest-order";
+import { PlatformConsole } from "./platform-console";
 import { PwaManager } from "./pwa-manager";
 import { tableContextFromUrl, useTableContext } from "@/store/table-context";
 
@@ -82,6 +83,8 @@ function AppBody({
   role: ReturnType<typeof useSession.getState>["role"];
   hydrated: boolean;
 }) {
+  const employee = useSession((s) => s.employee);
+  const signOutAll = useSession((s) => s.signOut);
 
   // Avoid a flash of the sign-in screen while the persisted session rehydrates.
   if (!hydrated) {
@@ -98,7 +101,12 @@ function AppBody({
     );
   }
 
-  if (role === "employee") return <EmployeeDashboard />;
+  if (role === "employee") {
+    // r57: the platform owner gets the venue-management command center
+    // instead of the lounge tabs — they run the PLATFORM, not a branch.
+    if (employee?.role === "platform_admin") return <PlatformConsole onSignOut={signOutAll} />;
+    return <EmployeeDashboard />;
+  }
   if (role === "guest") return <GuestOrder />;
   return <Landing />;
 }

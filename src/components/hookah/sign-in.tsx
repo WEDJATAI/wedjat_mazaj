@@ -24,11 +24,15 @@ import { useI18n } from "@/store/i18n";
 import { useTableContext } from "@/store/table-context";
 import { usePwa } from "@/store/pwa";
 import { EASE, GoldButton, Kicker, ScreenShell } from "./kit/kit";
+import type { EmployeeBranch } from "@/store/session";
+import { MapPin, LayoutGrid } from "lucide-react";
 
 export function SignIn() {
   const [tab, setTab] = React.useState<"role" | "pin" | "guest">("role");
   const t = useI18n((s) => s.t);
   const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
+  // r57: no download CTAs once the app is installed on this device
+  const installed = usePwa((s) => s.installed);
   // Demo PIN hints only on trusted local development origins — never on the
   // public production deployment (the PINs are real employee credentials).
   const [isLocal, setIsLocal] = React.useState(false);
@@ -114,15 +118,18 @@ export function SignIn() {
                 {t("justBrowsing")}
               </button>
 
-              {/* Get the app — QR download + one-tap install */}
-              <button
-                type="button"
-                onClick={() => setGetAppOpen(true)}
-                className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-sm font-medium text-primary transition-all hover:border-primary/60 hover:bg-primary/15"
-              >
-                <QrCode className="size-4" />
-                {t("getApp")} — iOS & Android
-              </button>
+              {/* Get the app — QR download + one-tap install (hidden when
+                  this device already runs the installed app) */}
+              {!installed && (
+                <button
+                  type="button"
+                  onClick={() => setGetAppOpen(true)}
+                  className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-sm font-medium text-primary transition-all hover:border-primary/60 hover:bg-primary/15"
+                >
+                  <QrCode className="size-4" />
+                  {t("getApp")} — iOS & Android
+                </button>
+              )}
 
               {isLocal && (
                 <p className="mt-3 text-center text-xs text-muted-foreground">
@@ -201,10 +208,45 @@ function RoleCard({
 
 function PinPanel({ onBack }: { onBack: () => void }) {
   const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
   const signIn = useSession((s) => s.signInEmployee);
   const [pin, setPin] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [shake, setShake] = React.useState(false);
+  // r57: branch chooser state — multi-branch staff pick where they work
+  const [chooser, setChooser] = React.useState<{
+    employee: {
+      id: string;
+      name: string;
+      role: string;
+      permissions: string[];
+      venueId: string | null;
+      branchId: string | null;
+      branches: EmployeeBranch[];
+    };
+  } | null>(null);
+
+  const finishSignIn = (
+    emp: {
+      id: string;
+      name: string;
+      role: string;
+      permissions: string[];
+      venueId: string | null;
+      branchId: string | null;
+      branches: EmployeeBranch[];
+    },
+    chosenBranchId: string | null
+  ) => {
+    toast.success(`${t("welcome")} ${emp.name}!`);
+    const branch = emp.branches.find((b) => b.id === chosenBranchId) ?? null;
+    signIn({
+      ...emp,
+      permissions: emp.permissions as never,
+      branchId: chosenBranchId,
+      branchName: branch ? branch.nameAr ?? branch.name : null,
+    });
+  };
 
   const submit = async (fullPin?: string) => {
     const value = (fullPin ?? pin).trim();
@@ -220,8 +262,24 @@ function PinPanel({ onBack }: { onBack: () => void }) {
       if (!res.ok || !data.ok) {
         throw new Error(data.error ?? t("invalidPin"));
       }
-      toast.success(`${t("welcome")} ${data.employee.name}!`);
-      signIn(data.employee);
+      const emp = data.employee as {
+        id: string;
+        name: string;
+        role: string;
+        permissions: string[];
+        venueId: string | null;
+        branchId: string | null;
+        branches: EmployeeBranch[];
+      };
+      // r57 routing after auth:
+      //  platform_admin → straight into the Platform Console
+      //  multi-branch floaters (venue_admin / super_admin) → branch chooser
+      //  single-branch staff → straight in with their branch
+      if (emp.role !== "platform_admin" && emp.branches.length > 1) {
+        setChooser({ employee: emp });
+        return; // keep loading state off via finally
+      }
+      finishSignIn(emp, emp.branches[0]?.id ?? null);
     } catch (err) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
@@ -231,6 +289,85 @@ function PinPanel({ onBack }: { onBack: () => void }) {
       setLoading(false);
     }
   };
+
+  // ── r57: the branch chooser (multi-branch staff) ──
+  if (chooser) {
+    const emp = chooser.employee;
+    const isFloater = emp.role === "venue_admin" || emp.role === "super_admin";
+    const name = (b: EmployeeBranch) =>
+      lang === "ar" && b.nameAr ? b.nameAr : b.name;
+    return (
+      <div className="glass relative overflow-hidden rounded-3xl p-5">
+        <div
+          className="pointer-events-none absolute -top-14 left-1/2 h-28 w-48 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl"
+          aria-hidden
+        />
+        <Kicker className="relative mb-1.5 justify-center">
+          <span className="inline-flex items-center gap-1.5">
+            <MapPin className="size-3.5" /> {t("chooseBranch")}
+          </span>
+        </Kicker>
+        <p className="relative mb-5 text-center text-sm font-medium text-foreground/80">
+          {t("chooseBranchDesc")}
+        </p>
+        <div className="relative grid gap-2.5">
+          {isFloater && (
+            <button
+              type="button"
+              onClick={() => finishSignIn(emp, null)}
+              className="group glass relative flex min-h-16 items-center gap-3.5 rounded-2xl p-4 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40"
+            >
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary ring-1 ring-primary/25">
+                <LayoutGrid className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="font-display block text-base font-bold text-gold-soft">
+                  {t("allBranches")}
+                </span>
+                <span className="block text-xs font-medium text-foreground/75">
+                  {t("allBranchesDesc")}
+                </span>
+              </span>
+            </button>
+          )}
+          {emp.branches.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => finishSignIn(emp, b.id)}
+              className="group glass relative flex min-h-16 items-center gap-3.5 rounded-2xl p-4 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40"
+            >
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary ring-1 ring-primary/25">
+                <MapPin className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="font-display block text-base font-bold text-gold-soft">
+                  {name(b)}
+                </span>
+                <span className="block text-xs font-medium text-foreground/75">
+                  {lang === "ar" && b.venueNameAr ? b.venueNameAr : b.venueName}
+                </span>
+              </span>
+              {b.isFlagship && (
+                <span className="shrink-0 rounded-full border border-primary/35 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                  ★
+                </span>
+              )}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="relative mt-1 w-full py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground"
+            onClick={() => setChooser(null)}
+          >
+            ← {t("back")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── the PIN pad (unchanged behavior) ──
 
   const press = (d: string) => {
     if (pin.length >= 4) return;
@@ -332,10 +469,36 @@ function PinPanel({ onBack }: { onBack: () => void }) {
 
 function GuestPanel({ onBack }: { onBack: () => void }) {
   const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
   const signIn = useSession((s) => s.signInGuest);
   const tableCtx = useTableContext();
   const [name, setName] = React.useState("");
   const [table, setTable] = React.useState("");
+  // r57 — which branch is this guest sitting at?
+  const [branches, setBranches] = React.useState<
+    { id: string; name: string; nameAr: string | null; venueName: string; venueNameAr: string | null; isFlagship: boolean }[]
+  >([]);
+  const [branchId, setBranchId] = React.useState<string>("");
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/branches");
+        const data = await res.json();
+        if (cancelled || !data.ok) return;
+        const list = data.branches as typeof branches;
+        setBranches(list);
+        // preselect the flagship (or first) branch
+        setBranchId((prev) => prev || list.find((b) => b.isFlagship)?.id || list[0]?.id || "");
+      } catch {
+        // silent — single-branch/legacy behavior when unreachable
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Prefill the table from the POS link context (the employee opened
   // mazaj from the table's check) so the order lands on the right check.
@@ -346,10 +509,18 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
   }, []);
 
   const valid = name.trim().length > 0;
+  const selectedBranch = branches.find((b) => b.id === branchId) ?? null;
 
   const submit = () => {
     if (!valid) return;
-    signIn({ name: name.trim(), table: table.trim() });
+    signIn({
+      name: name.trim(),
+      table: table.trim(),
+      branchId: branchId || null,
+      branchName: selectedBranch
+        ? (lang === "ar" && selectedBranch.nameAr) || selectedBranch.name
+        : null,
+    });
     toast.success(`Welcome, ${name.trim()}! 🎉`);
   };
 
@@ -382,7 +553,7 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground">
+          <Label className="text-xs font-semibold text-foreground/85">
             {t("tableOptional")}
           </Label>
           <Input
@@ -401,6 +572,47 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
             </p>
           )}
         </div>
+
+        {/* r57 — the branch picker (only when the venue has multiple) */}
+        {branches.length > 1 && (
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground/85">
+              <MapPin className="size-3 text-primary" />
+              {t("chooseBranchGuest")}
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {branches.map((b) => {
+                const label = (lang === "ar" && b.nameAr) || b.name;
+                const active = branchId === b.id;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setBranchId(b.id)}
+                    aria-pressed={active}
+                    className={
+                      "flex min-h-12 flex-col items-start justify-center gap-0.5 rounded-xl border px-3 py-2 text-start transition-all duration-200 " +
+                      (active
+                        ? "border-primary/50 bg-primary/15"
+                        : "border-white/[0.12] bg-white/[0.05] hover:border-primary/35")
+                    }
+                  >
+                    <span
+                      className={
+                        "text-sm font-semibold " + (active ? "text-primary" : "text-foreground/90")
+                      }
+                    >
+                      {label}
+                    </span>
+                    <span className="truncate text-[10px] font-medium text-foreground/70">
+                      {(lang === "ar" && b.venueNameAr) || b.venueName}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <GoldButton
           size="lg"

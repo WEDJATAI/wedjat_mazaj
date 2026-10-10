@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useBranchScope } from "@/hooks/use-branch-scope";
+import { useI18n } from "@/store/i18n";
 import {
   AppHeader,
   EmptyState,
@@ -35,6 +37,9 @@ interface ServiceRequest {
   status: string;
   createdAt: string;
   acknowledgedAt: string | null;
+  /** r57 — the branch this request belongs to (set in the all-branches scope) */
+  branchName?: string | null;
+  branchNameAr?: string | null;
 }
 
 function timeAgo(iso: string): string {
@@ -57,13 +62,21 @@ const donePillBtn =
   "inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 text-sm font-semibold text-emerald-500 transition-all hover:bg-emerald-500/20 active:scale-[0.97]";
 
 export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
+  const { branchParam, branchName } = useBranchScope();
+  const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
+  // r57 — "all" = every branch of the venue; show a branch chip per request
+  const scopeAll = branchParam === "all";
+  const scopeLabel = branchName ?? t("allBranches");
   const [requests, setRequests] = React.useState<ServiceRequest[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/requests");
+      const res = await fetch(
+        `/api/requests?branchId=${encodeURIComponent(branchParam)}`
+      );
       const data = await res.json();
       if (data.ok) setRequests(data.requests);
       else toast.error("Could not load requests");
@@ -72,7 +85,7 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [branchParam]);
 
   React.useEffect(() => {
     load();
@@ -110,7 +123,7 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
         <AppHeader
           icon={<BellRing className="size-5" />}
           title="Requests"
-          subtitle="Guest calls for the shisha man"
+          subtitle={`Guest calls for the shisha man · ${scopeLabel}`}
           actions={
             <>
               {pending.length > 0 && (
@@ -181,6 +194,7 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
                     <StaggerItem key={r.id}>
                       <RequestCard
                         req={r}
+                        showBranch={scopeAll}
                         onAck={() => acknowledge(r, "acknowledged")}
                       />
                     </StaggerItem>
@@ -193,6 +207,7 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
                     <StaggerItem key={r.id}>
                       <RequestCard
                         req={r}
+                        showBranch={scopeAll}
                         onAck={() => acknowledge(r, "done")}
                         ackLabel="Mark done"
                       />
@@ -204,7 +219,7 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
                 <Section title="Done" count={done.length} muted>
                   {done.map((r) => (
                     <StaggerItem key={r.id}>
-                      <RequestCard req={r} />
+                      <RequestCard req={r} showBranch={scopeAll} />
                     </StaggerItem>
                   ))}
                 </Section>
@@ -320,11 +335,15 @@ function RequestCard({
   req,
   onAck,
   ackLabel = "Acknowledge",
+  showBranch,
 }: {
   req: ServiceRequest;
   onAck?: () => void;
   ackLabel?: string;
+  /** r57 — all-branches scope: render the branch chip when present */
+  showBranch?: boolean;
 }) {
+  const lang = useI18n((s) => s.lang);
   const isCoal = req.type === "coal_request";
   const title = isCoal
     ? "Coal request"
@@ -386,6 +405,11 @@ function RequestCard({
             {req.table && (
               <span className="flex items-center gap-1">
                 <MapPin className="size-3" /> {req.table}
+              </span>
+            )}
+            {showBranch && req.branchName && (
+              <span className="flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-foreground/80">
+                <MapPin className="size-3" /> {(lang === "ar" && req.branchNameAr) || req.branchName}
               </span>
             )}
             <span className="flex items-center gap-1 tabular-nums">

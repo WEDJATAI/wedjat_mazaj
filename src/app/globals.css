@@ -91,7 +91,9 @@
   --secondary: oklch(0.27 0.016 60);
   --secondary-foreground: oklch(0.96 0.012 70);
   --muted: oklch(0.25 0.012 60);
-  --muted-foreground: oklch(0.72 0.02 65);
+  /* r57 contrast fix: raised from oklch(0.72 0.02 65) — metadata text on
+     glass cards must stay clearly readable in dim lounge lighting */
+  --muted-foreground: oklch(0.80 0.03 72);
   --accent: oklch(0.32 0.06 55);
   --accent-foreground: oklch(0.96 0.012 70);
   --destructive: oklch(0.65 0.2 25);
@@ -183,14 +185,17 @@
     "Times New Roman", serif;
 }
 
-/* Gold gradient display text */
+/* Gold gradient display text
+   r57 contrast fix: the dark end of the gradient climbed from oklch(0.62)
+   to oklch(0.76) — large display headlines no longer fade into the card
+   background at their lower half */
 .text-gold {
   background: linear-gradient(
     165deg,
     oklch(0.97 0.03 92) 0%,
-    oklch(0.9 0.1 82) 30%,
-    oklch(0.8 0.14 70) 58%,
-    oklch(0.62 0.11 55) 100%
+    oklch(0.92 0.09 82) 34%,
+    oklch(0.85 0.12 72) 64%,
+    oklch(0.76 0.12 62) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -200,8 +205,8 @@
 .text-gold-soft {
   background: linear-gradient(
     180deg,
-    oklch(0.95 0.035 85) 0%,
-    oklch(0.82 0.12 70) 100%
+    oklch(0.96 0.04 85) 0%,
+    oklch(0.88 0.11 74) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;

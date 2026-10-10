@@ -68,6 +68,8 @@ interface OrderScreenProps {
   /** R46: numeric Wedjat table id (POS link / picker) — threaded to the
    * checkout payload so the check lands on the right table. */
   defaultTableId?: number | null;
+  /** r57: the branch this order is placed at (guest session / employee scope) */
+  branchId?: string | null;
   headerExtra?: React.ReactNode;
   onSignOut?: () => void;
   /** show the scan button + barcode modal (guest mode) */
@@ -92,6 +94,7 @@ export function OrderScreen({
   defaultCustomer,
   defaultTable,
   defaultTableId,
+  branchId,
   headerExtra,
   onSignOut,
   enableScan = false,
@@ -715,6 +718,7 @@ export function OrderScreen({
         defaultCustomer={defaultCustomer}
         defaultTable={defaultTable}
         defaultTableId={defaultTableId}
+        branchId={branchId}
         onOrderPlaced={onOrderPlaced}
       />
 

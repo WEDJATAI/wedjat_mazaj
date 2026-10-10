@@ -27,6 +27,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { egp, getBrand } from "@/lib/catalog";
+import { sendServiceRequest } from "@/lib/request-queue";
 import { usePwa } from "@/store/pwa";
 import { useI18n } from "@/store/i18n";
 import { attachGuestIfSubscribed } from "@/lib/push-client";
@@ -39,6 +40,8 @@ export function GuestOrder() {
   const tableCtx = useTableContext();
   const t = useI18n((s) => s.t);
   const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
+  // r57: hide every "download the app" CTA when the app is already installed
+  const installed = usePwa((s) => s.installed);
   const [callOpen, setCallOpen] = React.useState(false);
   const [coalOpen, setCoalOpen] = React.useState(false);
   const [favOpen, setFavOpen] = React.useState(false);
@@ -158,6 +161,7 @@ export function GuestOrder() {
         defaultCustomer={guest.name}
         defaultTable={guest.table}
         defaultTableId={tableCtx.tableId}
+        branchId={guest.branchId ?? null}
         onSignOut={signOut}
         enableScan
         onOrderPlaced={handleOrderPlaced}
@@ -171,14 +175,16 @@ export function GuestOrder() {
                 onClick={() => setSommOpen(true)}
               />
             </StaggerItem>
-            <StaggerItem>
-              <QuickPill
-                icon={<Download className="size-4" />}
-                label={t("getApp")}
-                ariaLabel={t("getApp")}
-                onClick={() => setGetAppOpen(true)}
-              />
-            </StaggerItem>
+            {!installed && (
+              <StaggerItem>
+                <QuickPill
+                  icon={<Download className="size-4" />}
+                  label={t("getApp")}
+                  ariaLabel={t("getApp")}
+                  onClick={() => setGetAppOpen(true)}
+                />
+              </StaggerItem>
+            )}
             <StaggerItem>
               <QuickPill
                 icon={<Radar className="size-4" />}
@@ -351,21 +357,24 @@ function CallShishaManDialog({
   const submit = async () => {
     setSending(true);
     try {
-      const res = await fetch("/api/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "call_shisha_man",
-          guestName: guest.name,
-          table: guest.table,
-          note: note.trim(),
-        }),
+      const result = await sendServiceRequest({
+        type: "call_shisha_man",
+        guestName: guest.name,
+        table: guest.table,
+        note: note.trim(),
+        branchId: guest.branchId ?? null,
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed");
-      toast.success(t("shishaManToast"), {
-        description: t("shishaManToastDesc"),
-      });
+      if (result === "queued") {
+        // cloud unreachable — the request is saved and will auto-deliver
+        toast.warning(t("requestQueued"), {
+          description: t("requestQueuedDesc"),
+          duration: 5000,
+        });
+      } else {
+        toast.success(t("shishaManToast"), {
+          description: t("shishaManToastDesc"),
+        });
+      }
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("couldNotSignIn"));
@@ -447,25 +456,28 @@ function CoalRequestDialog({
   const submit = async (coalType: "regular_coal" | "cubed_coal") => {
     setSending(true);
     try {
-      const res = await fetch("/api/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "coal_request",
-          guestName: guest.name,
-          table: guest.table,
-          note:
-            coalType === "cubed_coal"
-              ? t("coalNoteCubed")
-              : t("coalNoteRegular"),
-        }),
+      const result = await sendServiceRequest({
+        type: "coal_request",
+        guestName: guest.name,
+        table: guest.table,
+        branchId: guest.branchId ?? null,
+        note:
+          coalType === "cubed_coal"
+            ? t("coalNoteCubed")
+            : t("coalNoteRegular"),
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed");
-      toast.success(t("coalToast"), {
-        description:
-          coalType === "cubed_coal" ? t("cubedOnWay") : t("regularOnWay"),
-      });
+      if (result === "queued") {
+        // cloud unreachable — the request is saved and will auto-deliver
+        toast.warning(t("requestQueued"), {
+          description: t("requestQueuedDesc"),
+          duration: 5000,
+        });
+      } else {
+        toast.success(t("coalToast"), {
+          description:
+            coalType === "cubed_coal" ? t("cubedOnWay") : t("regularOnWay"),
+        });
+      }
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("couldNotSignIn"));

@@ -39,9 +39,14 @@ import {
   Wand2,
   ShieldX,
   X,
+  MapPin,
+  ChevronDown,
+  LayoutGrid,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePwa } from "@/store/pwa";
+import { useBranchScope } from "@/hooks/use-branch-scope";
+import { useI18n } from "@/store/i18n";
 import { SommelierSheet } from "./sommelier-sheet";
 import { EASE, EmptyState, FadeSwap, TabBar, type TabItem } from "./kit/kit";
 
@@ -53,7 +58,27 @@ interface TabDef extends TabItem {
 export function EmployeeDashboard() {
   const employee = useSession((s) => s.employee) as EmployeeSession | null;
   const signOut = useSession((s) => s.signOut);
+  const setEmployeeBranch = useSession((s) => s.setEmployeeBranch);
   const perms = employee?.permissions ?? [];
+
+  // r57 — multi-branch staff switch their working branch from the header
+  const { branchId, branchName, branches, isFloater } = useBranchScope();
+  const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
+  const [branchMenuOpen, setBranchMenuOpen] = React.useState(false);
+  const branchMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // close the branch menu on outside tap
+  React.useEffect(() => {
+    if (!branchMenuOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (branchMenuRef.current && !branchMenuRef.current.contains(e.target as Node)) {
+        setBranchMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [branchMenuOpen]);
 
   // R49 smart alerts: chime + notification + badge for new orders/requests.
   const alerts = useSmartAlerts();
@@ -212,6 +237,86 @@ export function EmployeeDashboard() {
       <FadeSwap swapKey={activeTab?.key ?? "none"}>
         {activeTab && activeTab.render(signOut)}
       </FadeSwap>
+
+      {/* r57 — the branch switcher (venue admins / floaters only): a glass
+          chip fixed at the top edge; opens a dropdown to hop branches or
+          float across all of them (total-inventory matrix view) */}
+      {isFloater && (
+        <div
+          ref={branchMenuRef}
+          className="fixed start-3 top-[70px] z-40"
+        >
+          <button
+            type="button"
+            onClick={() => setBranchMenuOpen((o) => !o)}
+            aria-expanded={branchMenuOpen}
+            aria-haspopup="menu"
+            aria-label={t("branchLabel")}
+            className="glass flex h-10 max-w-[60vw] items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-foreground/90 transition-all hover:border-primary/45 active:scale-[0.97]"
+          >
+            <MapPin className="size-3.5 shrink-0 text-primary" />
+            <span className="truncate">{branchName ?? t("allBranches")}</span>
+            <ChevronDown
+              className={`size-3.5 shrink-0 text-foreground/70 transition-transform ${branchMenuOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          <AnimatePresence>
+            {branchMenuOpen && (
+              <motion.div
+                role="menu"
+                initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                transition={{ duration: 0.18, ease: EASE }}
+                className="glass absolute start-0 top-12 w-64 overflow-hidden rounded-2xl p-1.5 shadow-2xl shadow-black/60"
+              >
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={branchId === null}
+                  onClick={() => {
+                    setEmployeeBranch(null);
+                    setBranchMenuOpen(false);
+                  }}
+                  className={`flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-start text-sm transition-colors ${
+                    branchId === null
+                      ? "bg-primary/15 font-bold text-primary"
+                      : "text-foreground/90 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <LayoutGrid className="size-4 shrink-0" />
+                  <span className="truncate">{t("allBranches")}</span>
+                </button>
+                {branches.map((b) => {
+                  const label = (lang === "ar" && b.nameAr) || b.name;
+                  const active = branchId === b.id;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={active}
+                      onClick={() => {
+                        setEmployeeBranch(b.id);
+                        setBranchMenuOpen(false);
+                      }}
+                      className={`flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-start text-sm transition-colors ${
+                        active
+                          ? "bg-primary/15 font-bold text-primary"
+                          : "text-foreground/90 hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <MapPin className="size-4 shrink-0" />
+                      <span className="truncate">{label}</span>
+                      {b.isFlagship && <span className="ms-auto text-[10px] text-primary">★</span>}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       <SommelierSheet
         open={sommOpen}
