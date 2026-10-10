@@ -6,7 +6,19 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // PRODUCTION PROVIDER — this file is the single source of truth and is
+  // deployed to Vercel, where DATABASE_URL points at Neon PostgreSQL.
+  //
+  // DO NOT flip this to "sqlite": a sqlite-generated client rejects the
+  // postgres:// URL and takes the whole production site down (this exact
+  // regression shipped between r57 and r59 and took wmazaj.vercel.app
+  // offline — see worklog r60).
+  //
+  // Local sandbox dev runs against a SQLite file instead. The dev/db
+  // scripts derive `prisma/schema.local.prisma` (gitignored, sqlite
+  // provider) from THIS file automatically — never edit or commit that
+  // derived file.
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

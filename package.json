@@ -3,15 +3,17 @@
   "version": "0.2.1",
   "private": true,
   "scripts": {
-    "dev": "DATABASE_URL=\"$( (grep -m1 '^DATABASE_URL=' .env.local 2>/dev/null || grep -m1 '^DATABASE_URL=' .env) | cut -d= -f2- )\" next dev -p 3000 2>&1 | tee dev.log",
+    "dev": "node scripts/gen-local-schema.mjs && prisma generate --schema prisma/schema.local.prisma && DATABASE_URL=\"$( (grep -m1 '^DATABASE_URL=' .env.local 2>/dev/null || grep -m1 '^DATABASE_URL=' .env) | cut -d= -f2- )\" next dev -p 3000 2>&1 | tee dev.log",
     "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
-    "db:push": "prisma db push --accept-data-loss",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset",
+    "db:push": "node scripts/gen-local-schema.mjs && prisma db push --schema prisma/schema.local.prisma --accept-data-loss",
+    "db:generate": "node scripts/gen-local-schema.mjs && prisma generate --schema prisma/schema.local.prisma",
+    "db:migrate": "node scripts/gen-local-schema.mjs && prisma migrate dev --schema prisma/schema.local.prisma",
+    "db:reset": "node scripts/gen-local-schema.mjs && prisma migrate reset --schema prisma/schema.local.prisma",
     "db:seed": "bun run prisma/seed.ts",
+    "db:push:prod": "prisma db push --schema prisma/schema.prisma --accept-data-loss --skip-generate",
+    "db:seed:prod": "prisma generate --schema prisma/schema.prisma && bun run prisma/seed.ts && node scripts/gen-local-schema.mjs && prisma generate --schema prisma/schema.local.prisma",
     "backup": "bash scripts/backup-db.sh"
   },
   "dependencies": {
