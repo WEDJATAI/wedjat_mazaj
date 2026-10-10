@@ -17,6 +17,9 @@ interface PwaState {
   getAppOpen: boolean;
   /** the full-screen install landing (QR / ?install=1) open state */
   installLandingOpen: boolean;
+  /** the cinematic marketing landing is the active view — the install
+   *  banner stays quiet while it sells the app itself */
+  marketingLandingActive: boolean;
   /** offline orders waiting to sync */
   queuedCount: number;
   /** queue flush in progress */
@@ -28,6 +31,7 @@ interface PwaState {
   setCanInstall: (v: boolean) => void;
   setGetAppOpen: (v: boolean) => void;
   setInstallLandingOpen: (v: boolean) => void;
+  setMarketingLandingActive: (v: boolean) => void;
   setQueuedCount: (n: number) => void;
   setSyncing: (v: boolean) => void;
 }
@@ -39,6 +43,7 @@ export const usePwa = create<PwaState>()((set) => ({
   canInstall: false,
   getAppOpen: false,
   installLandingOpen: false,
+  marketingLandingActive: false,
   queuedCount: 0,
   syncing: false,
   setOnline: (online) => set({ online }),
@@ -47,6 +52,7 @@ export const usePwa = create<PwaState>()((set) => ({
   setCanInstall: (canInstall) => set({ canInstall }),
   setGetAppOpen: (getAppOpen) => set({ getAppOpen }),
   setInstallLandingOpen: (installLandingOpen) => set({ installLandingOpen }),
+  setMarketingLandingActive: (marketingLandingActive) => set({ marketingLandingActive }),
   setQueuedCount: (queuedCount) => set({ queuedCount }),
   setSyncing: (syncing) => set({ syncing }),
 }));

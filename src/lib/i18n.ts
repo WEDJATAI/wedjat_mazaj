@@ -478,6 +478,53 @@ export interface Translations {
   queuedOrders: string;
   syncingOrders: string;
   ordersSynced: string;
+
+  // Landing — cinematic home experience
+  landKicker: string;
+  landHeroTitleA: string;
+  landHeroTitleB: string;
+  landHeroSub: string;
+  landHeroMeta: string;
+  landCtaOrder: string;
+  landScroll: string;
+  landNavPlatform: string;
+  landNavExperience: string;
+  landNavApp: string;
+  landRitualKicker: string;
+  landRitualTitle: string;
+  landRitual1T: string;
+  landRitual1D: string;
+  landRitual2T: string;
+  landRitual2D: string;
+  landRitual3T: string;
+  landRitual3D: string;
+  landFeatKicker: string;
+  landFeatTitle: string;
+  landFeatAiT: string;
+  landFeatAiD: string;
+  landFeatTrackT: string;
+  landFeatTrackD: string;
+  landFeatOfflineT: string;
+  landFeatOfflineD: string;
+  landFeatLoyaltyT: string;
+  landFeatLoyaltyD: string;
+  landStatHouses: string;
+  landStatFlavors: string;
+  landStatBowl: string;
+  landStatBogo: string;
+  landAppKicker: string;
+  landAppTitle: string;
+  landAppDesc: string;
+  landAppB1: string;
+  landAppB2: string;
+  landAppB3: string;
+  landAppB4: string;
+  landFooterCraft: string;
+  landFooterTagline: string;
+  landFooterRights: string;
+  landEnter: string;
+  landMenuPeek: string;
+  landMenuPeekSub: string;
 }
 
 export const translations: Record<Lang, Partial<Translations>> = {
@@ -972,6 +1019,59 @@ export const translations: Record<Lang, Partial<Translations>> = {
     queuedOrders: "orders waiting to sync",
     syncingOrders: "Syncing orders…",
     ordersSynced: "Back online — orders synced ✓",
+
+    // Landing — cinematic home experience
+    landKicker: "Mazaj · Shisha Atelier",
+    landHeroTitleA: "Where Smoke",
+    landHeroTitleB: "Becomes Poetry",
+    landHeroSub:
+      "Seven legendary molasses houses. One bowl crafted to order, tracked live to your table — and a full app that lives on your phone.",
+    landHeroMeta: "7 Houses · 30+ Flavors · Crafted Bowls",
+    landCtaOrder: "Order Now",
+    landScroll: "Scroll",
+    landNavPlatform: "Platform",
+    landNavExperience: "Experience",
+    landNavApp: "The App",
+    landRitualKicker: "The Experience",
+    landRitualTitle: "The Ritual, Perfected",
+    landRitual1T: "Choose your house",
+    landRitual1D:
+      "Seven molasses houses — from timeless Egyptian classics to Amy's premium line. Or let the AI sommelier read your mood.",
+    landRitual2T: "Crafted to order",
+    landRitual2D:
+      "Every bowl packed to order — 20 grams, your mix, your way. Bring your own hookah or molasses and two bowls cost one.",
+    landRitual3T: "Tracked to your table",
+    landRitual3D:
+      "Watch it live — from coal to cloud. A gentle ping the moment it's served, and points with every bowl.",
+    landFeatKicker: "The Platform",
+    landFeatTitle: "A lounge that thinks",
+    landFeatAiT: "AI Sommelier",
+    landFeatAiD:
+      "Tell it your mood — sweet, minty, strong — and it crafts your perfect bowl from the live menu.",
+    landFeatTrackT: "Live Tracking",
+    landFeatTrackD: "From “preparing” to “served” — every stage streaming live to your phone.",
+    landFeatOfflineT: "Works Offline",
+    landFeatOfflineD: "Order in airplane mode. It syncs itself the moment you're back.",
+    landFeatLoyaltyT: "Mazaj+ Rewards",
+    landFeatLoyaltyD: "Every bowl earns. Climb tiers, unlock free mixes.",
+    landStatHouses: "Molasses Houses",
+    landStatFlavors: "Flavors",
+    landStatBowl: "Per Bowl",
+    landStatBogo: "Bring Your Own",
+    landAppKicker: "The App",
+    landAppTitle: "Carry the whole lounge",
+    landAppDesc:
+      "No app store needed. Scan the code, tap install — the full platform lives on your home screen, works offline, and stays in perfect sync with the lounge.",
+    landAppB1: "Installs in seconds",
+    landAppB2: "Works offline",
+    landAppB3: "Pings you when ready",
+    landAppB4: "Earns Mazaj+ points",
+    landFooterCraft: "Crafted in Cairo",
+    landFooterTagline: "Order · Track · Earn",
+    landFooterRights: "All rights reserved",
+    landEnter: "Enter the lounge",
+    landMenuPeek: "Tonight's houses",
+    landMenuPeekSub: "Tap to open the full menu",
   },
   ar: {
     mazaj: "مزاج",
@@ -1440,5 +1540,57 @@ export const translations: Record<Lang, Partial<Translations>> = {
     queuedOrders: "طلبات في انتظار المزامنة",
     syncingOrders: "جارٍ مزامنة الطلبات…",
     ordersSynced: "عاد الاتصال — تمت المزامنة ✓",
+
+    // Landing — cinematic home experience
+    landKicker: "مزاج · بيت الشيشة",
+    landHeroTitleA: "حيث يصير الدخان",
+    landHeroTitleB: "شِعراً",
+    landHeroSub:
+      "سبعة بيوت معسل أصيلة. طبق واحد يُصنع حسب طلبك ويُتابع مباشرة حتى طاولتك — وتطبيق كامل يعيش على هاتفك.",
+    landHeroMeta: "٧ بيوت · +٣٠ نكهة · أطباق مصنوعة يدوياً",
+    landCtaOrder: "اطلب الآن",
+    landScroll: "مرّر",
+    landNavPlatform: "المنصة",
+    landNavExperience: "التجربة",
+    landNavApp: "التطبيق",
+    landRitualKicker: "التجربة",
+    landRitualTitle: "طقوسٌ صُقلت بإتقان",
+    landRitual1T: "اختر بيتك",
+    landRitual1D:
+      "سبعة بيوت معسل — من الكلاسيكيات المصرية الخالدة إلى خط أمي الفاخر. أو دع السوميلييه الذكي يقرأ مزاجك.",
+    landRitual2T: "يُصنع لطلبك",
+    landRitual2D:
+      "كل طبق يُحضَّر عند الطلب — ٢٠ جراماً، خلطتك، بطريقتك. أحضر معلك أو معسلك وادفع طبقاً واحداً عن كل اثنين.",
+    landRitual3T: "يُتابع حتى طاولتك",
+    landRitual3D:
+      "تابعه مباشرة — من الفحم إلى السحابة. تنبيه لطيف لحظة التقديم، ونقاط مع كل طبق.",
+    landFeatKicker: "المنصة",
+    landFeatTitle: "صالةٌ تفكّر",
+    landFeatAiT: "سوميلييه ذكي",
+    landFeatAiD: "أخبره بمزاجك — حلو، منعش، قوي — فيصوغ طبقك المثالي من القائمة الحية.",
+    landFeatTrackT: "تتبع مباشر",
+    landFeatTrackD: "من «يُحضّر» إلى «قُدّم» — كل مرحلة تصل مباشرة إلى هاتفك.",
+    landFeatOfflineT: "يعمل بلا إنترنت",
+    landFeatOfflineD: "اطلب في وضع الطيران. تتم المزامنة لحظة عودة الاتصال.",
+    landFeatLoyaltyT: "مكافآت مزاج+",
+    landFeatLoyaltyD: "كل طبق يكسبك. ارتقِ المستويات وافتح خلطات مجانية.",
+    landStatHouses: "بيوت معسل",
+    landStatFlavors: "نكهة",
+    landStatBowl: "جرام للطبق",
+    landStatBogo: "احضر معلك",
+    landAppKicker: "التطبيق",
+    landAppTitle: "احمل الصالة كاملة",
+    landAppDesc:
+      "بدون متجر تطبيقات. امسح الكود واضغط تثبيت — المنصة كاملة تعيش على شاشتك الرئيسية، تعمل بلا إنترنت، وتبقى مزامنة تماماً مع الصالة.",
+    landAppB1: "يثبت في ثوانٍ",
+    landAppB2: "يعمل بلا إنترنت",
+    landAppB3: "ينبّهك عندما يجهز",
+    landAppB4: "يكسب نقاط مزاج+",
+    landFooterCraft: "صُنع في القاهرة",
+    landFooterTagline: "اطلب · تابع · اكسب",
+    landFooterRights: "جميع الحقوق محفوظة",
+    landEnter: "ادخل الصالة",
+    landMenuPeek: "بيوت الليلة",
+    landMenuPeekSub: "اضغط لفتح القائمة كاملة",
   },
 };

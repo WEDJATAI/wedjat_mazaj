@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSession } from "@/store/session";
-import { SignIn } from "./sign-in";
+import { Landing } from "./landing/landing";
 import { EmployeeDashboard } from "./employee-dashboard";
 import { GuestOrder } from "./guest-order";
 import { PwaManager } from "./pwa-manager";
@@ -100,5 +100,5 @@ function AppBody({
 
   if (role === "employee") return <EmployeeDashboard />;
   if (role === "guest") return <GuestOrder />;
-  return <SignIn />;
+  return <Landing />;
 }

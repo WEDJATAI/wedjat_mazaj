@@ -24,6 +24,7 @@ export function InstallBanner() {
   const setGetAppOpen = usePwa((s) => s.setGetAppOpen);
   const getAppOpen = usePwa((s) => s.getAppOpen);
   const landingOpen = usePwa((s) => s.installLandingOpen);
+  const marketingLanding = usePwa((s) => s.marketingLandingActive);
 
   const [visible, setVisible] = React.useState(false);
   const [installing, setInstalling] = React.useState(false);
@@ -79,7 +80,7 @@ export function InstallBanner() {
     }
   };
 
-  if (standalone || getAppOpen || landingOpen) return null;
+  if (standalone || getAppOpen || landingOpen || marketingLanding) return null;
 
   return (
     <AnimatePresence>

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display, Amiri } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { I18nProvider } from "@/components/hookah/i18n-provider";
@@ -14,6 +14,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Cinematic display serif for the landing — per-glyph fallback:
+// Latin glyphs render in Playfair, Arabic glyphs fall through to Amiri.
+const playfair = Playfair_Display({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
+});
+
+const amiri = Amiri({
+  variable: "--font-display-ar",
+  subsets: ["arabic"],
+  weight: ["400", "700"],
+});
+
 export const viewport: Viewport = {
   themeColor: "#16110e",
   width: "device-width",
@@ -24,9 +39,9 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   applicationName: "Mazaj",
-  title: "Mazaj · Hookah Ordering",
+  title: "Mazaj · Where Smoke Becomes Poetry",
   description:
-    "Order hookah from Egyptian-market molasses brands — Mazaya, Al Fakher, Dandash, Nakhla, Amy, Salom & Kass. 20g bowls, 2-for-1 when you bring your own. Install the app: full version, works offline, two-way synced.",
+    "Seven legendary molasses houses. Bowls crafted to order, tracked live to your table. Install the full app — no app store, works offline, two-way synced with the lounge.",
   keywords: [
     "hookah",
     "shisha",
@@ -57,8 +72,9 @@ export const metadata: Metadata = {
   },
   formatDetection: { telephone: false },
   openGraph: {
-    title: "Mazaj · Hookah Ordering",
-    description: "Egyptian-market hookah & molasses ordering.",
+    title: "Mazaj · Where Smoke Becomes Poetry",
+    description:
+      "The cinematic shisha atelier — order, track live, earn rewards. Full app installs without an app store.",
     siteName: "Mazaj",
     type: "website",
   },
@@ -72,7 +88,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${amiri.variable} antialiased bg-background text-foreground`}
       >
         <I18nProvider>
           {children}

@@ -172,3 +172,207 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ============================================================
+   LANDING — "Midnight Ember" cinematic design system
+   ============================================================ */
+
+/* Display serif: Latin glyphs → Playfair, Arabic glyphs → Amiri (per-glyph) */
+.font-display {
+  font-family: var(--font-display), var(--font-display-ar), Georgia,
+    "Times New Roman", serif;
+}
+
+/* Gold gradient display text */
+.text-gold {
+  background: linear-gradient(
+    165deg,
+    oklch(0.97 0.03 92) 0%,
+    oklch(0.9 0.1 82) 30%,
+    oklch(0.8 0.14 70) 58%,
+    oklch(0.62 0.11 55) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gold-soft {
+  background: linear-gradient(
+    180deg,
+    oklch(0.95 0.035 85) 0%,
+    oklch(0.82 0.12 70) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Hairline gold divider */
+.ember-hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.78 0.15 65 / 0.45) 50%,
+    transparent 100%
+  );
+}
+
+/* Glassmorphism card */
+.glass {
+  background: oklch(0.21 0.016 60 / 0.5);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid oklch(1 0 0 / 8%);
+}
+
+/* Film grain overlay (adds cinema texture) */
+.noise-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: overlay;
+}
+
+/* Cinematic vignette */
+.vignette {
+  background: radial-gradient(
+    120% 90% at 50% 40%,
+    transparent 40%,
+    oklch(0.12 0.015 60 / 0.55) 82%,
+    oklch(0.1 0.015 60 / 0.9) 100%
+  );
+}
+
+/* Soft image edge fades */
+.mask-fade-b {
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+}
+
+/* Brand marquee — infinite scroll */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee 38s linear infinite;
+  will-change: transform;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Scroll indicator — travelling dot */
+@keyframes scroll-dot {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(26px);
+    opacity: 0;
+  }
+}
+.scroll-dot {
+  animation: scroll-dot 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* Gentle levitation */
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.float-soft {
+  animation: float-soft 7s ease-in-out infinite;
+}
+
+/* Gold shimmer sweep across text/buttons */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+.shimmer-line {
+  background: linear-gradient(
+    90deg,
+    oklch(0.78 0.15 65 / 0) 0%,
+    oklch(0.9 0.1 75) 50%,
+    oklch(0.78 0.15 65 / 0) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 5s linear infinite;
+}
+
+/* Breathing glow for the hero CTA */
+@keyframes breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 24px 4px oklch(0.78 0.15 65 / 0.25),
+      0 0 64px 12px oklch(0.78 0.15 65 / 0.12);
+  }
+  50% {
+    box-shadow: 0 0 34px 8px oklch(0.78 0.15 65 / 0.4),
+      0 0 90px 20px oklch(0.78 0.15 65 / 0.18);
+  }
+}
+.cta-breathe {
+  animation: breathe 3.4s ease-in-out infinite;
+}
+
+/* Lenis smooth scroll — recommended styles */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Gold selection */
+::selection {
+  background: oklch(0.78 0.15 65 / 0.35);
+  color: oklch(0.98 0.01 70);
+}
+
+/* Respect reduced motion for decorative loops */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .scroll-dot,
+  .float-soft,
+  .shimmer-line,
+  .cta-breathe {
+    animation: none;
+  }
+}
