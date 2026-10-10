@@ -798,3 +798,25 @@ Stage Summary:
 - Installed apps show zero download CTAs; staff dashboards never show the install banner.
 - Contrast: VLM-audited pass across ordering surfaces.
 - DEPLOYED: commit 29fd0ba pushed → Vercel auto-deploy. PRODUCTION DB (Neon) REMAINS DOWN until the owner restores credentials/env — the deployed code heals automatically the moment the DB returns (all routes + the new platform layer); /api/health is the probe. Production Neon will also need `prisma db push` for the r57 schema (venue/branch tables) when reachable.
+
+---
+Task ID: r58
+Agent: main (Z.ai Code)
+Task: Out-of-box animated logo (state of the art), rename "Add to cart" to a shisha-related term, and allow modifying orders even after confirmation.
+
+Work Log:
+- **Living-ember logo (generative)**: created `src/lib/logo-geometry.ts` — pure deterministic geometry (mulberry32 PRNG, single-line hookah paths, 3 seeded sine-perturbed bezier smoke tendrils, ember trails) shared by app + icon rasterizer (zero hydration drift).
+- Created `src/components/hookah/logo.tsx`: `MazajMark` (draw-on strokes via framer-motion pathLength, smoke through animated feTurbulence+feDisplacementMap SMIL field, pulsing coals + escaping sparks via animateMotion, breathing halo; reduced-motion safe), `MazajLogo` (mark + مزاج + letter-staggered MAZAJ gradient wordmark + ember hairline), `LogoSplash` (once-per-session boot cinematic, sessionStorage marked at DISMISS so StrictMode double-mount can't eat it — found & fixed during E2E).
+- Integrated: kit `Wordmark` + `AppHeader` wordmark (flame → living mark), sign-in marquee tile, landing nav, get-app-sheet + install-landing hero (animated mark instead of static PNG), app-shell hydration placeholder.
+- `scripts/render-logo-icons.ts` (sharp): rasterized the SAME geometry to icon-192/512, maskable-192/512, apple-touch-icon, favicon-64 + new `src/app/icon.svg` — home-screen icon matches the animated brand exactly. VLM-rated 8/10.
+- **Shisha wording**: addToCart "Add to cart"→"Pack my Shisha"/"جهّز شيشتي", addedToCart→"Shisha packed"/"الشيشة اتجهازت", inCart→"packed", cartBtn→"My Shisha"/"شيشتي", viewCart→"View my shisha", emptyCart→"No shisha packed yet", currentOrder→"My packed shisha" (14 i18n swaps EN+AR).
+- **Living Orders (amend after confirm)**: Prisma Order + `revision`/`amendedAt`/`amendedByName` (db:push ✓). New `POST /api/orders/[id]/amend`: server recompute (totals/COGS/profit), NET-delta inventory reconciliation (brand grams, flavor subtypes, supplies, add-ons — returns grams on removals, validates increases), loyalty earn adjust w/ ledger clamp, human diff auto-posted to the order's comment thread, guest web-push, locked once served (409).
+- Cart store: `beginAmend/endAmend` + stash (draft cart restored on exit, not persisted). CartDrawer: amend header (#id + pulse), delta chip (+bowls ±EGP), "Save changes" CTA replacing checkout. OrderScreen: floating bar becomes EDITING ORDER bar. OrdersPanel: "Edit order" on active cards + amber Rev badges. GuestTracking: "Modify my order" on active orders + Rev chip. EmployeeDashboard: New tab morphs into the cart-driven OrderScreen editor while amending (selectTab reordered before tabs memo — fixed TDZ + refs-during-render lint).
+- **Bonus bug fix**: `/api/orders` zod schema now nullish-tolerant (customerName/phone/table/notes/loyaltyPhone) — BowlBuilder sent `phone: null` and got 400 (pre-existing, surfaced in E2E).
+- E2E (agent-browser iPhone 14 + VLM audits, evidence download/r58-01..20): splash plays once & fades ✓, sign-in marquee living mark ✓, "Pack my Shisha · 180 EGP" EN ✓ + "جهّز شيشتي · 125 EGP" AR ✓, "Shisha packed" toast ✓; staff flow: order 145 → Edit → +Amy mix → delta chip (+1 bowl +180) → Save → toast → queue shows Rev 1 · 2 hookahs · 325 EGP ✓, DB rev:1 + comment "Hassan · amendment #1 → + 1× Amy Fruits Mix (Blueberry+Mint) ¦ Total: 145 → 325 EGP" ✓, inventory: Amy 980g (−20), Blueberry/Mint 140g (mix split), Nakhla untouched by amend ✓; guest flow: "Modify my order" → amend bar #HSCWRE · 1 bowl · 125 EGP ✓, Stop editing exits cleanly ✓. Lint + tsc clean, dev.log all 200.
+
+Stage Summary:
+- Brand system: one deterministic geometry drives the animated in-app logo AND every PWA icon (single source of truth).
+- Ordering language is now shisha-native in EN + AR.
+- Orders are living documents until served: staff & guests amend with the full menu (mixes, BYO, add-ons); every amendment is stock-reconciled, loyalty-adjusted, audit-trailed, push-notified, and rev-badged.
+- Committed eee4890, pushed to main (Vercel will deploy).
