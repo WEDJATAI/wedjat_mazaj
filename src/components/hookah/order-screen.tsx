@@ -17,12 +17,9 @@ import { BrandCard } from "./brand-card";
 import { ConfigSheet } from "./config-sheet";
 import { CartDrawer } from "./cart-drawer";
 import { CheckoutDialog } from "./checkout-dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   ShoppingBag,
-  Flame,
   Sparkles,
   Wind,
   FlaskRound,
@@ -34,9 +31,20 @@ import {
 } from "lucide-react";
 import { BarcodeModal } from "./barcode-modal";
 import { SessionTimer } from "./session-timer";
+import { motion } from "framer-motion";
 import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
+import {
+  AppHeader,
+  EASE,
+  GoldButton,
+  Kicker,
+  ScreenShell,
+  Stagger,
+  StaggerItem,
+  Wordmark,
+} from "./kit/kit";
 
 function useMounted() {
   const [m, setM] = React.useState(false);
@@ -248,136 +256,112 @@ export function OrderScreen({
   };
 
   return (
-    <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
-      <div className="ember-glow pointer-events-none absolute inset-0" />
-
-      <div className="relative flex min-h-screen flex-col">
-        {/* App bar */}
-        <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4">
-            <div className="flex items-center gap-2">
-              <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
-                <Flame className="size-5" />
-              </span>
-              <div className="leading-tight">
-                <p className="text-base font-bold tracking-tight smoke-text">
-                  {title}
-                </p>
-                {subtitle && (
-                  <p className="-mt-0.5 text-[11px] text-muted-foreground">
-                    {subtitle}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              {enableScan && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 rounded-full"
-                  onClick={() => setScanOpen(true)}
-                  aria-label="Scan barcode"
-                >
-                  <ScanLine className="size-4" />
-                  <span className="hidden sm:inline">{t("scan")}</span>
-                </Button>
-              )}
-              {headerExtra}
-              <Badge
-                variant="secondary"
-                className="hidden bg-muted/60 text-muted-foreground sm:inline-flex"
+    <ScreenShell>
+      <AppHeader
+        wordmark
+        title={title}
+        subtitle={subtitle}
+        actions={
+          <>
+            {enableScan && (
+              <button
+                type="button"
+                onClick={() => setScanOpen(true)}
+                className="glass inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Scan barcode"
               >
-                20g / {t("perHookah")}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                className="relative gap-2 rounded-full"
-                onClick={() => setCartOpen(true)}
+                <ScanLine className="size-4" />
+                <span className="hidden sm:inline">{t("scan")}</span>
+              </button>
+            )}
+            {headerExtra}
+            <span className="hidden rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-[11px] text-muted-foreground md:inline-flex">
+              20g / {t("perHookah")}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              className="glass relative inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              aria-label={t("cartBtn")}
+            >
+              <ShoppingBag className="size-4" />
+              <span className="hidden sm:inline">{t("cartBtn")}</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1.5 -end-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] px-1 text-[11px] font-bold text-[oklch(0.17_0.03_50)] shadow-lg">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={t("signOut")}
               >
-                <ShoppingBag className="size-4" />
-                <span className="hidden sm:inline">{t("cartBtn")}</span>
-                {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
-                    {cartCount}
-                  </span>
-                )}
-              </Button>
-              {onSignOut && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full"
-                  onClick={onSignOut}
-                  aria-label={t("signOut")}
-                >
-                  <LogOut className="size-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </header>
+                <LogOut className="size-4" />
+              </button>
+            )}
+          </>
+        }
+      />
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-40 pt-6">
-          {returningBanner}
-          {showTimer && (
-            <section className="mb-6">
-              <SessionTimer />
-            </section>
-          )}
-
-          {/* Menu search (r54) */}
-          <section className="mb-6" aria-label={t("searchMenu")}>
-            <div className="relative">
-              <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("searchPlaceholder")}
-                className="h-12 rounded-2xl border-border bg-card ps-10 pe-4 text-base"
-                aria-label={t("searchMenu")}
-              />
-              {searchActive && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-                  aria-label={t("cancel")}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-40 pt-6 sm:px-5">
+        {returningBanner}
+        {showTimer && (
+          <section className="mb-6">
+            <SessionTimer />
           </section>
+        )}
 
-          {searchActive ? (
-            /* ─── Search results ─── */
-            <section className="space-y-6">
-              <div>
-                <h2 className="mb-3 text-xl font-bold tracking-tight">
-                  {t("searchMatches")}: “{query.trim()}”
-                </h2>
-                {!hasMatches && (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
-                    {t("searchNoResults")}
-                  </div>
-                )}
+        {/* Menu search (r54) */}
+        <section className="mb-6" aria-label={t("searchMenu")}>
+          <div className="relative">
+            <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className="h-12 rounded-2xl border-white/[0.08] bg-white/[0.04] ps-10 pe-4 text-base backdrop-blur-xl"
+              aria-label={t("searchMenu")}
+            />
+            {searchActive && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                aria-label={t("cancel")}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </section>
 
-                {/* matching flavors — one-tap add rows */}
-                {flavorMatches.length > 0 && (
-                  <div className="space-y-2">
-                    {flavorMatches.map(({ brand, flavor }) => {
-                      const isFlat =
-                        brand.flavorTypes.length === 1 &&
-                        brand.flavorTypes[0] === "flat";
-                      return (
+        {searchActive ? (
+          /* ─── Search results ─── */
+          <section className="space-y-6">
+            <div>
+              <Kicker className="mb-4">{t("searchMatches")}: “{query.trim()}”</Kicker>
+              {!hasMatches && (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center text-sm text-muted-foreground">
+                  {t("searchNoResults")}
+                </div>
+              )}
+
+              {/* matching flavors — one-tap add rows */}
+              {flavorMatches.length > 0 && (
+                <Stagger className="space-y-2">
+                  {flavorMatches.map(({ brand, flavor }) => {
+                    const isFlat =
+                      brand.flavorTypes.length === 1 &&
+                      brand.flavorTypes[0] === "flat";
+                    return (
+                      <StaggerItem key={`${brand.id}:${flavor}`}>
                         <button
-                          key={`${brand.id}:${flavor}`}
                           type="button"
                           onClick={() => addFlavorQuick(brand, flavor)}
-                          className="group flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3 text-start transition-all hover:border-primary/60 hover:shadow-lg active:scale-[0.99]"
+                          className="group glass flex w-full items-center gap-3 rounded-2xl p-3 text-start transition-all hover:border-primary/35 hover:shadow-[0_14px_36px_-16px_rgba(0,0,0,0.7)] active:scale-[0.99]"
                         >
                           <span
                             className={`grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-xl ${brand.accent}`}
@@ -397,134 +381,165 @@ export function OrderScreen({
                             <Plus className="size-4" />
                           </span>
                         </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* matching presets */}
-                {presetMatches.length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {presetMatches.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => addPreset(p.id)}
-                        className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-all hover:bg-primary/20 active:scale-95"
-                      >
-                        <span className="text-base">{p.emoji}</span>
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* whole-brand matches open the config sheet */}
-                {brandMatches.length > 0 && (
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {brandMatches.map((brand) => (
-                      <BrandCard
-                        key={brand.id}
-                        brand={brand}
-                        inCart={mounted ? inCartFor(brand.id) : 0}
-                        onSelect={() => handleSelectBrand(brand)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          ) : (
-            <>
-              {/* Hero */}
-              <section className="relative overflow-hidden rounded-3xl border border-border">
-                <div
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: "url(/images/hero.png)" }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/40" />
-                <div className="relative flex flex-col gap-4 p-6 sm:p-10">
-                  <Badge
-                    variant="secondary"
-                    className="w-fit gap-1.5 border border-primary/30 bg-primary/10 text-primary"
-                  >
-                    <Sparkles className="size-3.5" />
-                    {t("egyptianLounge")}
-                  </Badge>
-                  <h1 className="max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-                    {t("heroLine1")}{" "}
-                    <span className="smoke-text">{t("heroLine2")}</span>
-                  </h1>
-                  <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
-                    {t("heroBody")}
-                  </p>
-
-                  <div className="mt-2 grid gap-3 sm:grid-cols-3">
-                    <PromoCard
-                      icon={<Wind className="size-4" />}
-                      title={t("promoByoTitle")}
-                      body={t("promoByoBody")}
-                    />
-                    <PromoCard
-                      icon={<FlaskRound className="size-4" />}
-                      title={t("promoMolassesTitle")}
-                      body={t("promoMolassesBody")}
-                    />
-                    <PromoCard
-                      icon={<Sparkles className="size-4" />}
-                      title={t("promoMixTitle")}
-                      body={t("promoMixBody")}
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Quick start — popular bowls for one-tap add */}
-              <section className="mt-6">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary">
-                    <Sparkles className="size-3.5" />
-                  </span>
-                  <div>
-                    <h2 className="text-sm font-bold">{t("popularBowls")}</h2>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("oneTapFav")}
-                    </p>
-                  </div>
-                </div>
-                <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-                  {BOWL_PRESETS.map((p) => {
-                    const unit =
-                      p.components.length > 1
-                        ? Math.max(
-                            ...p.components.map(
-                              (c) => getBrand(c.brandId)?.pricing.fruitsMix ?? 145
-                            )
-                          )
-                        : getBrand(p.components[0]?.brandId)?.pricing.fruits ?? 125;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => addPreset(p.id)}
-                        className="group flex shrink-0 flex-col items-center gap-1 rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
-                        style={{ minWidth: 96 }}
-                      >
-                        <span className="text-3xl">{p.emoji}</span>
-                        <span className="text-center text-[11px] font-medium leading-tight">
-                          {p.name}
-                        </span>
-                        <span className="text-[10px] font-semibold text-primary">
-                          {egp(unit)}
-                        </span>
-                      </button>
+                      </StaggerItem>
                     );
                   })}
-                </div>
-              </section>
+                </Stagger>
+              )}
 
-              {/* Price legend */}
-              <section className="mt-6 grid gap-3 sm:grid-cols-4">
+              {/* matching presets */}
+              {presetMatches.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {presetMatches.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => addPreset(p.id)}
+                      className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-all hover:bg-primary/20 active:scale-95"
+                    >
+                      <span className="text-base">{p.emoji}</span>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* whole-brand matches open the config sheet */}
+              {brandMatches.length > 0 && (
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {brandMatches.map((brand, i) => (
+                    <BrandCard
+                      key={brand.id}
+                      brand={brand}
+                      inCart={mounted ? inCartFor(brand.id) : 0}
+                      onSelect={() => handleSelectBrand(brand)}
+                      index={i}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        ) : (
+          <>
+            {/* ─── Hero — the lounge invitation ───────────────────────── */}
+            <section className="relative overflow-hidden rounded-3xl border border-white/[0.07]">
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: "url(/images/hero.png)" }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.135_0.014_60)] via-[oklch(0.135_0.014_60/0.82)] to-[oklch(0.135_0.014_60/0.35)]" />
+              <div className="vignette absolute inset-0 opacity-50" aria-hidden />
+
+              <div className="relative flex flex-col gap-4 p-6 sm:p-10">
+                <motion.span
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1, ease: EASE }}
+                  className="glass inline-flex w-fit items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary"
+                >
+                  <Sparkles className="size-3.5" />
+                  {t("egyptianLounge")}
+                </motion.span>
+                <motion.h1
+                  initial={{ opacity: 0, y: 22, filter: "blur(6px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.85, delay: 0.2, ease: EASE }}
+                  className="font-display max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-5xl"
+                >
+                  {t("heroLine1")}{" "}
+                  <span className="text-gold">{t("heroLine2")}</span>
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.38, ease: EASE }}
+                  className="max-w-xl text-sm text-muted-foreground sm:text-base"
+                >
+                  {t("heroBody")}
+                </motion.p>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.5, ease: EASE }}
+                  className="mt-2 grid gap-3 sm:grid-cols-3"
+                >
+                  <PromoCard
+                    icon={<Wind className="size-4" />}
+                    title={t("promoByoTitle")}
+                    body={t("promoByoBody")}
+                  />
+                  <PromoCard
+                    icon={<FlaskRound className="size-4" />}
+                    title={t("promoMolassesTitle")}
+                    body={t("promoMolassesBody")}
+                  />
+                  <PromoCard
+                    icon={<Sparkles className="size-4" />}
+                    title={t("promoMixTitle")}
+                    body={t("promoMixBody")}
+                  />
+                </motion.div>
+              </div>
+            </section>
+
+            {/* Quick start — popular bowls for one-tap add */}
+            <section className="mt-8">
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary ring-1 ring-primary/25">
+                  <Sparkles className="size-4" />
+                </span>
+                <div>
+                  <h2 className="font-display text-base font-bold text-gold-soft">
+                    {t("popularBowls")}
+                  </h2>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("oneTapFav")}
+                  </p>
+                </div>
+              </div>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+                {BOWL_PRESETS.map((p, i) => {
+                  const unit =
+                    p.components.length > 1
+                      ? Math.max(
+                          ...p.components.map(
+                            (c) => getBrand(c.brandId)?.pricing.fruitsMix ?? 145
+                          )
+                        )
+                      : getBrand(p.components[0]?.brandId)?.pricing.fruits ?? 125;
+                  return (
+                    <motion.button
+                      key={p.id}
+                      type="button"
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.55 + i * 0.05, ease: EASE }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => addPreset(p.id)}
+                      className="glass group flex shrink-0 flex-col items-center gap-1 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35"
+                      style={{ minWidth: 96 }}
+                    >
+                      <span className="text-3xl transition-transform duration-300 group-hover:scale-110">
+                        {p.emoji}
+                      </span>
+                      <span className="text-center text-[11px] font-medium leading-tight">
+                        {p.name}
+                      </span>
+                      <span className="font-display text-[11px] font-bold text-gold">
+                        {egp(unit)}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Price legend */}
+            <section className="mt-8">
+              <Kicker className="mb-4">{t("priceList")}</Kicker>
+              <div className="grid gap-3 sm:grid-cols-4">
                 <LegendCard
                   title={t("legendFruits")}
                   price="125 EGP"
@@ -542,30 +557,35 @@ export function OrderScreen({
                   price="45 EGP"
                   sub={t("legendFlatSub")}
                 />
-              </section>
+              </div>
+            </section>
 
-              {/* Shisha category + Brands */}
-              <section className="mt-8">
-                {/* Step 1: choose shisha type */}
-                {!shishaCat && (
-                  <div>
-                    <div className="mb-4">
-                      <h2 className="text-xl font-bold tracking-tight">
-                        {t("chooseShisha")}
-                      </h2>
-                      <p className="text-sm text-muted-foreground">
-                        {t("chooseShishaDesc")}
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {SHISHA_CATEGORIES.map((cat) => (
+            {/* Shisha category + Brands */}
+            <section className="mt-10">
+              {/* Step 1: choose shisha type */}
+              {!shishaCat && (
+                <div>
+                  <div className="mb-4">
+                    <h2 className="font-display text-2xl font-bold tracking-tight text-gold-soft">
+                      {t("chooseShisha")}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {t("chooseShishaDesc")}
+                    </p>
+                  </div>
+                  <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {SHISHA_CATEGORIES.map((cat) => (
+                      <StaggerItem key={cat.key}>
                         <button
-                          key={cat.key}
                           type="button"
                           onClick={() => setShishaCat(cat.key)}
-                          className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-border bg-card p-5 text-start transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10"
+                          className="group glass relative flex w-full items-center gap-4 overflow-hidden rounded-2xl p-5 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.8)]"
                         >
-                          <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/95 ring-1 ring-border">
+                          <div
+                            className="pointer-events-none absolute -end-10 -top-12 size-36 rounded-full bg-primary/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-80"
+                            aria-hidden
+                          />
+                          <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/95 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-white/10">
                             <img
                               src={cat.logo}
                               alt={cat.label}
@@ -573,8 +593,10 @@ export function OrderScreen({
                               loading="lazy"
                             />
                           </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-lg font-semibold">{cat.label}</p>
+                          <div className="relative min-w-0 flex-1">
+                            <p className="font-display text-lg font-bold text-gold-soft">
+                              {cat.label}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               {cat.desc}
                             </p>
@@ -582,74 +604,78 @@ export function OrderScreen({
                               {cat.brandIds.length} {t("brands")} →
                             </p>
                           </div>
-                          <ArrowRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary rtl:-scale-x-100" />
+                          <ArrowRight className="relative size-5 shrink-0 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary rtl:rotate-180" />
                         </button>
-                      ))}
+                      </StaggerItem>
+                    ))}
+                  </Stagger>
+                </div>
+              )}
+
+              {/* Step 2: brands in chosen category */}
+              {shishaCat && (
+                <div>
+                  <div className="mb-4 flex items-end justify-between">
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShishaCat(null)}
+                        className="mb-1 flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        ← {t("changeCategory")}
+                      </button>
+                      <h2 className="font-display text-2xl font-bold tracking-tight text-gold-soft">
+                        {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)?.label}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {t("tapBrandHint")}
+                      </p>
                     </div>
+                    <span className="text-xs text-muted-foreground">
+                      {brandsForCategory(shishaCat).length} {t("brands")}
+                    </span>
                   </div>
-                )}
 
-                {/* Step 2: brands in chosen category */}
-                {shishaCat && (
-                  <div>
-                    <div className="mb-4 flex items-end justify-between">
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => setShishaCat(null)}
-                          className="mb-1 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                        >
-                          ← {t("changeCategory")}
-                        </button>
-                        <h2 className="text-xl font-bold tracking-tight">
-                          {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)
-                            ?.label}
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          {t("tapBrandHint")}
-                        </p>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {brandsForCategory(shishaCat).length} {t("brands")}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {brandsForCategory(shishaCat).map((brand) => (
-                        <BrandCard
-                          key={brand.id}
-                          brand={brand}
-                          inCart={mounted ? inCartFor(brand.id) : 0}
-                          onSelect={() => handleSelectBrand(brand)}
-                        />
-                      ))}
-                    </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {brandsForCategory(shishaCat).map((brand, i) => (
+                      <BrandCard
+                        key={brand.id}
+                        brand={brand}
+                        inCart={mounted ? inCartFor(brand.id) : 0}
+                        onSelect={() => handleSelectBrand(brand)}
+                        index={i}
+                      />
+                    ))}
                   </div>
-                )}
-              </section>
-            </>
-          )}
-        </main>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </main>
 
-        {/* Footer */}
-        <footer className="relative mt-auto border-t border-border bg-background/60 py-6">
-          <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-1 px-4 text-center text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">Mazaj Hookah Lounge</p>
-            <p>{t("footerLine")}</p>
-          </div>
-        </footer>
-      </div>
+      {/* Footer */}
+      <footer className="relative mt-auto border-t border-white/[0.06] bg-[oklch(0.135_0.014_60/0.6)] py-6">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-2 px-4 text-center text-xs text-muted-foreground">
+          <Wordmark size="sm" />
+          <span className="ember-hairline w-16" aria-hidden />
+          <p>{t("footerLine")}</p>
+        </div>
+      </footer>
 
       {/* Floating cart bar — always anchored to the bottom (bottomInset
           lifts it above things like the staff tab bar) */}
       {mounted && cartCount > 0 && (
-        <div
-          className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          className="fixed inset-x-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
           style={bottomInset ? { bottom: `${bottomInset}px` } : undefined}
         >
-          <div className="mx-auto flex w-full max-w-5xl items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl shadow-black/30 backdrop-blur-xl">
-            <div className="flex items-center gap-2">
-              <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
+          <div className="glass mx-auto flex w-full max-w-5xl items-center gap-3 rounded-2xl p-3 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]">
+            <div className="flex items-center gap-2.5">
+              <span className="grid size-10 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
                 <ShoppingBag className="size-4" />
               </span>
               <div className="leading-tight">
@@ -657,21 +683,17 @@ export function OrderScreen({
                   {cartCount} {cartCount > 1 ? t("bowls") : t("bowl")}
                   {totals.bogo ? ` · ${t("bogoOn")}` : ""}
                 </p>
-                <p className="text-base font-bold tabular-nums">
+                <p className="font-display text-lg font-bold tabular-nums text-gold">
                   {egp(totals.total)}
                 </p>
               </div>
             </div>
-            <Button
-              size="lg"
-              className="ml-auto rounded-xl font-semibold"
-              onClick={() => setCartOpen(true)}
-            >
+            <GoldButton className="ms-auto" onClick={() => setCartOpen(true)}>
               {t("viewCart")}
-              <ArrowRight className="size-4 rtl:-scale-x-100" />
-            </Button>
+              <ArrowRight className="size-4 rtl:rotate-180" />
+            </GoldButton>
           </div>
-        </div>
+        </motion.div>
       )}
 
       <ConfigSheet
@@ -703,7 +725,7 @@ export function OrderScreen({
           onScan={handleScan}
         />
       )}
-    </div>
+    </ScreenShell>
   );
 }
 
@@ -717,8 +739,8 @@ function PromoCard({
   body: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-border bg-card/70 p-3 backdrop-blur">
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+    <div className="glass flex items-start gap-3 rounded-2xl p-3">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary ring-1 ring-primary/25">
         {icon}
       </span>
       <div>
@@ -741,20 +763,25 @@ function LegendCard({
   badge?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card/60 p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+    <div className="glass relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30">
+      <div
+        className="pointer-events-none absolute -top-8 -end-6 size-24 rounded-full bg-primary/10 blur-2xl"
+        aria-hidden
+      />
+      <div className="relative flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          {title}
+        </p>
         {badge && (
-          <Badge
-            variant="secondary"
-            className="border border-primary/30 bg-primary/15 text-primary"
-          >
+          <span className="rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
             {badge}
-          </Badge>
+          </span>
         )}
       </div>
-      <p className="mt-1 text-xl font-bold text-primary">{price}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
+      <p className="font-display relative mt-1.5 text-2xl font-bold text-gold">
+        {price}
+      </p>
+      <p className="relative mt-0.5 text-[11px] text-muted-foreground">{sub}</p>
     </div>
   );
 }

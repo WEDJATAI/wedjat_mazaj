@@ -2,10 +2,8 @@
 
 import * as React from "react";
 import { useSession } from "@/store/session";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import {
   ScrollText,
   RefreshCw,
@@ -22,6 +20,7 @@ import {
   Hand,
   UserCheck,
   AlarmClock,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -33,6 +32,15 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  AppHeader,
+  EmptyState,
+  GoldButton,
+  Kicker,
+  StatTile,
+  Stagger,
+  StaggerItem,
+} from "./kit/kit";
 
 interface OrderRow {
   id: string;
@@ -85,15 +93,15 @@ function timeAgo(iso: string): string {
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   pending: {
     label: "Pending",
-    cls: "border border-primary/30 bg-primary/15 text-primary",
+    cls: "rounded-full border-transparent bg-primary/15 text-primary ring-1 ring-primary/45",
   },
   preparing: {
     label: "Preparing",
-    cls: "border border-amber-500/30 bg-amber-500/15 text-amber-500",
+    cls: "rounded-full border-transparent bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/40",
   },
   done: {
     label: "Done",
-    cls: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-500",
+    cls: "rounded-full border-transparent bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/40",
   },
 };
 
@@ -109,6 +117,41 @@ function slaState(
   if (min >= lateAt) return { level: "late", minutes: min };
   if (min >= warnAt) return { level: "warn", minutes: min };
   return null;
+}
+
+/* ── Midnight Ember shared bits (panel-local) ─────────────────────────── */
+
+const glassIconBtn =
+  "glass grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-all hover:border-primary/50 hover:text-foreground active:scale-95";
+
+const glassPillBtn =
+  "inline-flex h-11 items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 text-xs font-semibold text-foreground/90 backdrop-blur-xl transition-all hover:border-primary/40 hover:bg-white/[0.07] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50";
+
+const donePillBtn =
+  "inline-flex h-11 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 text-xs font-semibold text-emerald-500 transition-all hover:bg-emerald-500/20 active:scale-[0.97]";
+
+function HeaderPill({
+  icon,
+  children,
+  tone,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  tone: "gold" | "amber";
+}) {
+  return (
+    <span
+      className={cn(
+        "hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold sm:inline-flex",
+        tone === "gold"
+          ? "bg-primary/15 text-primary ring-1 ring-primary/40"
+          : "bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/40"
+      )}
+    >
+      {icon}
+      {children}
+    </span>
+  );
 }
 
 export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
@@ -193,127 +236,142 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
   );
   const done = orders.filter((o) => o.status === "done");
 
+  const activeCount = mine.length + othersActive.length;
+  const queueValue = [...incoming, ...mine, ...othersActive].reduce(
+    (sum, o) => sum + (o.total ?? 0),
+    0
+  );
+
   return (
-    <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
+    <div className="dark relative flex min-h-screen flex-col text-foreground">
       <div className="ember-glow pointer-events-none absolute inset-0" />
       <div className="relative flex min-h-screen flex-col">
-        <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
-              <ScrollText className="size-5" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-base font-bold tracking-tight smoke-text">
-                Order queue
-              </p>
-              <p className="-mt-0.5 text-[11px] text-muted-foreground">
-                Active sessions & history
-              </p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
+        <AppHeader
+          icon={<ScrollText className="size-5" />}
+          title="Queue"
+          subtitle="Active sessions & history"
+          actions={
+            <>
               {incoming.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="gap-1 border border-primary/30 bg-primary/15 text-primary"
-                >
-                  <Flame className="size-3" /> {incoming.length} incoming
-                </Badge>
+                <HeaderPill tone="gold" icon={<Flame className="size-3.5" />}>
+                  {incoming.length} incoming
+                </HeaderPill>
               )}
-              {(mine.length + othersActive.length) > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="gap-1 border border-amber-500/30 bg-amber-500/15 text-amber-500"
-                >
-                  <ChefHat className="size-3" /> {mine.length + othersActive.length} active
-                </Badge>
+              {activeCount > 0 && (
+                <HeaderPill tone="amber" icon={<ChefHat className="size-3.5" />}>
+                  {activeCount} active
+                </HeaderPill>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
+              <button
+                type="button"
                 onClick={load}
                 aria-label="Refresh"
+                title="Refresh"
+                className={glassIconBtn}
               >
                 <RefreshCw className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
+              </button>
+              <button
+                type="button"
                 onClick={onSignOut}
                 aria-label="Sign out"
+                title="Sign out"
+                className={glassIconBtn}
               >
                 <LogOut className="size-4" />
-              </Button>
-            </div>
-          </div>
-        </header>
+              </button>
+            </>
+          }
+        />
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-44 pt-6 sm:px-5">
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-32 rounded-2xl" />
+                <Skeleton key={i} className="h-36 rounded-2xl bg-white/[0.05]" />
               ))}
             </div>
           ) : orders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-              <div className="grid size-16 place-items-center rounded-full bg-muted/50">
-                <ScrollText className="size-7 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium">No orders yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Orders appear here once placed.
-                </p>
-              </div>
-            </div>
+            <EmptyState
+              className="mt-6"
+              icon={<ScrollText className="size-6" />}
+              title="No orders yet"
+              description="Orders appear here once placed."
+            />
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-8">
+              {/* Live queue pulse — gold stat tiles */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatTile
+                  icon={<Flame className="size-4" />}
+                  text={String(incoming.length)}
+                  label="Incoming"
+                />
+                <StatTile
+                  icon={<ChefHat className="size-4" />}
+                  text={String(activeCount)}
+                  label="In progress"
+                />
+                <StatTile
+                  icon={<CheckCheck className="size-4" />}
+                  text={String(done.length)}
+                  label="Done"
+                />
+                <StatTile
+                  icon={<Banknote className="size-4" />}
+                  text={egp(queueValue)}
+                  label="Queue value"
+                />
+              </div>
+
               {incoming.length > 0 && (
                 <Section title="Incoming — tap to confirm" count={incoming.length}>
                   {incoming.map((o) => (
-                    <OrderCard
-                      key={o.id}
-                      order={o}
-                      highlight
-                      onClaim={() => claimOrder(o)}
-                      onComments={() => setCommentsFor(o)}
-                    />
+                    <StaggerItem key={o.id}>
+                      <OrderCard
+                        order={o}
+                        highlight
+                        onClaim={() => claimOrder(o)}
+                        onComments={() => setCommentsFor(o)}
+                      />
+                    </StaggerItem>
                   ))}
                 </Section>
               )}
               {mine.length > 0 && (
                 <Section title="My orders" count={mine.length}>
                   {mine.map((o) => (
-                    <OrderCard
-                      key={o.id}
-                      order={o}
-                      onStatus={(s) => setStatus(o, s)}
-                      onComments={() => setCommentsFor(o)}
-                    />
+                    <StaggerItem key={o.id}>
+                      <OrderCard
+                        order={o}
+                        onStatus={(s) => setStatus(o, s)}
+                        onComments={() => setCommentsFor(o)}
+                      />
+                    </StaggerItem>
                   ))}
                 </Section>
               )}
               {othersActive.length > 0 && (
                 <Section title="Other active" count={othersActive.length} muted>
                   {othersActive.map((o) => (
-                    <OrderCard
-                      key={o.id}
-                      order={o}
-                      onComments={() => setCommentsFor(o)}
-                    />
+                    <StaggerItem key={o.id}>
+                      <OrderCard
+                        order={o}
+                        onComments={() => setCommentsFor(o)}
+                      />
+                    </StaggerItem>
                   ))}
                 </Section>
               )}
               {done.length > 0 && (
                 <Section title="Done" count={done.length} muted>
                   {done.slice(0, 10).map((o) => (
-                    <OrderCard
-                      key={o.id}
-                      order={o}
-                      onComments={() => setCommentsFor(o)}
-                    />
+                    <StaggerItem key={o.id}>
+                      <OrderCard
+                        order={o}
+                        onComments={() => setCommentsFor(o)}
+                      />
+                    </StaggerItem>
                   ))}
                 </Section>
               )}
@@ -321,10 +379,10 @@ export function OrdersPanel({ onSignOut }: { onSignOut: () => void }) {
           )}
         </main>
 
-        <footer className="relative mt-auto border-t border-border bg-background/60 py-6">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-1.5 px-4 text-center text-xs text-muted-foreground">
-            <Flame className="size-3 text-primary" />
-            Auto-refreshes every 15 seconds
+        <footer className="relative mt-auto border-t border-white/[0.06] bg-[oklch(0.135_0.014_60/0.6)] py-6">
+          <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-2 px-4 text-center text-xs text-muted-foreground">
+            <Flame className="size-3.5 text-primary" aria-hidden />
+            <span>Auto-refreshes every 10 seconds</span>
           </div>
         </footer>
       </div>
@@ -350,22 +408,23 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <div className="mb-2 flex items-center gap-2">
-        <h2
+    <section>
+      <div className="mb-3 flex items-center gap-2.5">
+        <Kicker className={muted ? "opacity-60" : undefined}>{title}</Kicker>
+        <span
           className={cn(
-            "text-sm font-semibold",
-            muted ? "text-muted-foreground" : "text-foreground"
+            "grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[10px] font-bold ring-1",
+            muted
+              ? "bg-white/[0.04] text-muted-foreground ring-white/10"
+              : "bg-primary/15 text-primary ring-primary/35"
           )}
+          aria-label={`${count} orders`}
         >
-          {title}
-        </h2>
-        <Badge variant="secondary" className="bg-muted/60 text-muted-foreground">
           {count}
-        </Badge>
+        </span>
       </div>
-      <div className="space-y-3">{children}</div>
-    </div>
+      <Stagger className="space-y-3">{children}</Stagger>
+    </section>
   );
 }
 
@@ -402,27 +461,27 @@ function OrderCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-card p-4",
+        "glass relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]",
         highlight
-          ? "border-primary ring-1 ring-primary/40"
+          ? "ring-1 ring-primary/50"
           : order.status === "pending"
-          ? "border-primary/50"
+          ? "ring-1 ring-primary/30"
           : order.status === "preparing"
-          ? "border-amber-500/40"
-          : "border-border opacity-80",
-        sla?.level === "late" && "ring-2 ring-destructive/50"
+          ? "ring-1 ring-amber-500/25"
+          : "opacity-75",
+        sla?.level === "late" && "ring-2 ring-destructive/60"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">
+            <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
               {order.customerName || "Walk-in"}
             </p>
             {isUnassigned ? (
               <Badge
                 variant="secondary"
-                className="border border-primary/30 bg-primary/15 text-primary"
+                className="rounded-full border-transparent bg-primary/15 text-primary ring-1 ring-primary/45"
               >
                 Incoming
               </Badge>
@@ -435,10 +494,10 @@ function OrderCard({
               <Badge
                 variant="secondary"
                 className={cn(
-                  "gap-1",
+                  "gap-1 rounded-full",
                   sla.level === "warn"
-                    ? "border border-amber-500/40 bg-amber-500/15 text-amber-500"
-                    : "animate-pulse border border-destructive/40 bg-destructive/15 text-destructive"
+                    ? "border-transparent bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/40"
+                    : "animate-pulse border-transparent bg-destructive/15 text-destructive ring-1 ring-destructive/45 motion-reduce:animate-none"
                 )}
               >
                 <AlarmClock className="size-3" />
@@ -452,7 +511,7 @@ function OrderCard({
                 <MapPin className="size-3" /> {order.table}
               </span>
             )}
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 tabular-nums">
               <Clock className="size-3" /> {timeAgo(order.createdAt)}
             </span>
             <span className="flex items-center gap-1">
@@ -461,72 +520,71 @@ function OrderCard({
             </span>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">
+        <div className="shrink-0 text-end">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             {order.itemCount} hookah{order.itemCount > 1 ? "s" : ""}
           </p>
-          <p className="font-bold text-primary">{egp(order.total)}</p>
+          <p className="font-display text-xl font-bold tabular-nums text-gold">
+            {egp(order.total)}
+          </p>
         </div>
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {items.map((it, i) => (
-          <span
-            key={i}
-            className="rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground"
-          >
-            {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
-          </span>
-        ))}
-      </div>
+      {items.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {items.map((it, i) => (
+            <span
+              key={i}
+              className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2.5 py-1 text-[11px] text-foreground/75"
+            >
+              {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
+            </span>
+          ))}
+        </div>
+      )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="ember-hairline mt-3.5" aria-hidden />
+
+      <div className="mt-3.5 flex flex-wrap items-center gap-2">
         {onClaim && (
-          <Button
+          <GoldButton
             size="sm"
-            className="rounded-xl"
+            className="h-11 normal-case tracking-wide"
             onClick={onClaim}
           >
             <UserCheck className="size-4" /> Confirm & take
-          </Button>
+          </GoldButton>
         )}
         {onStatus && order.status === "pending" && (
-          <Button
+          <GoldButton
             size="sm"
-            className="rounded-xl"
+            className="h-11 normal-case tracking-wide"
             onClick={() => onStatus("preparing")}
           >
             <ChefHat className="size-4" /> Start preparing
-          </Button>
+          </GoldButton>
         )}
         {onStatus && order.status === "preparing" && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="rounded-xl"
+          <button
+            type="button"
+            className={glassPillBtn}
             onClick={() => onStatus("pending")}
           >
             <Pause className="size-4" /> Back to pending
-          </Button>
+          </button>
         )}
         {onStatus && order.status !== "done" && (
-          <Button
-            size="sm"
-            variant="default"
-            className="rounded-xl bg-emerald-600 hover:bg-emerald-600/90"
+          <button
+            type="button"
+            className={donePillBtn}
             onClick={() => onStatus("done")}
           >
             <CheckCheck className="size-4" /> Mark done
-          </Button>
+          </button>
         )}
-        <Button
-          size="sm"
-          variant="outline"
-          className="rounded-xl"
-          onClick={onComments}
-        >
+        <button type="button" className={glassPillBtn} onClick={onComments}>
           <MessageCircle className="size-4" /> Comments
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -597,13 +655,20 @@ function CommentsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="slim-scroll mx-auto flex max-h-[92vh] w-full max-w-xl flex-col overflow-y-auto rounded-t-3xl border-t border-border p-0"
+        className="slim-scroll mx-auto flex max-h-[92vh] w-full max-w-xl flex-col overflow-y-auto rounded-t-3xl border-t border-white/[0.08] bg-[oklch(0.155_0.014_60/0.92)] p-0 backdrop-blur-2xl"
       >
-        <SheetHeader className="px-5 pt-5 pb-2">
-          <SheetTitle className="flex items-center gap-2">
-            <MessageCircle className="size-5 text-primary" /> Order comments
+        <div
+          className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-white/15"
+          aria-hidden
+        />
+        <SheetHeader className="px-5 pt-2 pb-2">
+          <SheetTitle className="flex items-center gap-3 font-display text-xl font-bold tracking-tight text-gold-soft">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+              <MessageCircle className="size-4" />
+            </span>
+            Order comments
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="tabular-nums">
             Order #{order.id.slice(-6).toUpperCase()} ·{" "}
             {order.customerName || "Walk-in"}
             {order.table ? ` · ${order.table}` : ""}
@@ -614,52 +679,49 @@ function CommentsSheet({
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 2 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 rounded-xl" />
+                <Skeleton key={i} className="h-16 rounded-2xl bg-white/[0.05]" />
               ))}
             </div>
           ) : comments.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-5 text-center text-sm text-muted-foreground">
               No comments yet. Add the first one below.
             </div>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {comments.map((c) => (
-                <li
-                  key={c.id}
-                  className="rounded-xl border border-border bg-card p-3"
-                >
+                <li key={c.id} className="glass rounded-2xl p-3.5">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-semibold text-foreground">
+                    <span className="font-semibold text-gold-soft">
                       {c.author}
                     </span>
-                    <span>{timeAgo(c.createdAt)}</span>
+                    <span className="tabular-nums">{timeAgo(c.createdAt)}</span>
                   </div>
-                  <p className="mt-1 text-sm">{c.body}</p>
+                  <p className="mt-1.5 text-sm text-foreground/90">{c.body}</p>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        <Separator />
-        <div className="space-y-2 p-4">
+        <div className="ember-hairline" aria-hidden />
+        <div className="space-y-2.5 p-5 pb-6">
           <input
-            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm outline-none focus:border-primary"
+            className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
             placeholder="Your name"
             aria-label="Author"
           />
           <textarea
-            className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Add a comment — e.g. needs extra coal, customer wants less heat…"
             rows={2}
             aria-label="Comment"
           />
-          <Button
-            className="w-full rounded-xl"
+          <GoldButton
+            className="h-12 w-full text-sm"
             disabled={!body.trim() || sending}
             onClick={submit}
           >
@@ -670,7 +732,7 @@ function CommentsSheet({
                 <Send className="size-4" /> Add comment
               </>
             )}
-          </Button>
+          </GoldButton>
         </div>
       </SheetContent>
     </Sheet>

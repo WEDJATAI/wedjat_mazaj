@@ -3,7 +3,6 @@
 import * as React from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import {
   Download,
   CheckCircle2,
@@ -25,12 +24,19 @@ import {
   isNativeApp,
   setPlatformOverride,
   usePwa,
-  detectPlatform,
   type InstallPlatform,
 } from "@/store/pwa";
 import { useI18n } from "@/store/i18n";
 import type { Translations } from "@/lib/i18n";
 import { QrCodeSvg } from "./qr-code";
+import {
+  EASE,
+  GoldButton,
+  Kicker,
+  ScreenShell,
+  Stagger,
+  StaggerItem,
+} from "./kit/kit";
 
 /** Session flag — the banner stays quiet for the rest of the session once
  * the QR landing has been served (it already did the banner's job). */
@@ -114,7 +120,7 @@ export function InstallLanding() {
     }
 
     // Strip the params (unless the page sits in an in-app browser, where
-    // Safari/Chrome must still see ?install=1 after "Open in Safari").
+    // Safari/Chrome must still see ?install=1 after "Open in Safari".)
     if (!inAppBrowser) {
       const url = new URL(window.location.href);
       url.searchParams.delete("install");
@@ -236,7 +242,7 @@ export function InstallLanding() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[80] overflow-y-auto bg-gradient-to-b from-[#16110e] via-[#1c1512] to-[#251a12]"
+          className="fixed inset-0 z-[80] overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-label={t("getApp")}
@@ -245,160 +251,209 @@ export function InstallLanding() {
             type="button"
             onClick={() => setOpen(false)}
             aria-label={t("later")}
-            className="fixed right-4 top-4 z-10 grid size-10 place-items-center rounded-full bg-card/80 text-muted-foreground backdrop-blur transition-colors hover:bg-muted hover:text-foreground"
+            className="glass fixed end-4 top-4 z-10 grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
           >
             <X className="size-5" />
           </button>
 
-          <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center px-5 py-10 text-center">
-            {/* Hero */}
-            <div className="relative mt-4">
-              <div className="absolute inset-0 -z-10 scale-[1.8] animate-pulse rounded-full bg-primary/30 blur-3xl" />
-              <Image
-                src="/icons/icon-192.png"
-                alt="Mazaj app icon"
-                width={96}
-                height={96}
-                priority
-                className="rounded-[1.4rem] shadow-2xl shadow-black/60 ring-1 ring-white/10"
-              />
-            </div>
-            <h1 className="mt-5 text-3xl font-black tracking-tight">
-              Mazaj
-            </h1>
-            <p className="mt-1 text-sm font-medium text-amber-200/80">
-              {t("landingTagline")}
-            </p>
-            <p className="mt-2.5 flex items-center gap-1.5 rounded-full border border-border bg-card/70 px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
-              <span className="text-amber-400" aria-hidden>
-                ★★★★★
-              </span>
-              {t("installMeta")}
-            </p>
-
-            {/* Platform install card */}
-            <div className="mt-6 w-full">
-              {platform === "ios" ? (
-                inApp ? (
-                  <IosSafariFirst t={t} />
-                ) : (
-                  <IosSteps t={t} />
-                )
-              ) : platform === "android" ? (
-                phase === "success" ? (
-                  <InstallSuccess t={t} onDone={() => setOpen(false)} />
-                ) : (
-                  <div className="w-full space-y-3">
-                    {/* Primary — direct APK download, zero Play Store */}
-                    <motion.div
-                      animate={{
-                        boxShadow: [
-                          "0 0 0 0 rgba(217,119,6,0.0)",
-                          "0 0 34px 6px rgba(217,119,6,0.35)",
-                          "0 0 0 0 rgba(217,119,6,0.0)",
-                        ],
-                      }}
-                      transition={{ repeat: Infinity, duration: 1.8 }}
-                      className="w-full rounded-2xl"
-                    >
-                      <a
-                        href={APK_URL}
-                        download="Mazaj.apk"
-                        onClick={() => setApkStarted(true)}
-                        className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
-                      >
-                        <Download className="size-5" aria-hidden />
-                        {t("apkButton")}
-                      </a>
-                    </motion.div>
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      {apkStarted
-                        ? t("apkStarted")
-                        : `${t("apkSub")}${
-                            appMeta
-                              ? ` · v${appMeta.version} · ${(
-                                  appMeta.sizeBytes / 1048576
-                                ).toFixed(1)} MB`
-                              : ""
-                          }`}
-                    </p>
-                    {apkStarted && <ApkAfterSteps t={t} />}
-                    {phase === "prompting" ? (
-                      <p className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card/70 py-3 text-xs font-medium text-muted-foreground backdrop-blur">
-                        <Loader2 className="size-4 animate-spin" aria-hidden />
-                        {t("installing")}
-                      </p>
-                    ) : (
-                      canInstall && (
-                        <>
-                          <div className="flex items-center gap-2 py-1" aria-hidden>
-                            <span className="h-px flex-1 bg-border" />
-                            <span className="text-[11px] text-muted-foreground">
-                              {t("orDivider")}
-                            </span>
-                            <span className="h-px flex-1 bg-border" />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={installInstant}
-                            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card/70 text-sm font-semibold backdrop-blur transition-colors hover:bg-muted"
-                          >
-                            <Zap className="size-4 text-primary" aria-hidden />
-                            {t("instantAdd")}
-                          </button>
-                        </>
-                      )
-                    )}
-                  </div>
-                )
-              ) : (
-                <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card/80 p-6 backdrop-blur">
-                  <p className="flex items-center gap-2 text-base font-bold">
-                    <QrCode className="size-4 text-primary" />{" "}
-                    {t("scanWithPhone")}
-                  </p>
-                  <div className="rounded-2xl bg-white p-4 shadow-inner">
-                    <QrCodeSvg text={installUrl} size={210} />
-                  </div>
-                  <p className="max-w-[32ch] text-xs leading-relaxed text-muted-foreground">
-                    {t("scanHint")}
-                  </p>
+          <ScreenShell embers emberDensity={0.4}>
+            <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center px-5 py-10 text-center">
+              {/* Hero — the MAZAJ marquee */}
+              <motion.div
+                initial={{ opacity: 0, y: 24, filter: "blur(6px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.8, ease: EASE }}
+                className="mt-4 flex flex-col items-center"
+              >
+                <div className="relative">
+                  <div
+                    className="absolute inset-0 -z-10 scale-[1.8] animate-pulse rounded-full bg-primary/30 blur-3xl"
+                    aria-hidden
+                  />
+                  <Image
+                    src="/icons/icon-192.png"
+                    alt="Mazaj app icon"
+                    width={96}
+                    height={96}
+                    priority
+                    className="rounded-[1.6rem] shadow-2xl shadow-black/60 ring-1 ring-white/10"
+                  />
                 </div>
+                <p className="mt-5 text-xs font-semibold tracking-[0.5em] text-muted-foreground">
+                  مــزاج
+                </p>
+                <h1 className="font-display mt-2 text-5xl font-bold tracking-wide text-gold">
+                  MAZAJ
+                </h1>
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.8, delay: 0.4, ease: EASE }}
+                  className="ember-hairline mt-4 w-32"
+                  aria-hidden
+                />
+                <p className="mt-3 text-sm font-medium text-amber-200/80">
+                  {t("landingTagline")}
+                </p>
+                <p className="glass mt-2.5 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
+                  <span className="text-amber-400" aria-hidden>
+                    ★★★★★
+                  </span>
+                  {t("installMeta")}
+                </p>
+              </motion.div>
+
+              {/* Platform install card */}
+              <Stagger className="mt-6 w-full" delay={0.15}>
+                {platform === "ios" ? (
+                  inApp ? (
+                    <StaggerItem>
+                      <IosSafariFirst t={t} />
+                    </StaggerItem>
+                  ) : (
+                    <StaggerItem>
+                      <IosSteps t={t} />
+                    </StaggerItem>
+                  )
+                ) : platform === "android" ? (
+                  phase === "success" ? (
+                    <StaggerItem>
+                      <InstallSuccess t={t} onDone={() => setOpen(false)} />
+                    </StaggerItem>
+                  ) : (
+                    <StaggerItem>
+                      <div className="w-full space-y-3">
+                        {/* Primary — direct APK download, zero Play Store */}
+                        <motion.div
+                          animate={{
+                            boxShadow: [
+                              "0 0 0 0 rgba(232,163,61,0.0)",
+                              "0 0 34px 6px rgba(232,163,61,0.35)",
+                              "0 0 0 0 rgba(232,163,61,0.0)",
+                            ],
+                          }}
+                          transition={{ repeat: Infinity, duration: 1.8 }}
+                          className="w-full rounded-full"
+                        >
+                          <a
+                            href={APK_URL}
+                            download="Mazaj.apk"
+                            onClick={() => setApkStarted(true)}
+                            className="group relative flex h-14 w-full items-center justify-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] text-lg font-bold text-[oklch(0.17_0.03_50)] shadow-[0_10px_30px_-10px_oklch(0.72_0.145_60/0.55)] transition-transform duration-300 hover:scale-[1.02] active:scale-[0.97]"
+                          >
+                            {/* sheen sweep */}
+                            <span
+                              aria-hidden
+                              className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                            />
+                            <Download className="relative size-5" aria-hidden />
+                            <span className="relative">{t("apkButton")}</span>
+                          </a>
+                        </motion.div>
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                          {apkStarted
+                            ? t("apkStarted")
+                            : `${t("apkSub")}${
+                                appMeta
+                                  ? ` · v${appMeta.version} · ${(
+                                      appMeta.sizeBytes / 1048576
+                                    ).toFixed(1)} MB`
+                                  : ""
+                              }`}
+                        </p>
+                        {apkStarted && <ApkAfterSteps t={t} />}
+                        {phase === "prompting" ? (
+                          <p className="glass flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-medium text-muted-foreground">
+                            <Loader2 className="size-4 animate-spin" aria-hidden />
+                            {t("installing")}
+                          </p>
+                        ) : (
+                          canInstall && (
+                            <>
+                              <div
+                                className="flex items-center gap-2 py-1"
+                                aria-hidden
+                              >
+                                <span className="ember-hairline flex-1" />
+                                <span className="text-[11px] text-muted-foreground">
+                                  {t("orDivider")}
+                                </span>
+                                <span className="ember-hairline flex-1" />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={installInstant}
+                                className="glass flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold transition-all duration-300 hover:border-primary/35 hover:text-primary"
+                              >
+                                <Zap className="size-4 text-primary" aria-hidden />
+                                {t("instantAdd")}
+                              </button>
+                            </>
+                          )
+                        )}
+                      </div>
+                    </StaggerItem>
+                  )
+                ) : (
+                  <StaggerItem>
+                    <div className="glass flex w-full flex-col items-center gap-4 rounded-3xl p-6">
+                      <Kicker>
+                        <span className="inline-flex items-center gap-1.5">
+                          <QrCode className="size-3.5" /> {t("scanWithPhone")}
+                        </span>
+                      </Kicker>
+                      <div className="rounded-2xl bg-white p-4 shadow-[0_0_44px_-8px_oklch(0.78_0.15_65/0.4)] ring-2 ring-primary/40">
+                        <QrCodeSvg text={installUrl} size={210} />
+                      </div>
+                      <p className="max-w-[32ch] text-xs leading-relaxed text-muted-foreground">
+                        {t("scanHint")}
+                      </p>
+                    </div>
+                  </StaggerItem>
+                )}
+              </Stagger>
+
+              {platform === "android" && phase !== "success" && (
+                <p className="mt-3 max-w-[36ch] text-[11px] leading-relaxed text-muted-foreground">
+                  {t("installAndroidIntro")}
+                </p>
               )}
-            </div>
 
-            {platform === "android" && phase !== "success" && (
-              <p className="mt-3 max-w-[36ch] text-[11px] leading-relaxed text-muted-foreground">
-                {t("installAndroidIntro")}
+              {/* Feature chips */}
+              <Stagger className="mt-7 flex flex-wrap justify-center gap-2" delay={0.3}>
+                <StaggerItem>
+                  <span className="glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium">
+                    <BellRing className="size-3 text-primary" />{" "}
+                    {t("featTracking")}
+                  </span>
+                </StaggerItem>
+                <StaggerItem>
+                  <span className="glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium">
+                    <Gift className="size-3 text-primary" /> {t("featLoyalty")}
+                  </span>
+                </StaggerItem>
+                <StaggerItem>
+                  <span className="glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium">
+                    <WifiOff className="size-3 text-primary" />{" "}
+                    {t("featOffline")}
+                  </span>
+                </StaggerItem>
+              </Stagger>
+              <p className="mt-3.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                <RefreshCw className="mt-0.5 size-3 shrink-0 text-primary" />
+                {t("syncDesc2")}
               </p>
-            )}
 
-            {/* Feature chips */}
-            <div className="mt-7 flex flex-wrap justify-center gap-2">
-              <span className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium">
-                <BellRing className="size-3 text-primary" /> {t("featTracking")}
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium">
-                <Gift className="size-3 text-primary" /> {t("featLoyalty")}
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-medium">
-                <WifiOff className="size-3 text-primary" /> {t("featOffline")}
-              </span>
+              {/* Skip */}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="mt-auto pt-8 text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+              >
+                {t("continueInBrowser")}
+              </button>
             </div>
-            <p className="mt-3.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
-              <RefreshCw className="mt-0.5 size-3 shrink-0 text-primary" />
-              {t("syncDesc2")}
-            </p>
-
-            {/* Skip */}
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="mt-auto pt-8 text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
-            >
-              {t("continueInBrowser")}
-            </button>
-          </div>
+          </ScreenShell>
         </motion.div>
       )}
     </AnimatePresence>
@@ -417,20 +472,24 @@ function IosSteps({ t }: { t: T }) {
   ] as const;
 
   return (
-    <div className="w-full space-y-4 rounded-3xl border border-border bg-card/80 p-5 backdrop-blur">
-      <p className="flex items-center justify-center gap-2 text-base font-bold">
-        <Smartphone className="size-4 text-primary" /> {t("installIosTitle")}
-      </p>
-      <p className="text-center text-xs text-muted-foreground">
-        {t("installIosIntro")}
-      </p>
+    <div className="glass w-full space-y-4 rounded-3xl p-5">
+      <div className="flex flex-col items-center gap-1.5">
+        <Kicker>
+          <span className="inline-flex items-center gap-1.5">
+            <Smartphone className="size-3.5" /> {t("installIosTitle")}
+          </span>
+        </Kicker>
+        <p className="text-center text-xs text-muted-foreground">
+          {t("installIosIntro")}
+        </p>
+      </div>
       <ol className="space-y-2.5">
         {steps.map((s, i) => (
           <li
             key={s.text}
-            className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/40 p-3 text-left"
+            className="glass flex items-center gap-3 rounded-2xl p-3 text-start"
           >
-            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+            <span className="font-display grid size-7 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary ring-1 ring-primary/25">
               {i + 1}
             </span>
             <s.icon className="size-6 shrink-0 text-primary" />
@@ -443,7 +502,7 @@ function IosSteps({ t }: { t: T }) {
       <p className="text-center text-[11px] text-muted-foreground">
         {t("iosInstallNote")}
       </p>
-      <p className="mx-auto flex w-fit items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-center text-[11px] font-semibold text-amber-200">
+      <p className="mx-auto flex w-fit items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-center text-[11px] font-semibold text-gold-soft">
         {t("iosNoStore")}
       </p>
     </div>
@@ -457,15 +516,19 @@ function IosSteps({ t }: { t: T }) {
 
 function IosSafariFirst({ t }: { t: T }) {
   return (
-    <div className="w-full space-y-4 rounded-3xl border border-border bg-card/80 p-5 backdrop-blur">
-      <p className="flex items-center justify-center gap-2 text-base font-bold">
-        <Share className="size-4 text-primary" /> {t("openInSafariTitle")}
-      </p>
-      <p className="text-center text-xs leading-relaxed text-muted-foreground">
-        {t("openInSafariDesc")}
-      </p>
-      <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/40 p-3 text-left">
-        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+    <div className="glass w-full space-y-4 rounded-3xl p-5">
+      <div className="flex flex-col items-center gap-1.5">
+        <Kicker>
+          <span className="inline-flex items-center gap-1.5">
+            <Share className="size-3.5" /> {t("openInSafariTitle")}
+          </span>
+        </Kicker>
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
+          {t("openInSafariDesc")}
+        </p>
+      </div>
+      <div className="glass flex items-center gap-3 rounded-2xl p-3 text-start">
+        <span className="font-display grid size-7 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary ring-1 ring-primary/25">
           1
         </span>
         <Share className="size-6 shrink-0 text-primary" />
@@ -484,17 +547,17 @@ function IosSafariFirst({ t }: { t: T }) {
 function ApkAfterSteps({ t }: { t: T }) {
   const steps = [t("apkStep1"), t("apkStep2"), t("apkStep3")];
   return (
-    <div className="rounded-3xl border border-border bg-card/80 p-4 text-left backdrop-blur">
-      <p className="mb-2 text-center text-xs font-bold">
+    <div className="glass rounded-3xl p-4 text-start">
+      <p className="mb-2 text-center text-xs font-bold tracking-wide text-gold-soft">
         {t("apkAfterTitle")}
       </p>
       <ol className="space-y-1.5">
         {steps.map((s, i) => (
           <li
             key={s}
-            className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-background/40 px-3 py-2"
+            className="glass flex items-center gap-2.5 rounded-xl px-3 py-2"
           >
-            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
+            <span className="font-display grid size-6 shrink-0 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary ring-1 ring-primary/25">
               {i + 1}
             </span>
             <span className="text-xs leading-snug text-foreground/90">
@@ -518,25 +581,26 @@ function InstallSuccess({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex w-full flex-col items-center gap-3 rounded-3xl border border-emerald-500/30 bg-card/80 p-6 text-center backdrop-blur"
+      transition={{ duration: 0.5, ease: EASE }}
+      className="glass flex w-full flex-col items-center gap-3 rounded-3xl p-6 text-center ring-1 ring-primary/30"
     >
       <motion.span
         initial={{ scale: 0.3, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", damping: 12, stiffness: 220 }}
+        className="grid size-16 place-items-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/30 shadow-[0_0_44px_-6px_oklch(0.78_0.15_65/0.5)]"
       >
-        <CheckCircle2 className="size-14 text-emerald-500" />
+        <CheckCircle2 className="size-8" />
       </motion.span>
-      <p className="text-lg font-bold">{t("installSuccessTitle")}</p>
+      <p className="font-display text-xl font-bold tracking-tight text-gold-soft">
+        {t("installSuccessTitle")}
+      </p>
       <p className="max-w-[34ch] text-xs leading-relaxed text-muted-foreground">
         {t("installSuccessDesc")}
       </p>
-      <Button
-        className="mt-1 h-12 w-full rounded-2xl font-semibold"
-        onClick={onDone}
-      >
+      <GoldButton size="lg" className="mt-1 w-full" onClick={onDone}>
         {t("startUsing")}
-      </Button>
+      </GoldButton>
     </motion.div>
   );
 }

@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import {
   BarChart3,
   RefreshCw,
@@ -14,7 +12,6 @@ import {
   Star,
   Crown,
   Flame,
-  Users,
   TrendingUp,
   Wand2,
   AlertTriangle,
@@ -22,6 +19,14 @@ import {
 import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
 import { useI18n } from "@/store/i18n";
+import {
+  EmptyState,
+  GoldButton,
+  Kicker,
+  Stagger,
+  StaggerItem,
+  StatTile,
+} from "./kit/kit";
 import {
   ResponsiveContainer,
   LineChart,
@@ -130,29 +135,28 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
     : null;
 
   return (
-    <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
-      <div className="ember-glow pointer-events-none absolute inset-0" />
+    <div className="dark relative flex min-h-screen flex-col text-foreground">
+      <div className="ember-glow pointer-events-none absolute inset-0" aria-hidden />
       <div className="relative flex min-h-screen flex-col">
-        <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
+        <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[oklch(0.155_0.014_60/0.72)] backdrop-blur-2xl">
+          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4 sm:px-5">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
               <BarChart3 className="size-5" />
             </span>
-            <div className="leading-tight">
-              <p className="text-base font-bold tracking-tight smoke-text">
+            <div className="min-w-0 leading-tight">
+              <h1 className="font-display truncate text-xl font-bold tracking-tight text-gold-soft">
                 Analytics
-              </p>
-              <p className="-mt-0.5 text-[11px] text-muted-foreground">
+              </h1>
+              <p className="-mt-0.5 truncate text-[11px] text-muted-foreground">
                 Trends, peaks, staff &amp; feedback
               </p>
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 rounded-full border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+            <div className="ms-auto flex shrink-0 items-center gap-2">
+              <button
+                type="button"
                 onClick={generateBrief}
                 disabled={briefLoading}
+                className="glass inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-xs font-medium text-primary transition-all hover:border-primary/50 active:scale-95 disabled:pointer-events-none disabled:opacity-60"
               >
                 {briefLoading ? (
                   <RefreshCw className="size-4 animate-spin" />
@@ -160,65 +164,64 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
                   <Wand2 className="size-4" />
                 )}
                 <span className="hidden sm:inline">{t("aiBrief")}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
+              </button>
+              <button
+                type="button"
                 onClick={load}
                 aria-label="Refresh"
+                className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-all hover:text-foreground active:scale-95"
               >
                 <RefreshCw className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
+              </button>
+              <button
+                type="button"
                 onClick={onSignOut}
                 aria-label="Sign out"
+                className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-all hover:text-foreground active:scale-95"
               >
                 <LogOut className="size-4" />
-              </Button>
+              </button>
             </div>
           </div>
+          <div className="ember-hairline mx-auto w-full max-w-5xl" aria-hidden />
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-44 pt-6 sm:px-5">
           {!loading && loadError && !data ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-8 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/[0.06] p-8 text-center">
               <AlertTriangle className="size-8 text-destructive" />
               <p className="text-sm font-medium">{t("analyticsLoadError")}</p>
-              <Button
-                variant="outline"
-                className="rounded-xl"
-                onClick={load}
-              >
+              <GoldButton onClick={load}>
                 <RefreshCw className="size-4" /> {t("tryAgain")}
-              </Button>
+              </GoldButton>
             </div>
           ) : loading || !data ? (
             <div className="space-y-4">
-              <Skeleton className="h-28 rounded-2xl" />
-              <Skeleton className="h-64 rounded-2xl" />
-              <Skeleton className="h-48 rounded-2xl" />
+              <Skeleton className="h-28 rounded-2xl bg-white/[0.05]" />
+              <Skeleton className="h-64 rounded-2xl bg-white/[0.05]" />
+              <Skeleton className="h-48 rounded-2xl bg-white/[0.05]" />
             </div>
           ) : (
             <>
               {/* AI executive brief */}
               {brief && (
-                <section className="mb-6 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-                  <div className="flex items-center gap-2 border-b border-primary/20 bg-primary/10 px-4 py-2.5">
+                <section className="glass relative mb-8 overflow-hidden rounded-2xl ring-1 ring-primary/25">
+                  <div
+                    className="pointer-events-none absolute -top-12 end-0 size-40 rounded-full bg-primary/10 blur-3xl"
+                    aria-hidden
+                  />
+                  <div className="relative flex items-center gap-2 border-b border-white/[0.06] bg-primary/[0.08] px-4 py-2.5">
                     <Wand2 className="size-4 text-primary" />
                     <p className="text-sm font-bold text-primary">
                       {t("briefTitle")}
                     </p>
                     {briefSource === "ai" && (
-                      <span className="ml-auto rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                      <span className="ms-auto rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
                         {t("aiBadge")}
                       </span>
                     )}
                   </div>
-                  <div className="space-y-1.5 px-4 py-3">
+                  <div className="relative space-y-1.5 px-4 py-3">
                     {brief.split("\n").map((line, i) =>
                       line.trim() ? (
                         <p
@@ -235,44 +238,70 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
 
               {/* Today KPIs */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Kpi
+                <StatTile
+                  className="ring-1 ring-primary/25"
                   icon={<Wallet className="size-4" />}
-                  label="Today revenue"
-                  value={egp(data.today.revenue)}
-                  sub={`${data.today.orders} orders · ${data.today.hookahs} hookahs`}
-                  accent
+                  text={egp(data.today.revenue)}
+                  label={
+                    <>
+                      Today revenue
+                      <span className="mt-0.5 block normal-case tracking-normal text-muted-foreground/80">
+                        {data.today.orders} orders · {data.today.hookahs} hookahs
+                      </span>
+                    </>
+                  }
                 />
-                <Kpi
+                <StatTile
                   icon={<TrendingUp className="size-4" />}
-                  label="Today profit"
-                  value={egp(data.today.profit)}
-                  sub="net of COGS"
+                  text={egp(data.today.profit)}
+                  label={
+                    <>
+                      Today profit
+                      <span className="mt-0.5 block normal-case tracking-normal text-muted-foreground/80">
+                        net of COGS
+                      </span>
+                    </>
+                  }
                 />
-                <Kpi
+                <StatTile
                   icon={<Star className="size-4" />}
-                  label="Avg rating"
-                  value={
+                  text={
                     data.last30.avgRating != null
                       ? `${data.last30.avgRating} / 5`
                       : "—"
                   }
-                  sub={`${data.last30.ratedCount} ratings · 30d`}
+                  label={
+                    <>
+                      Avg rating
+                      <span className="mt-0.5 block normal-case tracking-normal text-muted-foreground/80">
+                        {data.last30.ratedCount} ratings · 30d
+                      </span>
+                    </>
+                  }
                 />
-                <Kpi
+                <StatTile
                   icon={<Crown className="size-4" />}
-                  label="Mazaj+ members"
-                  value={String(data.loyalty.members)}
-                  sub={`+${data.loyalty.newMembers30d} this month`}
+                  text={String(data.loyalty.members)}
+                  label={
+                    <>
+                      Mazaj+ members
+                      <span className="mt-0.5 block normal-case tracking-normal text-muted-foreground/80">
+                        +{data.loyalty.newMembers30d} this month
+                      </span>
+                    </>
+                  }
                 />
               </div>
 
               {/* 14-day revenue trend */}
-              <section className="mt-6">
-                <h2 className="mb-3 text-lg font-bold tracking-tight">
-                  Revenue — last 14 days
-                </h2>
-                <div className="rounded-2xl border border-border bg-card p-4">
-                  <div className="h-56">
+              <section className="mt-8">
+                <Kicker className="mb-4">Revenue — last 14 days</Kicker>
+                <div className="glass relative overflow-hidden rounded-2xl p-4">
+                  <div
+                    className="pointer-events-none absolute -top-10 end-0 size-32 rounded-full bg-primary/10 blur-3xl"
+                    aria-hidden
+                  />
+                  <div className="relative h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={data.trend14}>
                         <CartesianGrid
@@ -293,9 +322,10 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
                           width={44}
                         />
                         <Tooltip
+                          cursor={{ stroke: "rgba(245,158,11,0.3)" }}
                           contentStyle={{
                             background: "#1c1917",
-                            border: "1px solid #44403c",
+                            border: "1px solid rgba(245,158,11,0.25)",
                             borderRadius: 12,
                             fontSize: 12,
                           }}
@@ -310,31 +340,33 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
                           stroke="#f59e0b"
                           strokeWidth={2.5}
                           dot={false}
-                          activeDot={{ r: 4 }}
+                          activeDot={{ r: 4, fill: "#fbbf24" }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <p className="mt-1 text-center text-[11px] text-muted-foreground">
+                  <p className="relative mt-1 text-center text-[11px] text-muted-foreground">
                     30-day total: {egp(data.last30.revenue)} ·{" "}
                     {data.last30.orders} orders
                   </p>
                 </div>
               </section>
 
-              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <div className="mt-8 grid gap-4 lg:grid-cols-2">
                 {/* Top brands */}
                 <section>
-                  <h2 className="mb-3 text-lg font-bold tracking-tight">
-                    Top brands · 30 days
-                  </h2>
-                  <div className="rounded-2xl border border-border bg-card p-4">
+                  <Kicker className="mb-4">Top brands · 30 days</Kicker>
+                  <div className="glass relative overflow-hidden rounded-2xl p-4">
+                    <div
+                      className="pointer-events-none absolute -top-10 end-0 size-32 rounded-full bg-primary/10 blur-3xl"
+                      aria-hidden
+                    />
                     {data.topBrands.length === 0 ? (
-                      <p className="py-8 text-center text-sm text-muted-foreground">
+                      <p className="relative py-8 text-center text-sm text-muted-foreground">
                         No orders yet.
                       </p>
                     ) : (
-                      <div className="h-52">
+                      <div className="relative h-52">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
                             data={data.topBrands.slice(0, 7)}
@@ -354,7 +386,7 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
                               cursor={{ fill: "rgba(245,158,11,0.06)" }}
                               contentStyle={{
                                 background: "#1c1917",
-                                border: "1px solid #44403c",
+                                border: "1px solid rgba(245,158,11,0.25)",
                                 borderRadius: 12,
                                 fontSize: 12,
                               }}
@@ -384,11 +416,13 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
 
                 {/* Peak hours */}
                 <section>
-                  <h2 className="mb-3 text-lg font-bold tracking-tight">
-                    Peak hours · 30 days
-                  </h2>
-                  <div className="rounded-2xl border border-border bg-card p-4">
-                    <div className="h-52">
+                  <Kicker className="mb-4">Peak hours · 30 days</Kicker>
+                  <div className="glass relative overflow-hidden rounded-2xl p-4">
+                    <div
+                      className="pointer-events-none absolute -top-10 end-0 size-32 rounded-full bg-primary/10 blur-3xl"
+                      aria-hidden
+                    />
+                    <div className="relative h-52">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data.peakHours}>
                           <XAxis
@@ -409,7 +443,7 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
                             cursor={{ fill: "rgba(245,158,11,0.06)" }}
                             contentStyle={{
                               background: "#1c1917",
-                              border: "1px solid #44403c",
+                              border: "1px solid rgba(245,158,11,0.25)",
                               borderRadius: 12,
                               fontSize: 12,
                             }}
@@ -426,9 +460,9 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
                       </ResponsiveContainer>
                     </div>
                     {peakHour && peakHour.orders > 0 && (
-                      <p className="mt-1 flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
+                      <p className="relative mt-1 flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
                         <Flame className="size-3 text-primary" /> Busiest around{" "}
-                        <b className="text-foreground">
+                        <b className="font-semibold text-foreground">
                           {HOUR_LABELS[peakHour.hour]}
                         </b>{" "}
                         ({peakHour.orders} orders)
@@ -439,107 +473,107 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
               </div>
 
               {/* Employee leaderboard */}
-              <section className="mt-6">
-                <h2 className="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight">
-                  <Users className="size-5 text-primary" /> Staff leaderboard ·
-                  30 days
-                </h2>
+              <section className="mt-8">
+                <Kicker className="mb-4">Staff leaderboard · 30 days</Kicker>
                 {data.employees.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                    No attributed orders yet.
-                  </div>
+                  <EmptyState
+                    className="py-8"
+                    title="No attributed orders yet"
+                  />
                 ) : (
-                  <ul className="space-y-2">
+                  <Stagger className="space-y-2">
                     {data.employees.map((e, i) => (
-                      <li
-                        key={e.name}
-                        className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3"
-                      >
-                        <span
-                          className={cn(
-                            "grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold",
-                            i === 0
-                              ? "bg-yellow-500/15 text-yellow-500"
-                              : i === 1
-                              ? "bg-slate-400/15 text-slate-300"
-                              : i === 2
-                              ? "bg-amber-700/15 text-amber-600"
-                              : "bg-muted/60 text-muted-foreground"
-                          )}
-                        >
-                          {i + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{e.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {e.orders} orders · {e.hookahs} hookahs
+                      <StaggerItem key={e.name}>
+                        <div className="glass flex items-center gap-3 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_-16px_rgba(0,0,0,0.7)]">
+                          <span
+                            className={cn(
+                              "font-display grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold tabular-nums",
+                              i === 0
+                                ? "bg-primary/15 text-primary ring-1 ring-primary/25"
+                                : i === 1
+                                ? "bg-white/[0.08] text-foreground/80"
+                                : i === 2
+                                ? "bg-amber-700/20 text-amber-500 ring-1 ring-amber-700/20"
+                                : "bg-white/[0.04] text-muted-foreground"
+                            )}
+                          >
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{e.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {e.orders} orders · {e.hookahs} hookahs
+                            </p>
+                          </div>
+                          <p className="font-display font-bold tabular-nums text-gold">
+                            {egp(e.revenue)}
                           </p>
                         </div>
-                        <p className="font-bold text-primary">{egp(e.revenue)}</p>
-                      </li>
+                      </StaggerItem>
                     ))}
-                  </ul>
+                  </Stagger>
                 )}
               </section>
 
               {/* Guest feedback */}
-              <section className="mt-6">
-                <h2 className="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight">
-                  <Star className="size-5 text-yellow-400" /> Guest feedback
-                </h2>
+              <section className="mt-8">
+                <Kicker className="mb-4">Guest feedback</Kicker>
                 {data.feedback.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                    No ratings yet — guests can rate from the live tracking
-                    view once served.
-                  </div>
+                  <EmptyState
+                    className="py-8"
+                    title="No ratings yet"
+                    description="Guests can rate from the live tracking view once served."
+                  />
                 ) : (
-                  <ul className="space-y-2">
+                  <Stagger className="space-y-2">
                     {data.feedback.map((f) => (
-                      <li
-                        key={f.id}
-                        className={cn(
-                          "rounded-2xl border bg-card p-3",
-                          f.rating <= 2
-                            ? "border-destructive/40"
-                            : "border-border"
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium">
-                            {f.customerName || "Guest"}
-                            {f.table ? ` · ${f.table}` : ""}
-                          </p>
-                          <div className="flex gap-0.5">
-                            {[1, 2, 3, 4, 5].map((n) => (
-                              <Star
-                                key={n}
-                                className={cn(
-                                  "size-3.5",
-                                  n <= f.rating
-                                    ? "fill-yellow-400 text-yellow-400"
-                                    : "text-muted-foreground"
-                                )}
-                              />
-                            ))}
+                      <StaggerItem key={f.id}>
+                        <div
+                          className={cn(
+                            "glass rounded-2xl p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_-16px_rgba(0,0,0,0.7)]",
+                            f.rating <= 2 && "ring-1 ring-destructive/40"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium">
+                              {f.customerName || "Guest"}
+                              {f.table ? ` · ${f.table}` : ""}
+                            </p>
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map((n) => (
+                                <Star
+                                  key={n}
+                                  className={cn(
+                                    "size-3.5",
+                                    n <= f.rating
+                                      ? "fill-yellow-400 text-yellow-400"
+                                      : "text-muted-foreground"
+                                  )}
+                                />
+                              ))}
+                            </div>
                           </div>
+                          {f.comment && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              “{f.comment}”
+                            </p>
+                          )}
+                          {f.rating <= 2 && (
+                            <Badge
+                              variant="destructive"
+                              className="mt-2 rounded-full border border-destructive/40 bg-destructive/10"
+                            >
+                              Follow up recommended
+                            </Badge>
+                          )}
                         </div>
-                        {f.comment && (
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            “{f.comment}”
-                          </p>
-                        )}
-                        {f.rating <= 2 && (
-                          <Badge className="mt-2 border border-destructive/40 bg-destructive/10 text-destructive">
-                            Follow up recommended
-                          </Badge>
-                        )}
-                      </li>
+                      </StaggerItem>
                     ))}
-                  </ul>
+                  </Stagger>
                 )}
               </section>
 
-              <Separator className="mt-8" />
+              <div className="ember-hairline mt-8" aria-hidden />
               <p className="mt-3 text-center text-[11px] text-muted-foreground">
                 <ShoppingBag className="mr-1 inline size-3" />
                 All figures from the last 30 days of live order data.
@@ -548,45 +582,6 @@ export function AnalyticsPanel({ onSignOut }: { onSignOut: () => void }) {
           )}
         </main>
       </div>
-    </div>
-  );
-}
-
-function Kpi({
-  icon,
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border bg-card/60 p-4",
-        accent ? "border-primary/40 bg-primary/5" : "border-border"
-      )}
-    >
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className={accent ? "text-primary" : "text-muted-foreground"}>
-          {icon}
-        </span>
-        {label}
-      </div>
-      <p
-        className={cn(
-          "mt-1 text-xl font-bold",
-          accent ? "text-primary" : "text-foreground"
-        )}
-      >
-        {value}
-      </p>
-      {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useSession } from "@/store/session";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,6 +23,7 @@ import { LangToggle } from "./lang-toggle";
 import { useI18n } from "@/store/i18n";
 import { useTableContext } from "@/store/table-context";
 import { usePwa } from "@/store/pwa";
+import { EASE, GoldButton, Kicker, ScreenShell } from "./kit/kit";
 
 export function SignIn() {
   const [tab, setTab] = React.useState<"role" | "pin" | "guest">("role");
@@ -41,54 +41,63 @@ export function SignIn() {
     }
   }, []);
   return (
-    <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
-      <div className="ember-glow pointer-events-none absolute inset-0" />
+    <ScreenShell embers emberDensity={0.4} className="min-h-[100dvh]">
       {/* Language toggle */}
-      <div className="absolute right-4 top-4 z-10">
+      <div className="absolute end-4 top-4 z-10">
         <LangToggle />
       </div>
-      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-10">
+      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-12">
+        {/* ── the marquee ─────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8 flex flex-col items-center text-center"
+          transition={{ duration: 0.8, ease: EASE }}
+          className="mb-9 flex flex-col items-center text-center"
         >
           <motion.span
-            initial={{ scale: 0, rotate: -20 }}
+            initial={{ scale: 0, rotate: -18 }}
             animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", delay: 0.2 }}
-            className="mb-3 grid size-20 place-items-center rounded-3xl bg-primary/15 text-primary shadow-lg shadow-primary/10"
+            transition={{ type: "spring", delay: 0.15, stiffness: 200, damping: 16 }}
+            className="mb-4 grid size-20 place-items-center rounded-[1.6rem] bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary shadow-[0_0_44px_-6px_oklch(0.78_0.15_65/0.45)] ring-1 ring-primary/30"
           >
             <Flame className="size-10" />
           </motion.span>
-          <h1 className="text-4xl font-bold tracking-tight smoke-text">{t("mazaj")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("hookahLounge")}
+          <p className="text-xs font-semibold tracking-[0.5em] text-muted-foreground">
+            مــزاج
           </p>
+          <h1 className="font-display mt-2 text-5xl font-bold tracking-wide text-gold">
+            MAZAJ
+          </h1>
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: EASE }}
+            className="ember-hairline mt-4 w-32"
+            aria-hidden
+          />
+          <p className="mt-3 text-sm text-muted-foreground">{t("hookahLounge")}</p>
         </motion.div>
 
         <AnimatePresence mode="wait">
           {tab === "role" && (
             <motion.div
               key="role"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -24, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: -24, filter: "blur(4px)" }}
+              transition={{ duration: 0.4, ease: EASE }}
               className="grid gap-3"
             >
               <RoleCard
                 icon={<Store className="size-6" />}
                 title={t("imStaff")}
                 desc={t("imStaffDesc")}
-                accent="from-primary/20 to-primary/5"
                 onClick={() => setTab("pin")}
               />
               <RoleCard
                 icon={<UserRound className="size-6" />}
                 title={t("imGuest")}
                 desc={t("imGuestDesc")}
-                accent="from-amber-500/20 to-amber-500/5"
                 onClick={() => setTab("guest")}
               />
 
@@ -99,7 +108,7 @@ export function SignIn() {
                   useSession.getState().signInGuest({ name: "Guest", table: "" });
                   toast.success(`${t("browseSkipToast")}`);
                 }}
-                className="mt-1 flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/40 p-3 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:text-foreground"
+                className="mt-1 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-3 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:text-foreground"
               >
                 <Zap className="size-4 text-primary" />
                 {t("justBrowsing")}
@@ -109,7 +118,7 @@ export function SignIn() {
               <button
                 type="button"
                 onClick={() => setGetAppOpen(true)}
-                className="mt-2 flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-sm font-medium text-primary transition-all hover:border-primary/60 hover:bg-primary/15"
+                className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-sm font-medium text-primary transition-all hover:border-primary/60 hover:bg-primary/15"
               >
                 <QrCode className="size-4" />
                 {t("getApp")} — iOS & Android
@@ -131,9 +140,10 @@ export function SignIn() {
           {tab === "pin" && (
             <motion.div
               key="pin"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 24, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: 24, filter: "blur(4px)" }}
+              transition={{ duration: 0.4, ease: EASE }}
             >
               <PinPanel onBack={() => setTab("role")} />
             </motion.div>
@@ -141,16 +151,17 @@ export function SignIn() {
           {tab === "guest" && (
             <motion.div
               key="guest"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 24, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: 24, filter: "blur(4px)" }}
+              transition={{ duration: 0.4, ease: EASE }}
             >
               <GuestPanel onBack={() => setTab("role")} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </ScreenShell>
   );
 }
 
@@ -158,35 +169,32 @@ function RoleCard({
   icon,
   title,
   desc,
-  accent,
   onClick,
 }: {
   icon: React.ReactNode;
   title: string;
   desc: string;
-  accent: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10"
+      className="group glass relative flex min-h-20 items-center gap-4 overflow-hidden rounded-2xl p-5 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.8)]"
     >
+      {/* warm corner glow */}
       <div
-        className={cn(
-          "pointer-events-none absolute inset-0 bg-gradient-to-br opacity-50 transition-opacity group-hover:opacity-100",
-          accent
-        )}
+        className="pointer-events-none absolute -end-10 -top-12 size-36 rounded-full bg-primary/15 opacity-40 blur-3xl transition-opacity duration-500 group-hover:opacity-90"
+        aria-hidden
       />
-      <span className="relative grid size-12 place-items-center rounded-2xl bg-primary/15 text-primary">
+      <span className="relative grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary ring-1 ring-primary/25">
         {icon}
       </span>
       <div className="relative min-w-0 flex-1">
-        <p className="text-lg font-semibold">{title}</p>
+        <p className="font-display text-lg font-bold text-gold-soft">{title}</p>
         <p className="text-sm text-muted-foreground">{desc}</p>
       </div>
-      <ArrowRight className="relative size-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+      <ArrowRight className="relative size-5 shrink-0 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary rtl:rotate-180" />
     </button>
   );
 }
@@ -235,59 +243,67 @@ function PinPanel({ onBack }: { onBack: () => void }) {
   const back = () => setPin(pin.slice(0, -1));
 
   return (
-    <div className="rounded-3xl border border-border bg-card/70 p-5">
-      <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-        <ShieldCheck className="size-4 text-primary" />
-        {t("enterPin")}
-      </div>
+    <div className="glass relative overflow-hidden rounded-3xl p-5">
+      <div
+        className="pointer-events-none absolute -top-14 left-1/2 h-28 w-48 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl"
+        aria-hidden
+      />
+      <Kicker className="relative mb-4 justify-center">
+        <span className="inline-flex items-center gap-1.5">
+          <ShieldCheck className="size-3.5" /> {t("enterPin")}
+        </span>
+      </Kicker>
 
+      {/* PIN dots — molten gold when lit */}
       <motion.div
         animate={shake ? { x: [-8, 8, -6, 6, -3, 3, 0] } : {}}
         transition={{ duration: 0.4 }}
-        className="mb-6 flex justify-center gap-4"
+        className="relative mb-6 flex justify-center gap-4"
       >
         {[0, 1, 2, 3].map((i) => (
           <motion.span
             key={i}
             animate={{
               scale: i < pin.length ? 1.15 : 1,
-              backgroundColor: i < pin.length ? "var(--primary)" : "transparent",
+              backgroundColor:
+                i < pin.length ? "oklch(0.78 0.15 65)" : "oklch(0.78 0.15 65 / 0)",
+              boxShadow: i < pin.length
+                ? "0 0 18px oklch(0.78 0.15 65 / 0.55)"
+                : "0 0 0 oklch(0.78 0.15 65 / 0)",
             }}
             className={cn(
               "grid size-7 place-items-center rounded-full border-2 transition-colors",
-              i < pin.length
-                ? "border-primary"
-                : "border-border bg-muted/40"
+              i < pin.length ? "border-primary" : "border-white/15 bg-white/[0.03]"
             )}
           />
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="relative grid grid-cols-3 gap-3">
         {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
           <motion.button
             key={d}
             whileTap={{ scale: 0.92 }}
             type="button"
-            className="grid h-16 place-items-center rounded-2xl border border-border bg-muted/40 text-2xl font-semibold transition-colors hover:bg-muted/70 active:bg-primary/15"
+            className="font-display grid h-16 place-items-center rounded-2xl border border-white/[0.07] bg-white/[0.04] text-2xl font-bold text-foreground transition-all hover:border-primary/40 hover:bg-primary/[0.09] active:bg-primary/20"
             onClick={() => press(d)}
             disabled={loading}
           >
             {d}
           </motion.button>
         ))}
-        <Button
-          variant="ghost"
-          className="h-16 rounded-2xl text-sm"
+        <button
+          type="button"
+          className="grid h-16 place-items-center rounded-2xl border border-white/[0.07] bg-white/[0.02] text-xs font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
           onClick={onBack}
           disabled={loading}
         >
           ← {t("back")}
-        </Button>
+        </button>
         <motion.button
           whileTap={{ scale: 0.92 }}
           type="button"
-          className="grid h-16 place-items-center rounded-2xl border border-border bg-muted/40 text-2xl font-semibold transition-colors hover:bg-muted/70 active:bg-primary/15"
+          className="font-display grid h-16 place-items-center rounded-2xl border border-white/[0.07] bg-white/[0.04] text-2xl font-bold transition-all hover:border-primary/40 hover:bg-primary/[0.09] active:bg-primary/20"
           onClick={() => press("0")}
           disabled={loading}
         >
@@ -296,7 +312,7 @@ function PinPanel({ onBack }: { onBack: () => void }) {
         <motion.button
           whileTap={{ scale: 0.92 }}
           type="button"
-          className="grid h-16 place-items-center rounded-2xl border border-border bg-muted/40 transition-colors hover:bg-muted/70"
+          className="grid h-16 place-items-center rounded-2xl border border-white/[0.07] bg-white/[0.04] text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.09]"
           onClick={back}
           disabled={loading || pin.length === 0}
           aria-label="Delete"
@@ -306,7 +322,7 @@ function PinPanel({ onBack }: { onBack: () => void }) {
       </div>
 
       {loading && (
-        <p className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <p className="relative mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> {t("checking")}
         </p>
       )}
@@ -338,13 +354,18 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="rounded-3xl border border-border bg-card/70 p-5">
-      <div className="mb-5 flex items-center gap-2 text-sm text-muted-foreground">
-        <UserRound className="size-4 text-primary" />
-        {t("guestCheckIn")}
-      </div>
+    <div className="glass relative overflow-hidden rounded-3xl p-5">
+      <div
+        className="pointer-events-none absolute -top-14 left-1/2 h-28 w-48 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl"
+        aria-hidden
+      />
+      <Kicker className="relative mb-5 justify-center">
+        <span className="inline-flex items-center gap-1.5">
+          <UserRound className="size-3.5" /> {t("guestCheckIn")}
+        </span>
+      </Kicker>
 
-      <div className="space-y-4">
+      <div className="relative space-y-4">
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Sparkles className="size-3 text-primary" />
@@ -355,7 +376,7 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
             onChange={(e) => setName(e.target.value)}
             placeholder={t("namePlaceholder")}
             aria-label="Guest name"
-            className="h-12 rounded-xl text-base"
+            className="h-12 rounded-xl border-white/[0.09] bg-white/[0.04] text-base"
             autoFocus
             onKeyDown={(e) => e.key === "Enter" && submit()}
           />
@@ -369,7 +390,7 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
             onChange={(e) => setTable(e.target.value)}
             placeholder={t("tablePlaceholder")}
             aria-label="Guest table"
-            className="h-12 rounded-xl text-base"
+            className="h-12 rounded-xl border-white/[0.09] bg-white/[0.04] text-base"
             onKeyDown={(e) => e.key === "Enter" && submit()}
           />
           {tableCtx.fromPosLink && (tableCtx.tableId != null || tableCtx.tableName) && (
@@ -381,22 +402,22 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
           )}
         </div>
 
-        <Button
-          className="h-12 w-full rounded-xl text-base font-semibold"
+        <GoldButton
           size="lg"
+          className="w-full"
           disabled={!valid}
           onClick={submit}
         >
           {t("startOrdering")}
-          <ArrowRight className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full text-sm"
+          <ArrowRight className="size-4 rtl:rotate-180" />
+        </GoldButton>
+        <button
+          type="button"
+          className="w-full py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           onClick={onBack}
         >
           ← {t("back")}
-        </Button>
+        </button>
       </div>
     </div>
   );

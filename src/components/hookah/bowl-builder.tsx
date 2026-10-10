@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   BRANDS,
   MIXABLE_BRANDS,
@@ -19,8 +19,6 @@ import {
   type FlavorType,
   type Brand,
 } from "@/lib/catalog";
-import { useSession } from "@/store/session";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -32,10 +30,8 @@ import {
   Shuffle,
   Leaf,
   Wind,
-  FlaskRound,
   Send,
   Loader2,
-  Sparkles,
   TrendingUp,
   Trash2,
   ChevronLeft,
@@ -45,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { queueOrder } from "@/lib/offline-queue";
 import { tierDef } from "@/lib/loyalty";
+import { AppHeader, EmptyState, GoldButton, ScreenShell } from "./kit/kit";
 
 // --- types ---
 
@@ -94,6 +91,30 @@ let _uid = 0;
 function newUid() {
   _uid += 1;
   return `bowl-${_uid}-${Date.now()}`;
+}
+
+/** Cinematic gold check that draws itself in (reduced-motion aware). */
+function GoldCheck({ size = "size-10" }: { size?: string }) {
+  const reduced = useReducedMotion();
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={cn("text-primary", size)}
+      fill="none"
+      aria-hidden
+    >
+      <motion.path
+        d="m5 13 4.2 4.2L19 7.4"
+        stroke="currentColor"
+        strokeWidth={2.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={reduced ? false : { pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 170, damping: 22, delay: 0.2 }}
+      />
+    </svg>
+  );
 }
 
 // --- the component ---
@@ -339,350 +360,353 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
   };
 
   return (
-    <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
-      <div className="ember-glow pointer-events-none absolute inset-0" />
-      <div className="relative flex min-h-screen flex-col">
-        {/* App bar */}
-        <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
-              <Flame className="size-5" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-base font-bold tracking-tight smoke-text">Bowl builder</p>
-              <p className="-mt-0.5 text-[11px] text-muted-foreground">
-                {orderedByName} · build & send
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-auto rounded-full"
-              onClick={onSignOut}
-              aria-label="Sign out"
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-        </header>
+    <ScreenShell>
+      {/* App bar — cinematic glass header */}
+      <AppHeader
+        icon={<Flame className="size-5" />}
+        title="Bowl builder"
+        subtitle={`${orderedByName} · build & send`}
+        actions={
+          <button
+            type="button"
+            onClick={onSignOut}
+            aria-label="Sign out"
+            className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        }
+      />
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-40 pt-6">
-          {sent ? (
-            <SentConfirmation
-              orderId={sent.id}
-              total={sent.total}
-              queuedOffline={sent.queuedOffline}
-              onDone={() => setSent(null)}
-            />
-          ) : (
-            <>
-              {/* Customer + table inline — table is REQUIRED for employees */}
-              <div className="mb-4 grid grid-cols-2 gap-2">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-40 pt-6">
+        {sent ? (
+          <SentConfirmation
+            orderId={sent.id}
+            total={sent.total}
+            queuedOffline={sent.queuedOffline}
+            onDone={() => setSent(null)}
+          />
+        ) : (
+          <>
+            {/* Customer + table inline — table is REQUIRED for employees */}
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              <Input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Customer (optional)"
+                aria-label="Customer name"
+                className="h-11 rounded-xl border-white/[0.08] bg-white/[0.04]"
+              />
+              <div className="relative">
                 <Input
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Customer (optional)"
-                  aria-label="Customer name"
-                  className="rounded-xl"
+                  value={table}
+                  onChange={(e) => {
+                    setTable(e.target.value);
+                    setTableId(null); // manual typing → name-only reference
+                  }}
+                  placeholder="Table number *"
+                  aria-label="Table number (required)"
+                  className={cn(
+                    "h-11 rounded-xl border-white/[0.08] bg-white/[0.04]",
+                    !table.trim() && "border-amber-500/50"
+                  )}
                 />
-                <div className="relative">
-                  <Input
-                    value={table}
+                {wedjatTables.length > 0 && (
+                  <select
+                    value=""
                     onChange={(e) => {
-                      setTable(e.target.value);
-                      setTableId(null); // manual typing → name-only reference
+                      const v = e.target.value;
+                      if (!v) return;
+                      const t = wedjatTables.find((x) => String(x.id) === v);
+                      if (t) {
+                        setTable(t.name);
+                        setTableId(t.id); // the unambiguous check reference
+                      }
                     }}
-                    placeholder="Table number *"
-                    aria-label="Table number (required)"
-                    className={cn(
-                      "rounded-xl",
-                      !table.trim() && "border-amber-500/50"
-                    )}
-                  />
-                  {wedjatTables.length > 0 && (
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (!v) return;
-                        const t = wedjatTables.find((x) => String(x.id) === v);
-                        if (t) {
-                          setTable(t.name);
-                          setTableId(t.id); // the unambiguous check reference
-                        }
-                      }}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-lg border border-border bg-card px-2 py-1 text-xs text-muted-foreground"
-                      aria-label="Pick from Wedjat tables"
-                    >
-                      <option value="">📋 Pick</option>
-                      {wedjatTables
-                        .filter((t) => t.status === "free" || t.status === "occupied")
-                        .map((t) => (
-                          <option key={t.id} value={String(t.id)}>
-                            {`${t.floor ? `${t.floor} · ` : ""}${t.name} (${t.status})`}
-                          </option>
-                        ))}
-                    </select>
+                    className="absolute end-1 top-1/2 -translate-y-1/2 rounded-lg border border-white/[0.08] bg-[oklch(0.21_0.016_60/0.95)] px-2 py-1.5 text-xs text-muted-foreground backdrop-blur-xl"
+                    aria-label="Pick from Wedjat tables"
+                  >
+                    <option value="">📋 Pick</option>
+                    {wedjatTables
+                      .filter((t) => t.status === "free" || t.status === "occupied")
+                      .map((t) => (
+                        <option key={t.id} value={String(t.id)}>
+                          {`${t.floor ? `${t.floor} · ` : ""}${t.name} (${t.status})`}
+                        </option>
+                      ))}
+                  </select>
+                )}
+              </div>
+              {/* R49: loyalty phone attach — employees can link the order to a member */}
+              <div className="col-span-2">
+                <Input
+                  value={loyaltyPhone}
+                  onChange={(e) => setLoyaltyPhone(e.target.value)}
+                  placeholder="📱 Loyalty phone (optional — earn points for the customer)"
+                  inputMode="tel"
+                  aria-label="Loyalty phone (optional)"
+                  className={cn(
+                    "h-11 rounded-xl border-white/[0.08] bg-white/[0.04]",
+                    loyaltyChip &&
+                      loyaltyChip !== "new" &&
+                      "border-primary/50 bg-primary/5"
                   )}
-                </div>
-                {/* R49: loyalty phone attach — employees can link the order to a member */}
-                <div className="col-span-2">
-                  <Input
-                    value={loyaltyPhone}
-                    onChange={(e) => setLoyaltyPhone(e.target.value)}
-                    placeholder="📱 Loyalty phone (optional — earn points for the customer)"
-                    inputMode="tel"
-                    aria-label="Loyalty phone (optional)"
-                    className={cn(
-                      "rounded-xl",
-                      loyaltyChip && loyaltyChip !== "new" &&
-                        "border-primary/50 bg-primary/5"
-                    )}
-                  />
-                  {loyaltyChip === "new" && (
-                    <p className="mt-1 text-[11px] text-amber-500">
-                      New member — joins Mazaj+ automatically (50 bonus pts)
-                    </p>
-                  )}
-                  {loyaltyChip && loyaltyChip !== "new" && (
-                    <p className="mt-1 flex items-center gap-1.5 text-[11px] text-primary">
-                      {tierDef(loyaltyChip.tier).emoji} {loyaltyChip.name} ·{" "}
-                      {tierDef(loyaltyChip.tier).label} · {loyaltyChip.points} pts
-                    </p>
-                  )}
-                </div>
+                />
+                {loyaltyChip === "new" && (
+                  <p className="mt-1 text-[11px] text-amber-500">
+                    New member — joins Mazaj+ automatically (50 bonus pts)
+                  </p>
+                )}
+                {loyaltyChip && loyaltyChip !== "new" && (
+                  <p className="mt-1 flex items-center gap-1.5 text-[11px] text-primary">
+                    {tierDef(loyaltyChip.tier).emoji} {loyaltyChip.name} ·{" "}
+                    {tierDef(loyaltyChip.tier).label} · {loyaltyChip.points} pts
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick presets */}
+            <section className="mb-5">
+              <p className="mb-2 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-gold-soft">
+                <Zap className="size-3.5 text-primary" /> Quick presets
+              </p>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+                {BOWL_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      const comps: FlavorComp[] = p.components.map((c) => {
+                        const brand = getBrand(c.brandId)!;
+                        return {
+                          brandId: c.brandId,
+                          brandName: brand.name,
+                          flavorName: c.flavorName,
+                          emoji: brand.emoji,
+                          grams: MOLASSES_GRAMS,
+                        };
+                      });
+                      const b: Bowl = {
+                        uid: newUid(),
+                        primaryBrandId: comps[0].brandId,
+                        flavor: "fruits-mix",
+                        components: comps,
+                        qty: 1,
+                      };
+                      setBowls((prev) => [...prev, b]);
+                      toast.success(`${p.name} added`, {
+                        description: p.tag,
+                      });
+                    }}
+                    className="glass group flex shrink-0 flex-col items-center gap-1 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-1 hover:border-primary/35"
+                    style={{ minWidth: 88 }}
+                  >
+                    <span className="text-2xl transition-transform duration-300 group-hover:scale-110">
+                      {p.emoji}
+                    </span>
+                    <span className="text-center text-[11px] font-medium leading-tight">
+                      {p.name}
+                    </span>
+                    <span className="text-[9px] text-primary">{p.tag}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* Bowls in this order */}
+            <section className="mb-4">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
+                  This order{" "}
+                  <span className="font-sans text-xs font-normal text-muted-foreground">
+                    ({bowls.length} bowl{bowls.length !== 1 ? "s" : ""})
+                  </span>
+                </p>
+                {bowls.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setBowls([])}
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    Clear all
+                  </button>
+                )}
               </div>
 
-              {/* Quick presets */}
-              <section className="mb-5">
-                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <Zap className="size-3.5 text-primary" /> Quick presets
-                </p>
-                <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-                  {BOWL_PRESETS.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        const comps: FlavorComp[] = p.components.map((c) => {
-                          const brand = getBrand(c.brandId)!;
-                          return {
-                            brandId: c.brandId,
-                            brandName: brand.name,
-                            flavorName: c.flavorName,
-                            emoji: brand.emoji,
-                            grams: MOLASSES_GRAMS,
-                          };
-                        });
-                        const b: Bowl = {
-                          uid: newUid(),
-                          primaryBrandId: comps[0].brandId,
-                          flavor: "fruits-mix",
-                          components: comps,
-                          qty: 1,
-                        };
-                        setBowls((prev) => [...prev, b]);
-                        toast.success(`${p.name} added`, {
-                          description: p.tag,
-                        });
-                      }}
-                      className="group flex shrink-0 flex-col items-center gap-1 rounded-2xl border border-border bg-card p-3 transition-all hover:border-primary/60 hover:bg-primary/5"
-                      style={{ minWidth: 88 }}
-                    >
-                      <span className="text-2xl">{p.emoji}</span>
-                      <span className="text-center text-[11px] font-medium leading-tight">
-                        {p.name}
-                      </span>
-                      <span className="text-[9px] text-primary">{p.tag}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              {/* Bowls in this order */}
-              <section className="mb-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-sm font-semibold">
-                    This order{" "}
-                    <span className="text-muted-foreground">
-                      ({bowls.length} bowl{bowls.length !== 1 ? "s" : ""})
-                    </span>
-                  </p>
-                  {bowls.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setBowls([])}
-                      className="text-xs text-muted-foreground hover:text-destructive"
-                    >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-
-                <AnimatePresence mode="popLayout">
-                  {bowls.length === 0 ? (
-                    <motion.div
-                      key="empty"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center"
-                    >
-                      <span className="mb-2 block text-4xl">🌬️</span>
-                      <p className="text-sm font-medium">No bowls yet</p>
-                      <p className="text-xs text-muted-foreground">
-                        Tap a brand below or a preset above to start.
-                      </p>
-                    </motion.div>
-                  ) : (
-                    <div className="space-y-2">
-                      {bowls.map((b) => {
-                        const unit = bowlUnitPrice(b);
-                        const costB = bowlCost(b);
-                        const profitB = computeProfit(unit * b.qty, costB);
-                        return (
-                          <motion.div
-                            key={b.uid}
-                            layout
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3"
-                          >
-                            {/* mini bowl viz */}
-                            <BowlViz components={b.components} size={44} />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-semibold">
-                                {getBrand(b.primaryBrandId)?.name} ·{" "}
-                                {b.flavor === "fruits" ? "Fruits" : "Mix"}
-                                {b.qty > 1 && ` × ${b.qty}`}
-                              </p>
-                              <p className="truncate text-xs text-muted-foreground">
-                                {b.components.length === 0
-                                  ? "No flavors"
-                                  : b.components
-                                      .map((c) => c.flavorName)
-                                      .join(" + ")}
-                              </p>
-                              <p className="text-[11px] text-emerald-500">
-                                +{egp(profitB.netProfit)} profit ({profitB.marginPct}%)
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold">{egp(unit * b.qty)}</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeBowl(b.uid)}
-                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              aria-label="Remove bowl"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </AnimatePresence>
-              </section>
-
-              {/* Shisha category + Brand grid */}
-              <section>
-                {!shishaCat ? (
-                  <div>
-                    <p className="mb-2 text-sm font-semibold">Choose shisha type</p>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {SHISHA_CATEGORIES.map((cat) => (
-                        <button
-                          key={cat.key}
-                          type="button"
-                          onClick={() => setShishaCat(cat.key)}
-                          className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
-                        >
-                          <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/95 ring-1 ring-border">
-                            <img
-                              src={cat.logo}
-                              alt={cat.label}
-                              className="h-full w-full object-contain p-1"
-                              loading="lazy"
-                            />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold">{cat.label}</p>
-                            <p className="text-[11px] text-muted-foreground">{cat.desc}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+              <AnimatePresence mode="popLayout">
+                {bowls.length === 0 ? (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <EmptyState
+                      icon={<span className="text-2xl">🌬️</span>}
+                      title="No bowls yet"
+                      description="Tap a brand below or a preset above to start."
+                    />
+                  </motion.div>
                 ) : (
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-sm font-semibold">
-                        {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)?.label}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShishaCat(null)}
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        ← Change
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                      {brandsForCategory(shishaCat).map((brand) => (
-                        <button
-                          key={brand.id}
-                          type="button"
-                          onClick={() => startNewBowl(brand)}
-                          className="group relative flex flex-col items-center gap-1.5 overflow-hidden rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/5"
+                  <div className="space-y-2">
+                    {bowls.map((b) => {
+                      const unit = bowlUnitPrice(b);
+                      const costB = bowlCost(b);
+                      const profitB = computeProfit(unit * b.qty, costB);
+                      return (
+                        <motion.div
+                          key={b.uid}
+                          layout
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          className="glass flex items-center gap-3 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35"
                         >
-                          <div
-                            className="absolute -top-6 right-0 h-20 w-20 rounded-full opacity-60 blur-xl transition-opacity group-hover:opacity-100"
-                            style={{ backgroundColor: brandColor(brand.id) }}
-                          />
-                          <span
-                            className="relative grid size-12 place-items-center overflow-hidden rounded-xl bg-white/95"
-                            style={{ boxShadow: `0 0 0 1px ${brandColor(brand.id)}40` }}
+                          {/* mini bowl viz */}
+                          <BowlViz components={b.components} size={44} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold">
+                              {getBrand(b.primaryBrandId)?.name} ·{" "}
+                              {b.flavor === "fruits" ? "Fruits" : "Mix"}
+                              {b.qty > 1 && ` × ${b.qty}`}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {b.components.length === 0
+                                ? "No flavors"
+                                : b.components
+                                    .map((c) => c.flavorName)
+                                    .join(" + ")}
+                            </p>
+                            <p className="text-[11px] text-emerald-500">
+                              +{egp(profitB.netProfit)} profit ({profitB.marginPct}%)
+                            </p>
+                          </div>
+                          <div className="text-end">
+                            <p className="font-display font-bold tabular-nums text-gold">
+                              {egp(unit * b.qty)}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeBowl(b.uid)}
+                            className="grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            aria-label="Remove bowl"
                           >
-                            <img
-                              src={brand.logo}
-                              alt={brand.name}
-                              className="h-full w-full object-contain p-1"
-                              loading="lazy"
-                            />
-                          </span>
-                          <p className="relative text-sm font-semibold">{brand.name}</p>
-                          <p className="relative text-[10px] text-muted-foreground">
-                            from {egp(brand.pricing.flat ?? brand.pricing.fruits ?? 0)}
-                          </p>
-                          {brand.badge && (
-                            <Badge
-                              variant="secondary"
-                              className="relative border border-primary/30 bg-primary/15 text-primary"
-                            >
-                              {brand.badge}
-                            </Badge>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                            <Trash2 className="size-4" />
+                          </button>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 )}
-              </section>
-            </>
-          )}
-        </main>
+              </AnimatePresence>
+            </section>
 
-        {/* Footer */}
-        <footer className="relative mt-auto border-t border-border bg-background/60 py-4">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-1.5 px-4 text-center text-xs text-muted-foreground">
-            <Flame className="size-3 text-primary" />
-            20g per bowl · Profit shown live as you build
-          </div>
-        </footer>
-      </div>
+            {/* Shisha category + Brand grid */}
+            <section>
+              {!shishaCat ? (
+                <div>
+                  <p className="font-display mb-2 text-lg font-bold tracking-tight text-gold-soft">
+                    Choose shisha type
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {SHISHA_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.key}
+                        type="button"
+                        onClick={() => setShishaCat(cat.key)}
+                        className="group glass relative flex items-center gap-3 overflow-hidden rounded-2xl p-3 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.8)]"
+                      >
+                        <div
+                          className="pointer-events-none absolute -end-10 -top-12 size-36 rounded-full bg-primary/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-80"
+                          aria-hidden
+                        />
+                        <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/95 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-white/10">
+                          <img
+                            src={cat.logo}
+                            alt={cat.label}
+                            className="h-full w-full object-contain p-1"
+                            loading="lazy"
+                          />
+                        </span>
+                        <div className="relative min-w-0 flex-1">
+                          <p className="font-display text-base font-bold text-gold-soft">
+                            {cat.label}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">{cat.desc}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
+                      {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)?.label}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShishaCat(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      ← Change
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {brandsForCategory(shishaCat).map((brand) => (
+                      <button
+                        key={brand.id}
+                        type="button"
+                        onClick={() => startNewBowl(brand)}
+                        className="group glass relative flex flex-col items-center gap-1.5 overflow-hidden rounded-2xl p-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.8)]"
+                      >
+                        <div
+                          className="absolute -top-6 right-0 h-20 w-20 rounded-full opacity-60 blur-xl transition-opacity group-hover:opacity-100"
+                          style={{ backgroundColor: brandColor(brand.id) }}
+                          aria-hidden
+                        />
+                        <span
+                          className="relative grid size-12 place-items-center overflow-hidden rounded-xl bg-white/95"
+                          style={{ boxShadow: `0 0 0 1px ${brandColor(brand.id)}40` }}
+                        >
+                          <img
+                            src={brand.logo}
+                            alt={brand.name}
+                            className="h-full w-full object-contain p-1"
+                            loading="lazy"
+                          />
+                        </span>
+                        <p className="relative text-sm font-semibold">{brand.name}</p>
+                        <p className="font-display relative text-[10px] font-bold tabular-nums text-gold">
+                          from {egp(brand.pricing.flat ?? brand.pricing.fruits ?? 0)}
+                        </p>
+                        {brand.badge && (
+                          <Badge
+                            variant="secondary"
+                            className="relative border border-primary/30 bg-primary/15 text-primary"
+                          >
+                            {brand.badge}
+                          </Badge>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="relative mt-auto border-t border-white/[0.06] bg-[oklch(0.135_0.014_60/0.6)] py-4">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-1.5 px-4 text-center text-xs text-muted-foreground">
+          <Flame className="size-3 text-primary" />
+          20g per bowl · Profit shown live as you build
+        </div>
+      </footer>
 
       {/* Floating send bar */}
       {bowls.length > 0 && !sent && (
@@ -692,14 +716,16 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
           className="fixed inset-x-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
           style={{ bottom: 68 }}
         >
-          <div className="mx-auto flex w-full max-w-5xl items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl shadow-black/30 backdrop-blur-xl">
+          <div className="glass mx-auto flex w-full max-w-5xl items-center gap-3 rounded-2xl p-3 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]">
             {/* revenue + profit */}
             <div className="leading-tight">
               <p className="text-[11px] text-muted-foreground">
                 {totalHookahs} bowl{totalHookahs > 1 ? "s" : ""}
                 {bogo ? " · 2-for-1" : ""}
               </p>
-              <p className="text-lg font-bold tabular-nums">{egp(revenue)}</p>
+              <p className="font-display text-lg font-bold tabular-nums text-gold">
+                {egp(revenue)}
+              </p>
               <p className="flex items-center gap-1 text-[11px] text-emerald-500">
                 <TrendingUp className="size-3" />
                 +{egp(profit.netProfit)} ({profit.marginPct}%)
@@ -710,18 +736,18 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
               type="button"
               onClick={() => setOwnType(ownType ? null : "hookah")}
               className={cn(
-                "flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition-all",
+                "flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-all duration-300",
                 bogo
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border text-muted-foreground hover:text-foreground"
+                  ? "border-primary/40 bg-primary/15 text-primary ring-1 ring-primary/40"
+                  : "border-white/[0.08] text-muted-foreground hover:border-primary/40 hover:text-foreground"
               )}
             >
               <Wind className="size-3.5" />
               BYO
             </button>
-            <Button
+            <GoldButton
               size="lg"
-              className="ml-auto gap-2 rounded-xl font-semibold"
+              className="ms-auto"
               disabled={sending}
               onClick={sendOrder}
             >
@@ -732,7 +758,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                   <Send className="size-4" /> Send order
                 </>
               )}
-            </Button>
+            </GoldButton>
           </div>
         </motion.div>
       )}
@@ -747,7 +773,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
           />
         )}
       </AnimatePresence>
-    </div>
+    </ScreenShell>
   );
 }
 
@@ -767,7 +793,7 @@ function BowlViz({
   if (components.length === 0) {
     return (
       <div
-        className="grid place-items-center rounded-full border-2 border-dashed border-border bg-muted/40"
+        className="grid shrink-0 place-items-center rounded-full border-2 border-dashed border-white/10 bg-white/[0.03]"
         style={{ width: size, height: size }}
       >
         <Plus className="size-4 text-muted-foreground" />
@@ -783,7 +809,7 @@ function BowlViz({
   });
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="rotate-[-90deg]">
         {segments.map((s, i) => {
           const start = (s.angle * Math.PI) / 180;
@@ -819,6 +845,7 @@ function BowlEditor({
   onSave: (b: Bowl) => void;
   onCancel: () => void;
 }) {
+  const reduced = useReducedMotion();
   const [draft, setDraft] = React.useState<Bowl>(bowl);
   const [pickerOpen, setPickerOpen] = React.useState(false);
 
@@ -874,19 +901,25 @@ function BowlEditor({
         exit={{ y: "100%", opacity: 0 }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="slim-scroll dark relative max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-border bg-background sm:rounded-3xl"
+        className="slim-scroll relative max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/[0.08] bg-[oklch(0.175_0.015_60/0.95)] backdrop-blur-2xl sm:rounded-3xl"
       >
         <div className="ember-glow pointer-events-none absolute inset-0 rounded-3xl" />
         <div className="relative p-5">
-          {/* header */}
+          {/* grab handle + header */}
+          <div
+            className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/15"
+            aria-hidden
+          />
           <div className="mb-4 flex items-center justify-between">
             <button
               onClick={onCancel}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              className="flex min-h-11 items-center gap-1 rounded-full px-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ChevronLeft className="size-4" /> Cancel
+              <ChevronLeft className="size-4 rtl:rotate-180" /> Cancel
             </button>
-            <p className="font-semibold">Build bowl</p>
+            <p className="font-display text-xl font-bold tracking-tight text-gold-soft">
+              Build bowl
+            </p>
             <div className="w-16" />
           </div>
 
@@ -894,7 +927,7 @@ function BowlEditor({
           <div className="mb-5 flex flex-col items-center gap-3">
             <BowlViz components={draft.components} size={120} />
             <div className="text-center">
-              <p className="font-bold">
+              <p className="font-display text-lg font-bold text-gold-soft">
                 {brand?.emoji} {brand?.name}
               </p>
               <p className="text-xs text-muted-foreground">
@@ -915,24 +948,29 @@ function BowlEditor({
                     ? brand?.pricing.fruits ?? 0
                     : brand?.pricing.fruitsMix ?? 0;
                 return (
-                  <button
+                  <motion.button
                     key={ft.key}
                     type="button"
+                    whileTap={reduced ? undefined : { scale: 0.97 }}
                     onClick={() => setFlavorType(ft.key)}
                     className={cn(
-                      "flex items-center gap-2 rounded-xl border p-2.5 transition-all",
+                      "flex items-center gap-2.5 rounded-2xl border p-2.5 text-start transition-all duration-300",
                       active
-                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                        : "border-border hover:border-primary/50"
+                        ? "border-primary/40 bg-primary/10 ring-1 ring-primary/40"
+                        : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:bg-white/[0.06]"
                     )}
                   >
-                    <span className="text-primary">{ft.icon}</span>
-                    <div className="text-left">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+                      {ft.icon}
+                    </span>
+                    <div className="min-w-0 text-start">
                       <p className="text-sm font-medium">{ft.label}</p>
-                      <p className="text-xs text-primary">{egp(price)}</p>
+                      <p className="font-display text-sm font-bold tabular-nums text-gold">
+                        {egp(price)}
+                      </p>
                     </div>
-                    {active && <Check className="ml-auto size-4 text-primary" />}
-                  </button>
+                    {active && <Check className="ms-auto size-4 shrink-0 text-primary" />}
+                  </motion.button>
                 );
               })}
             </div>
@@ -944,10 +982,10 @@ function BowlEditor({
               {draft.components.map((c, i) => (
                 <div
                   key={`${c.brandId}:${c.flavorName}:${i}`}
-                  className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2"
+                  className="glass flex items-center gap-2.5 rounded-xl px-3 py-1.5"
                 >
                   <span
-                    className="size-3 rounded-full"
+                    className="size-3 shrink-0 rounded-full"
                     style={{ backgroundColor: brandColor(c.brandId) }}
                   />
                   <span className="text-lg">{c.emoji}</span>
@@ -959,7 +997,8 @@ function BowlEditor({
                   <button
                     type="button"
                     onClick={() => removeComponent(i)}
-                    className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    className="grid size-11 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Remove flavor"
                   >
                     <X className="size-3.5" />
                   </button>
@@ -970,15 +1009,14 @@ function BowlEditor({
 
           {/* Add flavor button */}
           {!isFlat && (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className="mb-4 w-full rounded-xl"
               onClick={() => setPickerOpen(true)}
+              className="mb-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-medium text-foreground transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
             >
               <Plus className="size-4" />
               {draft.components.length === 0 ? "Add a flavor" : "Add another flavor"}
-            </Button>
+            </button>
           )}
 
           {/* Flat brand: pick a single flavor */}
@@ -989,7 +1027,7 @@ function BowlEditor({
                   key={f}
                   type="button"
                   onClick={() => addComponent(brand.id, f)}
-                  className="rounded-full border border-border bg-card px-3 py-1.5 text-sm hover:border-primary hover:text-primary"
+                  className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 text-sm transition-all duration-300 hover:border-primary/40 hover:text-primary"
                 >
                   {f}
                 </button>
@@ -998,40 +1036,46 @@ function BowlEditor({
           )}
 
           {/* Quantity */}
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-border bg-card p-2">
-            <Button
+          <div className="glass mb-4 flex items-center justify-between rounded-2xl p-1.5">
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
               onClick={() => setDraft((d) => ({ ...d, qty: Math.max(1, d.qty - 1) }))}
               disabled={draft.qty <= 1}
+              aria-label="Decrease quantity"
+              className="grid size-11 place-items-center rounded-full text-lg font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:opacity-40"
             >
               −
-            </Button>
-            <span className="text-xl font-bold tabular-nums">{draft.qty}</span>
-            <Button
+            </button>
+            <span className="font-display text-2xl font-bold tabular-nums text-gold">
+              {draft.qty}
+            </span>
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
               onClick={() => setDraft((d) => ({ ...d, qty: Math.min(99, d.qty + 1) }))}
+              aria-label="Increase quantity"
+              className="grid size-11 place-items-center rounded-full text-lg font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
             >
               +
-            </Button>
+            </button>
           </div>
 
           {/* Live profit */}
           <div className="mb-4 grid grid-cols-3 gap-2">
-            <div className="rounded-xl border border-border bg-card p-2.5 text-center">
+            <div className="glass rounded-xl p-2.5 text-center">
               <p className="text-[10px] text-muted-foreground">Revenue</p>
-              <p className="text-sm font-bold">{egp(unit * draft.qty)}</p>
+              <p className="font-display text-sm font-bold tabular-nums text-gold">
+                {egp(unit * draft.qty)}
+              </p>
             </div>
-            <div className="rounded-xl border border-border bg-card p-2.5 text-center">
+            <div className="glass rounded-xl p-2.5 text-center">
               <p className="text-[10px] text-muted-foreground">Cost</p>
-              <p className="text-sm font-bold text-amber-500">{egp(cost)}</p>
+              <p className="font-display text-sm font-bold tabular-nums text-amber-500">
+                {egp(cost)}
+              </p>
             </div>
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2.5 text-center">
               <p className="text-[10px] text-muted-foreground">Profit</p>
-              <p className="text-sm font-bold text-emerald-500">
+              <p className="font-display text-sm font-bold tabular-nums text-emerald-500">
                 +{egp(profit.netProfit)}
               </p>
               <p className="text-[10px] text-emerald-500">{profit.marginPct}%</p>
@@ -1039,14 +1083,14 @@ function BowlEditor({
           </div>
 
           {/* Save */}
-          <Button
+          <GoldButton
             size="lg"
-            className="w-full rounded-xl text-base font-semibold"
+            className="w-full"
             disabled={!canSave}
             onClick={() => onSave(draft)}
           >
             <Check className="size-4" /> Add to order · {egp(unit * draft.qty)}
-          </Button>
+          </GoldButton>
         </div>
 
         {/* Flavor picker */}
@@ -1072,10 +1116,18 @@ function FlavorPickerModal({
   const brand = getBrand(activeBrand) ?? MIXABLE_BRANDS[0]!;
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col rounded-3xl bg-background p-4">
+    <div className="absolute inset-0 z-10 flex flex-col rounded-3xl bg-[oklch(0.19_0.016_60/0.98)] p-4 backdrop-blur-2xl">
+      {/* grab handle + header */}
+      <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/15" aria-hidden />
       <div className="mb-3 flex items-center justify-between">
-        <p className="font-semibold">Pick a flavor</p>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+        <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
+          Pick a flavor
+        </p>
+        <button
+          onClick={onClose}
+          aria-label="Close flavor picker"
+          className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+        >
           <X className="size-4" />
         </button>
       </div>
@@ -1087,10 +1139,10 @@ function FlavorPickerModal({
             type="button"
             onClick={() => setActiveBrand(b.id)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all",
+              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition-all duration-300",
               activeBrand === b.id
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border hover:border-primary/50"
+                ? "border-primary/40 bg-primary/10 text-primary ring-1 ring-primary/40"
+                : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:text-primary"
             )}
           >
             <span>{b.emoji}</span>
@@ -1098,13 +1150,13 @@ function FlavorPickerModal({
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="slim-scroll flex flex-wrap content-start gap-2 overflow-y-auto">
         {brand.flavors.map((f) => (
           <button
             key={f}
             type="button"
             onClick={() => onPick(brand.id, f)}
-            className="rounded-full border border-border bg-card px-3 py-1.5 text-sm hover:border-primary hover:text-primary"
+            className="rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm transition-all duration-300 hover:border-primary/40 hover:text-primary"
           >
             {f}
           </button>
@@ -1125,35 +1177,46 @@ function SentConfirmation({
   queuedOffline?: boolean;
   onDone: () => void;
 }) {
+  const reduced = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={reduced ? false : { opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col items-center justify-center gap-4 py-20 text-center"
     >
       {queuedOffline && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300">
+        <div className="glass flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-amber-300 ring-1 ring-amber-500/30">
           <CloudUpload className="size-4" />
           Saved offline — syncs to the kitchen when you reconnect
         </div>
       )}
       <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", delay: 0.1 }}
-        className="grid size-20 place-items-center rounded-full bg-emerald-500/15"
+        initial={reduced ? false : { scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 260, damping: 18 }}
+        className="relative grid size-20 place-items-center rounded-full bg-primary/10 ring-1 ring-primary/30"
       >
-        <Check className="size-10 text-emerald-500" />
+        <span
+          className="pointer-events-none absolute inset-0 rounded-full bg-primary/15 blur-xl"
+          aria-hidden
+        />
+        <GoldCheck />
       </motion.div>
       <div>
-        <p className="text-xl font-bold">Order sent!</p>
+        <p className="font-display text-2xl font-bold tracking-tight text-gold-soft">
+          Order sent!
+        </p>
         <p className="text-sm text-muted-foreground">
-          #{orderId.slice(-6).toUpperCase()} · {egp(total)}
+          <span className="font-mono">#{orderId.slice(-6).toUpperCase()}</span> ·{" "}
+          <span className="font-display font-bold tabular-nums text-gold">
+            {egp(total)}
+          </span>
         </p>
       </div>
-      <Button className="rounded-xl" onClick={onDone}>
+      <GoldButton onClick={onDone}>
         <Plus className="size-4" /> New order
-      </Button>
+      </GoldButton>
     </motion.div>
   );
 }

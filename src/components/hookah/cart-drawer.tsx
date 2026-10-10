@@ -10,9 +10,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import {
   Minus,
   Plus,
@@ -22,9 +19,11 @@ import {
   Wind,
   FlaskRound,
   PartyPopper,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/store/i18n";
+import { EmptyState, GoldButton, Kicker } from "./kit/kit";
 
 interface CartDrawerProps {
   open: boolean;
@@ -74,36 +73,40 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+        className="flex w-full flex-col gap-0 border-white/[0.08] bg-[oklch(0.175_0.015_60/0.92)] p-0 backdrop-blur-2xl sm:max-w-md"
       >
-        <SheetHeader className="border-b border-border px-5 py-4">
-          <div className="flex items-center gap-2">
-            <ShoppingBag className="size-5 text-primary" />
-            <SheetTitle className="text-lg">{t("currentOrder")}</SheetTitle>
+        {/* ── glass header with display title ── */}
+        <SheetHeader className="gap-1 border-b border-white/[0.08] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+              <ShoppingBag className="size-4" />
+            </span>
+            <div className="min-w-0 leading-tight">
+              <SheetTitle className="font-display text-xl font-bold tracking-tight text-gold-soft">
+                {t("currentOrder")}
+              </SheetTitle>
+              <SheetDescription className="text-xs">
+                {t("each20g")}
+              </SheetDescription>
+            </div>
             {totals.totalQty > 0 && (
-              <Badge
-                variant="secondary"
-                className="ml-auto bg-primary/15 text-primary"
-              >
-                {totals.totalQty} {totals.totalQty > 1 ? t("bowls") : t("bowl")}
-              </Badge>
+              <span className="ms-auto shrink-0 rounded-full border border-primary/30 bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                {totals.totalQty}{" "}
+                {totals.totalQty > 1 ? t("bowls") : t("bowl")}
+              </span>
             )}
           </div>
-          <SheetDescription>{t("each20g")}</SheetDescription>
         </SheetHeader>
 
         <div className="slim-scroll flex-1 overflow-y-auto px-5 py-4">
           {items.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 py-16 text-center">
-              <div className="grid size-16 place-items-center rounded-full bg-muted/50">
-                <ShoppingBag className="size-7 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium">{t("emptyCart")}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t("emptyCartDesc")}
-                </p>
-              </div>
+            <div className="flex h-full min-h-72 items-center justify-center">
+              <EmptyState
+                className="w-full"
+                icon={<ShoppingBag className="size-7" />}
+                title={t("emptyCart")}
+                description={t("emptyCartDesc")}
+              />
             </div>
           ) : (
             <ul className="space-y-3">
@@ -113,7 +116,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                 return (
                   <li
                     key={it.id}
-                    className="rounded-2xl border border-border bg-card p-3"
+                    className="glass rounded-2xl p-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]"
                   >
                     <div className="flex items-start gap-3">
                       <span
@@ -137,7 +140,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                           <button
                             type="button"
                             onClick={() => removeItem(it.id)}
-                            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            className="-me-1 -mt-1 grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
                             aria-label={`Remove ${it.primaryBrandName}`}
                           >
                             <Trash2 className="size-4" />
@@ -149,11 +152,11 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                           {flavorSummary(it)}
                         </p>
 
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="flex items-center gap-1 rounded-lg border border-border bg-background">
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
                             <button
                               type="button"
-                              className="grid size-8 place-items-center rounded-l-lg text-muted-foreground hover:bg-muted"
+                              className="grid size-11 place-items-center rounded-s-xl text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
                               onClick={() => setQty(it.id, it.qty - 1)}
                               aria-label="Decrease"
                             >
@@ -164,20 +167,21 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                             </span>
                             <button
                               type="button"
-                              className="grid size-8 place-items-center rounded-r-lg text-muted-foreground hover:bg-muted"
+                              className="grid size-11 place-items-center rounded-e-xl text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
                               onClick={() => setQty(it.id, it.qty + 1)}
                               aria-label="Increase"
                             >
                               <Plus className="size-3.5" />
                             </button>
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold">
+                          <div className="text-end">
+                            <p className="font-display font-bold tabular-nums text-gold">
                               {egp(it.unitPrice * charged)}
                             </p>
                             {bogo && free > 0 && (
                               <p className="text-[11px] font-medium text-primary">
-                                {free} {t("freeWord")} · {charged} {t("chargedWord")}
+                                {free} {t("freeWord")} · {charged}{" "}
+                                {t("chargedWord")}
                               </p>
                             )}
                           </div>
@@ -192,11 +196,13 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
         </div>
 
         {items.length > 0 && (
-          <div className="border-t border-border px-5 py-4">
+          <div className="border-t border-white/[0.08] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
             {/* BYO promo */}
-            <div className="mb-4 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+            <div className="glass mb-4 rounded-2xl p-3">
               <div className="mb-2 flex items-center gap-2">
-                <Sparkles className="size-4 text-primary" />
+                <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary ring-1 ring-primary/25">
+                  <Sparkles className="size-3.5" />
+                </span>
                 <p className="text-sm font-semibold text-foreground">
                   {t("byoTitle")}
                 </p>
@@ -209,19 +215,24 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                   type="button"
                   onClick={() => setOwnType(null)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all",
+                    "flex w-full items-center gap-3 rounded-xl border p-2.5 text-start transition-all duration-300",
                     ownType === null
-                      ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                      : "border-border bg-card hover:border-primary/50"
+                      ? "border-primary/40 bg-primary/10 ring-1 ring-primary/40"
+                      : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:bg-white/[0.06]"
                   )}
                 >
-                  <PartyPopper className="size-4 text-muted-foreground" />
-                  <div className="min-w-0">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-muted-foreground ring-1 ring-white/[0.08]">
+                    <PartyPopper className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{t("loungeSetup")}</p>
                     <p className="text-xs text-muted-foreground">
                       {t("loungeSetupDesc")}
                     </p>
                   </div>
+                  {ownType === null && (
+                    <Check className="size-4 shrink-0 text-primary" />
+                  )}
                 </button>
                 {OWN_OPTIONS.map((opt) => {
                   const active = ownType === opt.value;
@@ -231,33 +242,41 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                       type="button"
                       onClick={() => setOwnType(opt.value)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all",
+                        "flex w-full items-center gap-3 rounded-xl border p-2.5 text-start transition-all duration-300",
                         active
-                          ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                          : "border-border bg-card hover:border-primary/50"
+                          ? "border-primary/40 bg-primary/10 ring-1 ring-primary/40"
+                          : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:bg-white/[0.06]"
                       )}
                     >
-                      <span className="text-primary">{opt.icon}</span>
-                      <div className="min-w-0">
+                      <span
+                        className={cn(
+                          "grid size-9 shrink-0 place-items-center rounded-xl ring-1 transition-colors",
+                          active
+                            ? "bg-primary/15 text-primary ring-primary/25"
+                            : "bg-white/[0.05] text-muted-foreground ring-white/[0.08]"
+                        )}
+                      >
+                        {opt.icon}
+                      </span>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{t(opt.labelKey)}</p>
                         <p className="text-xs text-muted-foreground">
                           {t(opt.descKey)}
                         </p>
                       </div>
+                      {active && (
+                        <Check className="size-4 shrink-0 text-primary" />
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <Separator className="my-3" />
-
             {/* Add-ons (medical hose etc.) */}
             {SELLABLE_ADDONS.length > 0 && (
-              <div className="mb-3 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {t("addons")}
-                </p>
+              <div className="mb-3 space-y-2.5">
+                <Kicker>{t("addons")}</Kicker>
                 {SELLABLE_ADDONS.map((a) => {
                   const on = addons.includes(a.key);
                   return (
@@ -266,25 +285,28 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                       type="button"
                       onClick={() => toggleAddon(a.key)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all",
+                        "flex w-full items-center gap-3 rounded-xl border p-2.5 text-start transition-all duration-300",
                         on
-                          ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                          : "border-border bg-card hover:border-primary/50"
+                          ? "border-primary/40 bg-primary/10 ring-1 ring-primary/40"
+                          : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:bg-white/[0.06]"
                       )}
                     >
                       <span className="text-xl">{a.emoji}</span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{a.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {t("personalHose")} · +{egp(a.sellPrice)}
+                          {t("personalHose")} ·{" "}
+                          <span className="font-display font-bold tabular-nums text-gold">
+                            +{egp(a.sellPrice)}
+                          </span>
                         </p>
                       </div>
                       <span
                         className={cn(
-                          "grid size-5 place-items-center rounded-md border text-[10px] transition-colors",
+                          "grid size-5 shrink-0 place-items-center rounded-md border text-[10px] transition-colors",
                           on
                             ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border"
+                            : "border-white/[0.15]"
                         )}
                       >
                         {on ? "✓" : ""}
@@ -295,8 +317,9 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
               </div>
             )}
 
-            <Separator className="my-3" />
+            <span className="ember-hairline my-3 block w-full" aria-hidden />
 
+            {/* Totals */}
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>{t("subtotal")}</span>
@@ -314,21 +337,21 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                   <span className="tabular-nums">+{egp(addonTotal)}</span>
                 </div>
               )}
-              <div className="flex items-baseline justify-between pt-1">
+              <div className="flex items-baseline justify-between pt-1.5">
                 <span className="font-semibold">{t("total")}</span>
-                <span className="text-xl font-bold tabular-nums">
+                <span className="font-display text-2xl font-bold tabular-nums text-gold">
                   {egp(grandTotal)}
                 </span>
               </div>
             </div>
 
-            <Button
+            <GoldButton
               size="lg"
-              className="mt-4 w-full rounded-xl text-base font-semibold"
+              className="mt-4 w-full"
               onClick={onCheckout}
             >
               {t("checkout")} · {egp(grandTotal)}
-            </Button>
+            </GoldButton>
           </div>
         )}
       </SheetContent>

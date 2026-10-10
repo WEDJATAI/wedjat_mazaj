@@ -189,6 +189,7 @@ export interface Translations {
   legendAmy: string;
   legendSpecial: string;
   legendFlatSub: string;
+  priceList: string;
 
   // Guest tracking
   trackOrders: string;
@@ -715,6 +716,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     legendAmy: "Amy (premium)",
     legendSpecial: "Salom / Kass",
     legendFlatSub: "Everyday flat price",
+    priceList: "The price list",
 
     // Guest tracking
     trackOrders: "Track my orders",
@@ -1252,6 +1254,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     legendAmy: "أمي (بريميوم)",
     legendSpecial: "سلوم / كاس",
     legendFlatSub: "سعر ثابت يومي",
+    priceList: "قائمة الأسعار",
 
     trackOrders: "تتبع طلباتي",
     trackDesc: "حالة جلساتك مباشرة · بتتحدث كل ١٠ ثواني",

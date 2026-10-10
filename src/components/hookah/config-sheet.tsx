@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Brand,
   egp,
@@ -17,7 +18,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Minus,
@@ -38,6 +38,7 @@ import {
 import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
+import { FadeSwap, GoldButton, Kicker, Stagger, StaggerItem } from "./kit/kit";
 
 /** Flavors marked as popular (⭐) to guide first-time guests. */
 const POPULAR_FLAVORS = new Set([
@@ -48,6 +49,13 @@ const POPULAR_FLAVORS = new Set([
   "Watermelon",
 ]);
 
+/** Molten-gold selected pill (Midnight Ember signature). */
+const GOLD_FILL =
+  "border-transparent bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] text-[oklch(0.17_0.03_50)] shadow-[0_10px_26px_-10px_oklch(0.72_0.145_60/0.6)]";
+
+const GLASS_PILL =
+  "border-white/[0.08] bg-white/[0.04] text-foreground hover:border-primary/40 hover:bg-white/[0.07] hover:text-primary";
+
 interface ConfigSheetProps {
   brand: Brand | null;
   open: boolean;
@@ -56,6 +64,7 @@ interface ConfigSheetProps {
 
 export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
   const t = useI18n((s) => s.t);
+  const reduced = useReducedMotion();
   const addItem = useCart((s) => s.addItem);
   const [flavor, setFlavor] = React.useState<FlavorType>("fruits");
   const [qty, setQty] = React.useState(1);
@@ -148,27 +157,38 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="slim-scroll mx-auto max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl border-t border-border p-0"
+        className="slim-scroll mx-auto max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl border-t border-white/[0.08] bg-[oklch(0.175_0.015_60/0.92)] p-0 backdrop-blur-2xl"
       >
-        <SheetHeader className="px-5 pt-5 pb-2">
-          <div className="flex items-center gap-3">
-            <span className="grid size-12 place-items-center rounded-2xl bg-muted/60 text-2xl">
+        {/* ── cinematic header: grab handle + kicker + display brand title ── */}
+        <SheetHeader className="gap-2.5 px-5 pb-3 pt-3">
+          <div
+            className="mx-auto h-1 w-10 rounded-full bg-white/15"
+            aria-hidden
+          />
+          <div className="flex items-center gap-3.5">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/[0.08] bg-white/[0.05] text-2xl ring-1 ring-primary/25">
               {brand.emoji}
             </span>
-            <div>
-              <SheetTitle className="text-xl">{brand.name}</SheetTitle>
-              <SheetDescription>
-                {brand.origin} · {t("grams20Note")}
+            <div className="min-w-0 leading-tight">
+              <p className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-gold-soft">
+                {brand.origin}
+              </p>
+              <SheetTitle className="font-display -mt-0.5 text-2xl font-bold tracking-tight text-gold-soft">
+                {brand.name}
+              </SheetTitle>
+              <SheetDescription className="mt-0.5 text-xs">
+                {t("grams20Note")}
               </SheetDescription>
             </div>
           </div>
+          <span className="ember-hairline w-full" aria-hidden />
         </SheetHeader>
 
-        <div className="space-y-6 px-5 pb-4">
+        <Stagger className="space-y-6 px-5 pb-4">
           {/* Flavor type selector */}
           {!isFlat && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">{t("type")}</p>
+            <StaggerItem className="space-y-2.5">
+              <Kicker>{t("type")}</Kicker>
               <div className="grid grid-cols-2 gap-2">
                 {(["fruits", "fruits-mix"] as FlavorType[]).map((f) => {
                   const active = flavor === f;
@@ -177,169 +197,183 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
                       ? brand.pricing.fruits ?? 0
                       : brand.pricing.fruitsMix ?? 0;
                   return (
-                    <button
+                    <motion.button
                       key={f}
                       type="button"
+                      whileTap={reduced ? undefined : { scale: 0.97 }}
                       onClick={() => setFlavor(f)}
                       className={cn(
-                        "relative flex items-center gap-2 rounded-xl border p-3 text-left transition-all",
+                        "relative flex items-center gap-2.5 rounded-2xl border p-3 text-start transition-all duration-300",
                         active
-                          ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                          : "border-border bg-card hover:border-primary/50"
+                          ? "border-primary/40 bg-primary/10 ring-1 ring-primary/40"
+                          : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:bg-white/[0.06]"
                       )}
                     >
-                      {f === "fruits" ? (
-                        <Leaf className="size-4 text-primary" />
-                      ) : (
-                        <Shuffle className="size-4 text-primary" />
-                      )}
-                      <span className="flex-1">
-                        <span className="block font-medium">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+                        {f === "fruits" ? (
+                          <Leaf className="size-4" />
+                        ) : (
+                          <Shuffle className="size-4" />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">
                           {FLAVOR_LABELS[f]}
                         </span>
-                        <span className="text-xs font-semibold text-primary">
+                        <span className="font-display block text-sm font-bold tabular-nums text-gold">
                           {egp(price)}
                         </span>
                       </span>
-                      {active && <Check className="size-4 text-primary" />}
-                    </button>
+                      {active && <Check className="size-4 shrink-0 text-primary" />}
+                    </motion.button>
                   );
                 })}
               </div>
-            </div>
+            </StaggerItem>
           )}
 
           {/* Flat note */}
           {isFlat && (
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
-              <FlaskConical className="size-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium">{t("standardSession")}</p>
-                <p className="text-xs text-muted-foreground">
-                  {t("flatNote")} {egp(brand.pricing.flat ?? 0)} · 20g
-                </p>
+            <StaggerItem>
+              <div className="glass flex items-center gap-3 rounded-2xl p-3">
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+                  <FlaskConical className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{t("standardSession")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("flatNote")}{" "}
+                    <span className="font-display font-bold tabular-nums text-gold">
+                      {egp(brand.pricing.flat ?? 0)}
+                    </span>{" "}
+                    · 20g
+                  </p>
+                </div>
               </div>
-            </div>
+            </StaggerItem>
           )}
 
-          {/* Flavor picker */}
-          {!isFlat && flavor === "fruits" && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">
-                {t("pickFlavor")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {brand.flavors.map((f) => {
-                  const active = singleFlavor === f;
-                  const popular = POPULAR_FLAVORS.has(f);
-                  return (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setSingleFlavor(f)}
-                      className={cn(
-                        "relative rounded-full border px-4 py-2.5 text-sm font-medium transition-all",
-                        active
-                          ? "border-primary bg-primary/15 text-primary ring-1 ring-primary/40"
-                          : "border-border bg-card hover:border-primary/50"
-                      )}
-                    >
-                      {f}
-                      {popular && (
-                        <span className="absolute -top-1.5 -right-1.5 text-[10px]">⭐</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Mix picker: choose flavors across brands */}
-          {!isFlat && flavor === "fruits-mix" && (
-            <MixPicker
-              baseBrand={brand}
-              components={mixComponents}
-              grams={mixGrams}
-              onChange={setMixComponents}
-            />
-          )}
-
-          {!isFlat && flavor === "flat" && (
-            <div className="flex flex-wrap gap-2">
-              {brand.flavors.map((f) => {
-                const active = singleFlavor === f;
-                return (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => setSingleFlavor(f)}
-                    className={cn(
-                      "rounded-full border px-4 py-2.5 text-sm font-medium transition-all",
-                      active
-                        ? "border-primary bg-primary/15 text-primary ring-1 ring-primary/40"
-                        : "border-border bg-card hover:border-primary/50"
-                    )}
-                  >
-                    {f}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Flavor picker / mix picker — crossfades between modes */}
+          {!isFlat && (
+            <StaggerItem>
+              <FadeSwap swapKey={flavor}>
+                {flavor === "fruits" ? (
+                  <div className="space-y-2.5">
+                    <Kicker>{t("pickFlavor")}</Kicker>
+                    <div className="flex flex-wrap gap-2">
+                      {brand.flavors.map((f) => {
+                        const active = singleFlavor === f;
+                        const popular = POPULAR_FLAVORS.has(f);
+                        return (
+                          <motion.button
+                            key={f}
+                            type="button"
+                            whileTap={reduced ? undefined : { scale: 0.94 }}
+                            onClick={() => setSingleFlavor(f)}
+                            className={cn(
+                              "relative rounded-full border px-4 py-2.5 text-sm font-medium transition-all duration-300",
+                              active
+                                ? GOLD_FILL + " font-semibold"
+                                : GLASS_PILL
+                            )}
+                          >
+                            {f}
+                            {popular && (
+                              <span className="absolute -top-1.5 -end-1.5 text-[10px]">
+                                ⭐
+                              </span>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : flavor === "fruits-mix" ? (
+                  <MixPicker
+                    baseBrand={brand}
+                    components={mixComponents}
+                    grams={mixGrams}
+                    onChange={setMixComponents}
+                  />
+                ) : (
+                  <div className="space-y-2.5">
+                    <Kicker>{t("pickFlavor")}</Kicker>
+                    <div className="flex flex-wrap gap-2">
+                      {brand.flavors.map((f) => {
+                        const active = singleFlavor === f;
+                        return (
+                          <motion.button
+                            key={f}
+                            type="button"
+                            whileTap={reduced ? undefined : { scale: 0.94 }}
+                            onClick={() => setSingleFlavor(f)}
+                            className={cn(
+                              "relative rounded-full border px-4 py-2.5 text-sm font-medium transition-all duration-300",
+                              active
+                                ? GOLD_FILL + " font-semibold"
+                                : GLASS_PILL
+                            )}
+                          >
+                            {f}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </FadeSwap>
+            </StaggerItem>
           )}
 
           {/* Quantity */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-foreground">{t("quantity")}</p>
-              <p className="text-xs text-muted-foreground">
+          <StaggerItem className="space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <Kicker>{t("quantity")}</Kicker>
+              <p className="text-xs tabular-nums text-muted-foreground">
                 {qty} × 20g = {qty * 20}g total
               </p>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-border bg-card p-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+            <div className="glass flex items-center justify-between rounded-2xl p-2">
+              <GoldButton
+                aria-label="Decrease quantity"
+                className="size-11 p-0"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 disabled={qty <= 1}
-                aria-label="Decrease quantity"
               >
                 <Minus className="size-4" />
-              </Button>
-              <span className="min-w-12 text-center text-2xl font-bold tabular-nums">
+              </GoldButton>
+              <span className="font-display min-w-12 text-center text-2xl font-bold tabular-nums text-gold">
                 {qty}
               </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setQty((q) => Math.min(99, q + 1))}
+              <GoldButton
                 aria-label="Increase quantity"
+                className="size-11 p-0"
+                onClick={() => setQty((q) => Math.min(99, q + 1))}
               >
                 <Plus className="size-4" />
-              </Button>
+              </GoldButton>
             </div>
-          </div>
-        </div>
+          </StaggerItem>
+        </Stagger>
 
-        {/* Footer */}
-        <div className="border-t border-border bg-background/80 px-5 pb-5 pt-3 backdrop-blur">
-          <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{t("lineTotal")}</span>
-            <span className="text-lg font-bold">
+        {/* ── sticky footer: live price + gold CTA ── */}
+        <div className="sticky bottom-0 z-10 border-t border-white/[0.08] bg-[oklch(0.175_0.015_60/0.95)] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-2xl">
+          <div className="mb-3 flex items-baseline justify-between">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              {t("lineTotal")}
+            </span>
+            <span className="font-display text-2xl font-bold tabular-nums text-gold">
               {egp(unitPrice * qty)}
             </span>
           </div>
-          <Button
-            type="button"
+          <GoldButton
             size="lg"
-            className="w-full rounded-xl text-base font-semibold"
+            className="w-full"
             onClick={handleAdd}
             disabled={!canAdd}
           >
             {t("addToCart")} · {egp(unitPrice * qty)}
-          </Button>
+          </GoldButton>
         </div>
       </SheetContent>
     </Sheet>
@@ -365,16 +399,19 @@ function MixPicker({
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-foreground">
           {t("mixFlavors")}{" "}
           <span className="text-muted-foreground">
             ({components.length} {t("selectedWord")})
           </span>
         </p>
-        <Badge variant="secondary" className="bg-primary/15 text-primary">
-          <Shuffle className="mr-1 size-3" /> {t("mixMatch")}
+        <Badge
+          variant="secondary"
+          className="border-primary/30 bg-primary/15 text-primary"
+        >
+          <Shuffle className="size-3" /> {t("mixMatch")}
         </Badge>
       </div>
 
@@ -386,21 +423,21 @@ function MixPicker({
           {components.map((c, i) => (
             <li
               key={`${c.brandId}:${c.flavorName}:${i}`}
-              className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2"
+              className="glass flex items-center gap-2.5 rounded-xl px-3 py-1.5"
             >
               <span className="text-lg">{c.emoji}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
                   {c.brandName} · {c.flavorName}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[11px] tabular-nums text-muted-foreground">
                   {grams[i]?.toFixed(2)}g
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
                 aria-label="Remove flavor"
               >
                 <X className="size-4" />
@@ -409,19 +446,18 @@ function MixPicker({
           ))}
         </ul>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-4 text-center text-sm text-muted-foreground">
           {t("mixEmpty")}
         </div>
       )}
 
-      <Button
+      <button
         type="button"
-        variant="outline"
-        className="w-full rounded-xl"
         onClick={() => setPickerOpen(true)}
+        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-medium text-foreground transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
       >
         <Plus className="size-4" /> {t("addFlavor")}
-      </Button>
+      </button>
 
       {pickerOpen && (
         <FlavorPicker
@@ -470,7 +506,7 @@ function FlavorPicker({
   const brand = getBrand(activeBrand) ?? baseBrand;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-3">
+    <div className="glass rounded-2xl p-3">
       {/* brand tabs */}
       <div className="no-scrollbar mb-3 flex gap-1.5 overflow-x-auto pb-1">
         {MIXABLE_BRANDS.map((b) => (
@@ -479,10 +515,10 @@ function FlavorPicker({
             type="button"
             onClick={() => setActiveBrand(b.id)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all",
+              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition-all duration-300",
               activeBrand === b.id
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-background hover:border-primary/50"
+                ? "border-primary/40 bg-primary/10 text-primary ring-1 ring-primary/40"
+                : "border-white/[0.08] bg-white/[0.04] hover:border-primary/40 hover:text-primary"
             )}
           >
             <span>{b.emoji}</span>
@@ -502,25 +538,27 @@ function FlavorPicker({
               key={f}
               type="button"
               onClick={() => onPick(brand.id, f)}
-              className="relative rounded-full border border-border bg-background px-4 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/10 hover:text-primary"
+              className={cn(
+                "relative rounded-full border px-4 py-2.5 text-sm font-medium transition-all duration-300",
+                GLASS_PILL
+              )}
             >
               {f}
               {popular && (
-                <span className="absolute -top-1.5 -right-1.5 text-[10px]">⭐</span>
+                <span className="absolute -top-1.5 -end-1.5 text-[10px]">⭐</span>
               )}
             </button>
           );
         })}
       </div>
 
-      <Button
+      <button
         type="button"
-        variant="ghost"
-        className="mt-3 w-full text-sm"
         onClick={onClose}
+        className="mt-3 flex min-h-11 w-full items-center justify-center rounded-xl text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         {t("closeBtn")}
-      </Button>
+      </button>
     </div>
   );
 }

@@ -7,7 +7,6 @@ import { OrderScreen } from "./order-screen";
 import { FavoritesSheet } from "./favorites-sheet";
 import { GuestTrackingSheet } from "./guest-tracking";
 import { SommelierSheet } from "./sommelier-sheet";
-import { Button } from "@/components/ui/button";
 import {
   HandHelping,
   Loader2,
@@ -31,6 +30,8 @@ import { egp, getBrand } from "@/lib/catalog";
 import { usePwa } from "@/store/pwa";
 import { useI18n } from "@/store/i18n";
 import { attachGuestIfSubscribed } from "@/lib/push-client";
+import { motion } from "framer-motion";
+import { EASE, GoldButton, Stagger, StaggerItem } from "./kit/kit";
 
 export function GuestOrder() {
   const guest = useSession((s) => s.guest) as GuestSession | null;
@@ -161,104 +162,111 @@ export function GuestOrder() {
         enableScan
         onOrderPlaced={handleOrderPlaced}
         headerExtra={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-full"
-              onClick={() => setSommOpen(true)}
-              aria-label={t("aiSommelier")}
-            >
-              <Wand2 className="size-4 text-primary" />
-              <span className="hidden sm:inline">{t("aiBtn")}</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-full"
-              onClick={() => setGetAppOpen(true)}
-              aria-label={t("getApp")}
-            >
-              <Download className="size-4" />
-              <span className="hidden sm:inline">{t("getApp")}</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="relative gap-2 rounded-full"
-              onClick={() => {
-                setFocusOrderId(null);
-                setTrackOpen(true);
-              }}
-              aria-label={t("trackOrders")}
-            >
-              <Radar className="size-4" />
-              <span className="hidden sm:inline">{t("track")}</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="relative gap-2 rounded-full"
-              onClick={() => setFavOpen(true)}
-              aria-label={t("favorites")}
-            >
-              <Heart className="size-4" />
-              <span className="hidden sm:inline">{t("favorites")}</span>
-              {isReturning && (
-                <span className="absolute -top-1.5 -right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                  {favCount}
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-full"
-              onClick={() => setCoalOpen(true)}
-              aria-label={t("requestCoal")}
-            >
-              <Flame className="size-4" />
-              <span className="hidden sm:inline">{t("coal")}</span>
-            </Button>
-            <Button
-              size="sm"
-              className="gap-2 rounded-full"
-              onClick={() => setCallOpen(true)}
-              aria-label={t("callShishaMan")}
-            >
-              <HandHelping className="size-4" />
-              <span className="hidden sm:inline">{t("call")}</span>
-            </Button>
-          </>
+          <Stagger className="flex items-center gap-1" delay={0.22}>
+            <StaggerItem>
+              <QuickPill
+                icon={<Wand2 className="size-4" />}
+                label={t("aiBtn")}
+                ariaLabel={t("aiSommelier")}
+                onClick={() => setSommOpen(true)}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <QuickPill
+                icon={<Download className="size-4" />}
+                label={t("getApp")}
+                ariaLabel={t("getApp")}
+                onClick={() => setGetAppOpen(true)}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <QuickPill
+                icon={<Radar className="size-4" />}
+                label={t("track")}
+                ariaLabel={t("trackOrders")}
+                onClick={() => {
+                  setFocusOrderId(null);
+                  setTrackOpen(true);
+                }}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <QuickPill
+                icon={<Heart className="size-4" />}
+                label={t("favorites")}
+                ariaLabel={t("favorites")}
+                onClick={() => setFavOpen(true)}
+                badge={
+                  isReturning ? (
+                    <span className="absolute -top-1 -end-1 grid h-4 min-w-4 place-items-center rounded-full bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] px-1 text-[9px] font-bold text-[oklch(0.17_0.03_50)] shadow-lg">
+                      {favCount}
+                    </span>
+                  ) : undefined
+                }
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <QuickPill
+                icon={<Flame className="size-4" />}
+                label={t("coal")}
+                ariaLabel={t("requestCoal")}
+                onClick={() => setCoalOpen(true)}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <GoldButton
+                size="sm"
+                className="h-10 px-2 normal-case tracking-wide sm:px-4"
+                onClick={() => setCallOpen(true)}
+                aria-label={t("callShishaMan")}
+              >
+                <HandHelping className="size-4" />
+                <span className="hidden sm:inline">{t("call")}</span>
+              </GoldButton>
+            </StaggerItem>
+          </Stagger>
         }
         returningBanner={
           isReturning ? (
-            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 p-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
-                <Sparkles className="size-4" />
+            <motion.div
+              initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.6, delay: 0.15, ease: EASE }}
+              className="glass relative mb-4 flex flex-wrap items-center gap-3 overflow-hidden rounded-2xl p-3.5"
+            >
+              {/* warm corner glow */}
+              <div
+                className="pointer-events-none absolute -end-10 -top-14 size-40 rounded-full bg-primary/15 opacity-50 blur-3xl"
+                aria-hidden
+              />
+              <span className="relative grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary ring-1 ring-primary/25">
+                <Sparkles className="size-5" />
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">
+              <div className="relative min-w-0 flex-1">
+                <p className="font-display text-base font-bold tracking-tight text-gold-soft">
                   {t("welcomeBackName")} {guest.name}!
                 </p>
                 {topPick && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {t("yourUsual")}{" "}
                     <span className="font-medium text-foreground">
                       {topPick.label}
                     </span>{" "}
-                    · {egp(topPick.unit)}
+                    ·{" "}
+                    <span className="font-display font-bold tabular-nums text-gold">
+                      {egp(topPick.unit)}
+                    </span>
                   </p>
                 )}
               </div>
-              <Button
+              <GoldButton
                 size="sm"
-                className="rounded-xl"
+                className="relative normal-case tracking-normal"
                 onClick={() => setFavOpen(true)}
               >
                 {t("reorderBtn")}
-              </Button>
-            </div>
+              </GoldButton>
+            </motion.div>
           ) : null
         }
       />
@@ -290,6 +298,36 @@ export function GuestOrder() {
         guestName={guest.name}
       />
     </>
+  );
+}
+
+/** Midnight Ember quick-action pill — glass pill, gold-ring icon, hover lift. */
+function QuickPill({
+  icon,
+  label,
+  ariaLabel,
+  onClick,
+  badge,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  ariaLabel: string;
+  onClick: () => void;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className="glass relative inline-flex h-10 items-center gap-2 rounded-full px-2 text-xs font-medium text-muted-foreground transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:text-foreground active:scale-[0.97] sm:ps-2 sm:pe-3.5"
+    >
+      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/25">
+        {icon}
+      </span>
+      <span className="hidden sm:inline">{label}</span>
+      {badge}
+    </button>
   );
 }
 
@@ -338,24 +376,33 @@ function CallShishaManDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !sending && onOpenChange(o)}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <HandHelping className="size-5 text-primary" />
+      <DialogContent className="dark relative max-w-md overflow-hidden rounded-3xl border-white/[0.08] bg-[oklch(0.17_0.016_60/0.95)] p-5 text-foreground backdrop-blur-2xl">
+        <div
+          className="pointer-events-none absolute -top-16 left-1/2 h-32 w-56 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl"
+          aria-hidden
+        />
+        <DialogHeader className="relative">
+          <DialogTitle className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight text-gold-soft">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+              <HandHelping className="size-4" />
+            </span>
             {t("callShishaMan")}
           </DialogTitle>
-          <DialogDescription>{t("callDescShort")}</DialogDescription>
+          <DialogDescription className="ps-[2.875rem] text-xs">
+            {t("callDescShort")}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-2xl border border-border bg-muted/40 p-3 text-sm">
-          <p>
-            <span className="text-muted-foreground">{t("nameLabel")}</span>{" "}
-            <span className="font-medium">{guest.name}</span>
-          </p>
-          <p>
-            <span className="text-muted-foreground">{t("tableLabel")}</span>{" "}
-            <span className="font-medium">{guest.table || "—"}</span>
-          </p>
+        <div className="glass relative rounded-2xl p-3.5 text-sm">
+          <div className="relative flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{t("nameLabel")}</span>
+            <span className="font-semibold">{guest.name}</span>
+          </div>
+          <div className="ember-hairline my-2.5" aria-hidden />
+          <div className="relative flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{t("tableLabel")}</span>
+            <span className="font-semibold">{guest.table || "—"}</span>
+          </div>
         </div>
 
         <Textarea
@@ -363,12 +410,12 @@ function CallShishaManDialog({
           onChange={(e) => setNote(e.target.value)}
           placeholder={t("needHelpPlaceholder")}
           rows={3}
-          className="resize-none"
+          className="relative resize-none rounded-2xl border-white/[0.08] bg-white/[0.04]"
         />
 
-        <Button
-          className="w-full rounded-xl"
+        <GoldButton
           size="lg"
+          className="relative w-full"
           disabled={sending}
           onClick={submit}
         >
@@ -379,7 +426,7 @@ function CallShishaManDialog({
           ) : (
             t("sendRequest")
           )}
-        </Button>
+        </GoldButton>
       </DialogContent>
     </Dialog>
   );
@@ -429,55 +476,82 @@ function CoalRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !sending && onOpenChange(o)}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Flame className="size-5 text-primary" />
+      <DialogContent className="dark relative max-w-md overflow-hidden rounded-3xl border-white/[0.08] bg-[oklch(0.17_0.016_60/0.95)] p-5 text-foreground backdrop-blur-2xl">
+        <div
+          className="pointer-events-none absolute -top-16 left-1/2 h-32 w-56 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl"
+          aria-hidden
+        />
+        <DialogHeader className="relative">
+          <DialogTitle className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight text-gold-soft">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+              <Flame className="size-4" />
+            </span>
             {t("requestCoal")}
           </DialogTitle>
-          <DialogDescription>{t("coalDescShort")}</DialogDescription>
+          <DialogDescription className="ps-[2.875rem] text-xs">
+            {t("coalDescShort")}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-2xl border border-border bg-muted/40 p-3 text-sm">
-          <p>
-            <span className="text-muted-foreground">{t("nameLabel")}</span>{" "}
-            <span className="font-medium">{guest.name}</span>
-          </p>
-          <p>
-            <span className="text-muted-foreground">{t("tableLabel")}</span>{" "}
-            <span className="font-medium">{guest.table || "—"}</span>
-          </p>
+        <div className="glass relative rounded-2xl p-3.5 text-sm">
+          <div className="relative flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{t("nameLabel")}</span>
+            <span className="font-semibold">{guest.name}</span>
+          </div>
+          <div className="ember-hairline my-2.5" aria-hidden />
+          <div className="relative flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{t("tableLabel")}</span>
+            <span className="font-semibold">{guest.table || "—"}</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <button
+          <motion.button
             type="button"
             disabled={sending}
+            whileTap={{ scale: 0.97 }}
             onClick={() => submit("regular_coal")}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 text-center transition-all hover:border-primary/60 hover:bg-primary/5 disabled:opacity-50"
+            className="group glass relative flex flex-col items-center gap-2 overflow-hidden rounded-2xl p-5 text-center transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 disabled:pointer-events-none disabled:opacity-50"
           >
-            <span className="text-4xl">⚫</span>
-            <span className="font-semibold">{t("regularCoalType")}</span>
-            <span className="text-xs text-muted-foreground">
+            <div
+              className="pointer-events-none absolute -top-10 left-1/2 h-20 w-28 -translate-x-1/2 rounded-full bg-primary/15 opacity-50 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+              aria-hidden
+            />
+            <span className="relative grid size-14 place-items-center rounded-2xl bg-primary/10 text-3xl ring-1 ring-primary/20">
+              ⚫
+            </span>
+            <span className="relative font-semibold">
+              {t("regularCoalType")}
+            </span>
+            <span className="relative text-xs text-muted-foreground">
               {t("quickLight")}
             </span>
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
             disabled={sending}
+            whileTap={{ scale: 0.97 }}
             onClick={() => submit("cubed_coal")}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 text-center transition-all hover:border-primary/60 hover:bg-primary/5 disabled:opacity-50"
+            className="group glass relative flex flex-col items-center gap-2 overflow-hidden rounded-2xl p-5 text-center transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 disabled:pointer-events-none disabled:opacity-50"
           >
-            <span className="text-4xl">🟫</span>
-            <span className="font-semibold">{t("cubedCoalType")}</span>
-            <span className="text-xs text-muted-foreground">
+            <div
+              className="pointer-events-none absolute -top-10 left-1/2 h-20 w-28 -translate-x-1/2 rounded-full bg-primary/15 opacity-50 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+              aria-hidden
+            />
+            <span className="relative grid size-14 place-items-center rounded-2xl bg-primary/10 text-3xl ring-1 ring-primary/20">
+              🟫
+            </span>
+            <span className="relative font-semibold">
+              {t("cubedCoalType")}
+            </span>
+            <span className="relative text-xs text-muted-foreground">
               {t("longerBurn")}
             </span>
-          </button>
+          </motion.button>
         </div>
 
         {sending && (
-          <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <p className="relative flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> {t("sending")}
           </p>
         )}

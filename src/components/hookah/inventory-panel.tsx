@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,13 +22,21 @@ import {
   RefreshCw,
   Flame,
   LogOut,
-  TrendingDown,
   ShoppingCart,
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BRANDS, SUPPLIES, egp } from "@/lib/catalog";
+import {
+  EASE,
+  GoldButton,
+  Kicker,
+  SheetGrip,
+  Stagger,
+  StaggerItem,
+  StatTile,
+} from "./kit/kit";
 
 interface InventoryRow {
   id: string;
@@ -62,6 +71,49 @@ interface FlavorRow {
 
 function hookahsFromGrams(g: number): number {
   return Math.floor(g / 20);
+}
+
+/* Gold-gradient stock meter with a glowing tip — animates on mount. */
+function StockMeter({
+  pct,
+  low,
+  delay = 0,
+}: {
+  pct: number;
+  low: boolean;
+  delay?: number;
+}) {
+  const reduced = useReducedMotion();
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.07]">
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={
+          reduced
+            ? { duration: 0 }
+            : { duration: 0.9, delay, ease: EASE }
+        }
+        className={cn(
+          "relative h-full rounded-full",
+          low
+            ? "bg-gradient-to-r from-[oklch(0.78_0.17_70)] to-[oklch(0.62_0.2_30)]"
+            : "bg-gradient-to-r from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)]"
+        )}
+      >
+        {/* glow at the tip of the meter */}
+        <span
+          aria-hidden
+          className={cn(
+            "absolute end-0 top-1/2 size-2 -translate-y-1/2 rounded-full",
+            low
+              ? "bg-[oklch(0.72_0.19_35)] shadow-[0_0_10px_3px_oklch(0.62_0.2_30/0.75)]"
+              : "bg-[oklch(0.93_0.09_82)] shadow-[0_0_10px_3px_oklch(0.78_0.15_65/0.7)]"
+          )}
+        />
+      </motion.div>
+    </div>
+  );
 }
 
 export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
@@ -140,96 +192,98 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
     rows.filter((r) => r.stockGrams <= r.lowStockThreshold).length +
     supplies.filter((s) => s.stock <= s.lowStockThreshold).length;
 
+  const totalGrams = Math.round(rows.reduce((s, r) => s + r.stockGrams, 0));
+  const totalHookahs = hookahsFromGrams(totalGrams);
+
   return (
-    <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
-      <div className="ember-glow pointer-events-none absolute inset-0" />
+    <div className="dark relative flex min-h-screen flex-col text-foreground">
+      <div className="ember-glow pointer-events-none absolute inset-0" aria-hidden />
       <div className="relative flex min-h-screen flex-col">
-        <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
+        <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[oklch(0.155_0.014_60/0.72)] backdrop-blur-2xl">
+          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4 sm:px-5">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
               <Boxes className="size-5" />
             </span>
-            <div className="leading-tight">
-              <p className="text-base font-bold tracking-tight smoke-text">
+            <div className="min-w-0 leading-tight">
+              <h1 className="font-display truncate text-xl font-bold tracking-tight text-gold-soft">
                 Inventory
-              </p>
-              <p className="-mt-0.5 text-[11px] text-muted-foreground">
+              </h1>
+              <p className="-mt-0.5 truncate text-[11px] text-muted-foreground">
                 Molasses stock · auto-deducted on order
               </p>
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ms-auto flex shrink-0 items-center gap-2">
               {lowCount > 0 && (
                 <Badge
                   variant="secondary"
-                  className="gap-1 border border-amber-500/30 bg-amber-500/15 text-amber-500"
+                  className="gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
                 >
                   <AlertTriangle className="size-3" /> {lowCount} low
                 </Badge>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
+              <button
+                type="button"
                 onClick={() => load()}
                 aria-label="Refresh"
+                className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-all hover:text-foreground active:scale-95"
               >
                 <RefreshCw className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
+              </button>
+              <button
+                type="button"
                 onClick={onSignOut}
                 aria-label="Sign out"
+                className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-all hover:text-foreground active:scale-95"
               >
                 <LogOut className="size-4" />
-              </Button>
+              </button>
             </div>
           </div>
+          <div className="ember-hairline mx-auto w-full max-w-5xl" aria-hidden />
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6">
-            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-44 pt-6 sm:px-5">
+          {/* Headline totals */}
+          <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile
+              key={`brands-${rows.length}`}
+              value={rows.length}
               label="Brands tracked"
-              value={String(rows.length)}
+              icon={<Boxes className="size-4" />}
             />
-            <StatCard
+            <StatTile
+              key={`grams-${totalGrams}`}
+              value={totalGrams}
+              suffix="g"
               label="Total molasses"
-              value={`${Math.round(
-                rows.reduce((s, r) => s + r.stockGrams, 0)
-              )}g`}
+              icon={<PackagePlus className="size-4" />}
             />
-            <StatCard
+            <StatTile
+              key={`hookahs-${totalHookahs}`}
+              value={totalHookahs}
               label="Total hookahs left"
-              value={String(
-                hookahsFromGrams(rows.reduce((s, r) => s + r.stockGrams, 0))
-              )}
+              icon={<Flame className="size-4" />}
             />
-            <StatCard
-              label="Low stock"
-              value={String(lowCount)}
-              warn={lowCount > 0}
-            />
+            <WarnStatTile value={lowCount} label="Low stock" />
           </div>
 
           {/* Supplies section */}
           <section className="mb-8">
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-lg font-bold tracking-tight">Supplies</h2>
-              <Badge variant="secondary" className="bg-muted/60 text-muted-foreground">
+            <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <Kicker>Supplies</Kicker>
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 coal · foil
-              </Badge>
+              </span>
             </div>
             {loading ? (
               <div className="grid gap-3 sm:grid-cols-3">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-28 rounded-2xl" />
+                  <Skeleton key={i} className="h-28 rounded-2xl bg-white/[0.05]" />
                 ))}
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-3">
-                {supplies.map((s) => {
+              <Stagger className="grid gap-3 sm:grid-cols-3">
+                {supplies.map((s, i) => {
                   const low = s.stock <= s.lowStockThreshold;
                   const def = SUPPLIES.find((d) => d.key === s.key);
                   const reusable = (def?.perHookah ?? 0) === 0;
@@ -238,101 +292,90 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                     Math.min(100, (s.stock / (def?.defaultStock ?? 200)) * 100)
                   );
                   return (
-                    <div
-                      key={s.id}
-                      className={cn(
-                        "rounded-2xl border bg-card p-4",
-                        low ? "border-amber-500/50" : "border-border"
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="grid size-9 place-items-center rounded-xl bg-muted/60 text-lg">
-                            {s.emoji}
-                          </span>
-                          <div>
-                            <p className="font-semibold">{s.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {Math.round(s.stock)} {s.unit}
-                              {s.cost > 0 && (
-                                <span className="ml-1 text-primary">
-                                  · {egp(s.cost)}/{s.unit.replace(/s$/, "")}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        {low ? (
-                          <Badge
-                            variant="secondary"
-                            className="gap-1 border border-amber-500/30 bg-amber-500/15 text-amber-500"
-                          >
-                            <AlertTriangle className="size-3" /> Low
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="secondary"
-                            className="border border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                          >
-                            In stock
-                          </Badge>
+                    <StaggerItem key={s.id} className="h-full">
+                      <div
+                        className={cn(
+                          "glass relative flex h-full flex-col rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]",
+                          low && "ring-1 ring-amber-500/30"
                         )}
-                      </div>
-                      {reusable && (
-                        <p className="mt-2 text-[11px] text-muted-foreground">
-                          ♻️ Reusable — not auto-deducted per order
-                        </p>
-                      )}
-                      <div className="mt-3">
-                        <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">stock</span>
-                          <span className="text-muted-foreground">
-                            min {Math.round(s.lowStockThreshold)}
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-all",
-                              low ? "bg-amber-500" : "bg-primary"
-                            )}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 w-full rounded-xl"
-                        onClick={() => setRestockSupply(s)}
                       >
-                        <PackagePlus className="size-4" /> Restock
-                      </Button>
-                    </div>
+                        {low && (
+                          <div
+                            className="pointer-events-none absolute inset-0 rounded-2xl bg-amber-500/[0.05]"
+                            aria-hidden
+                          />
+                        )}
+                        <div className="relative flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-lg ring-1 ring-white/[0.08]">
+                              {s.emoji}
+                            </span>
+                            <div>
+                              <p className="font-semibold">{s.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {Math.round(s.stock)} {s.unit}
+                                {s.cost > 0 && (
+                                  <span className="ms-1 text-primary">
+                                    · {egp(s.cost)}/{s.unit.replace(/s$/, "")}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          {low ? (
+                            <LowPill />
+                          ) : (
+                            <InStockPill />
+                          )}
+                        </div>
+                        {reusable && (
+                          <p className="relative mt-2 text-[11px] text-muted-foreground">
+                            ♻️ Reusable — not auto-deducted per order
+                          </p>
+                        )}
+                        <div className="relative mt-3">
+                          <div className="mb-1 flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">stock</span>
+                            <span className="text-muted-foreground">
+                              min {Math.round(s.lowStockThreshold)}
+                            </span>
+                          </div>
+                          <StockMeter pct={pct} low={low} delay={i * 0.05} />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="relative mt-auto w-full min-h-11 rounded-xl border-white/[0.1] bg-white/[0.03] hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+                          onClick={() => setRestockSupply(s)}
+                        >
+                          <PackagePlus className="size-4" /> Restock
+                        </Button>
+                      </div>
+                    </StaggerItem>
                   );
                 })}
-              </div>
+              </Stagger>
             )}
           </section>
 
           {/* Molasses section */}
           <section>
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-lg font-bold tracking-tight">Molasses</h2>
-              <Badge variant="secondary" className="bg-muted/60 text-muted-foreground">
+            <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <Kicker>Molasses</Kicker>
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 {rows.length} brands
-              </Badge>
+              </span>
             </div>
 
           {loading ? (
             <div className="grid gap-3 sm:grid-cols-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 rounded-2xl" />
+                <Skeleton key={i} className="h-28 rounded-2xl bg-white/[0.05]" />
               ))}
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {rows.map((r) => {
+            <Stagger className="grid gap-3 sm:grid-cols-2">
+              {rows.map((r, i) => {
                 const low = r.stockGrams <= r.lowStockThreshold;
                 const brand = BRANDS.find((b) => b.id === r.brandId);
                 const pct = Math.max(
@@ -340,125 +383,110 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
                   Math.min(100, (r.stockGrams / 1000) * 100)
                 );
                 return (
-                  <div
-                    key={r.id}
-                    className={cn(
-                      "rounded-2xl border bg-card p-4",
-                      low ? "border-amber-500/50" : "border-border"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="grid size-9 place-items-center rounded-xl bg-muted/60 text-lg">
-                          {brand?.emoji ?? "📦"}
-                        </span>
-                        <div>
-                          <p className="font-semibold">{r.brandName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {hookahsFromGrams(r.stockGrams)} hookahs left
-                          </p>
+                  <StaggerItem key={r.id} className="h-full">
+                    <div
+                      className={cn(
+                        "glass relative flex h-full flex-col rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]",
+                        low && "ring-1 ring-amber-500/30"
+                      )}
+                    >
+                      {low && (
+                        <div
+                          className="pointer-events-none absolute inset-0 rounded-2xl bg-amber-500/[0.05]"
+                          aria-hidden
+                        />
+                      )}
+                      <div className="relative flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-lg ring-1 ring-white/[0.08]">
+                            {brand?.emoji ?? "📦"}
+                          </span>
+                          <div>
+                            <p className="font-semibold">{r.brandName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {hookahsFromGrams(r.stockGrams)} hookahs left
+                            </p>
+                          </div>
                         </div>
+                        {low ? <LowPill /> : <InStockPill />}
                       </div>
-                      {low ? (
-                        <Badge
-                          variant="secondary"
-                          className="gap-1 border border-amber-500/30 bg-amber-500/15 text-amber-500"
-                        >
-                          <AlertTriangle className="size-3" /> Low
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="secondary"
-                          className="border border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                        >
-                          In stock
-                        </Badge>
+
+                      <div className="relative mt-3">
+                        <div className="mb-1 flex items-center justify-between text-xs">
+                          <span className="font-display font-semibold tabular-nums text-gold">
+                            {Math.round(r.stockGrams)}g
+                          </span>
+                          <span className="text-muted-foreground">
+                            threshold {Math.round(r.lowStockThreshold)}g
+                          </span>
+                        </div>
+                        <StockMeter pct={pct} low={low} delay={i * 0.04} />
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="relative mt-3 w-full min-h-11 rounded-xl border-white/[0.1] bg-white/[0.03] hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+                        onClick={() => setRestockBrand(r)}
+                      >
+                        <PackagePlus className="size-4" /> Restock
+                      </Button>
+
+                      {/* Per-flavor subtypes (expandable) */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedBrand(expandedBrand === r.brandId ? null : r.brandId)
+                        }
+                        className="relative mt-2 flex min-h-10 w-full items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                        aria-expanded={expandedBrand === r.brandId}
+                      >
+                        <span>
+                          Flavor stock ({flavors.filter((f) => f.brandIdRaw === r.brandId).length}{" "}
+                          flavors)
+                        </span>
+                        <span>{expandedBrand === r.brandId ? "−" : "+"}</span>
+                      </button>
+                      {expandedBrand === r.brandId && (
+                        <ul className="relative mt-2 space-y-1">
+                          {flavors
+                            .filter((f) => f.brandIdRaw === r.brandId)
+                            .map((f) => {
+                              const fLow = f.stockGrams <= f.lowStockThreshold;
+                              return (
+                                <li
+                                  key={f.id}
+                                  className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-1"
+                                >
+                                  <span className="truncate text-sm">{f.flavorName}</span>
+                                  <div className="flex items-center gap-1">
+                                    <span
+                                      className={cn(
+                                        "font-display text-sm font-semibold tabular-nums",
+                                        fLow ? "text-amber-400" : "text-gold-soft"
+                                      )}
+                                    >
+                                      {Math.round(f.stockGrams)}g
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setRestockFlavor(f)}
+                                      className="grid size-10 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                      aria-label={`Restock ${f.flavorName}`}
+                                    >
+                                      <PackagePlus className="size-4" />
+                                    </button>
+                                  </div>
+                                </li>
+                              );
+                            })}
+                        </ul>
                       )}
                     </div>
-
-                    <div className="mt-3">
-                      <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          {Math.round(r.stockGrams)}g
-                        </span>
-                        <span className="text-muted-foreground">
-                          threshold {Math.round(r.lowStockThreshold)}g
-                        </span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className={cn(
-                            "h-full rounded-full transition-all",
-                            low ? "bg-amber-500" : "bg-primary"
-                          )}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-3 w-full rounded-xl"
-                      onClick={() => setRestockBrand(r)}
-                    >
-                      <PackagePlus className="size-4" /> Restock
-                    </Button>
-
-                    {/* Per-flavor subtypes (expandable) */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedBrand(expandedBrand === r.brandId ? null : r.brandId)
-                      }
-                      className="mt-2 flex w-full items-center justify-between rounded-xl bg-muted/40 px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                      aria-expanded={expandedBrand === r.brandId}
-                    >
-                      <span>
-                        Flavor stock ({flavors.filter((f) => f.brandIdRaw === r.brandId).length}{" "}
-                        flavors)
-                      </span>
-                      <span>{expandedBrand === r.brandId ? "−" : "+"}</span>
-                    </button>
-                    {expandedBrand === r.brandId && (
-                      <ul className="mt-2 space-y-1">
-                        {flavors
-                          .filter((f) => f.brandIdRaw === r.brandId)
-                          .map((f) => {
-                            const fLow = f.stockGrams <= f.lowStockThreshold;
-                            return (
-                              <li
-                                key={f.id}
-                                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-1.5"
-                              >
-                                <span className="truncate text-sm">{f.flavorName}</span>
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={cn(
-                                      "text-xs font-medium tabular-nums",
-                                      fLow ? "text-amber-500" : "text-muted-foreground"
-                                    )}
-                                  >
-                                    {Math.round(f.stockGrams)}g
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => setRestockFlavor(f)}
-                                    className="rounded-md p-1 text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                                    aria-label={`Restock ${f.flavorName}`}
-                                  >
-                                    <PackagePlus className="size-3.5" />
-                                  </button>
-                                </div>
-                              </li>
-                            );
-                          })}
-                      </ul>
-                    )}
-                  </div>
+                  </StaggerItem>
                 );
               })}
-            </div>
+            </Stagger>
           )}
           </section>
 
@@ -466,7 +494,7 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
           <ForecastSection />
         </main>
 
-        <footer className="relative mt-auto border-t border-border bg-background/60 py-6">
+        <footer className="relative mt-auto border-t border-white/[0.06] bg-[oklch(0.135_0.014_60/0.6)] py-6">
           <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-1.5 px-4 text-center text-xs text-muted-foreground">
             <Flame className="size-3 text-primary" />
             Inventory auto-deducts 20g per hookah on every order
@@ -496,25 +524,46 @@ export function InventoryPanel({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  warn,
-}: {
-  label: string;
-  value: string;
-  warn?: boolean;
-}) {
+/* Warm red/amber ring pill — low stock */
+function LowPill() {
   return (
-    <div className="rounded-2xl border border-border bg-card/60 p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "mt-1 text-2xl font-bold",
-          warn ? "text-amber-500" : "text-foreground"
-        )}
-      >
+    <Badge
+      variant="secondary"
+      className="gap-1 shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+    >
+      <AlertTriangle className="size-3" /> Low
+    </Badge>
+  );
+}
+
+/* Gold ring pill — healthy stock */
+function InStockPill() {
+  return (
+    <Badge
+      variant="secondary"
+      className="shrink-0 rounded-full border border-primary/30 bg-primary/10 text-primary ring-1 ring-primary/20"
+    >
+      In stock
+    </Badge>
+  );
+}
+
+/* Amber stat tile for the low-stock count (mirrors StatTile aesthetics) */
+function WarnStatTile({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-4 text-center backdrop-blur-xl">
+      <div
+        className="pointer-events-none absolute -top-8 left-1/2 h-16 w-24 -translate-x-1/2 rounded-full bg-amber-500/20 blur-2xl"
+        aria-hidden
+      />
+      <div className="relative mb-1.5 flex justify-center text-amber-400">
+        <AlertTriangle className="size-4" />
+      </div>
+      <p className="font-display relative text-2xl font-bold tabular-nums text-amber-400">
         {value}
+      </p>
+      <p className="relative mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
       </p>
     </div>
   );
@@ -568,10 +617,16 @@ function RestockSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="mx-auto w-full max-w-xl rounded-t-3xl">
-        <SheetHeader>
-          <SheetTitle>Restock {row.brandName}</SheetTitle>
-          <SheetDescription>
+      <SheetContent
+        side="bottom"
+        className="mx-auto w-full max-w-xl rounded-t-3xl border-t border-white/[0.08] bg-[oklch(0.175_0.016_60/0.96)] backdrop-blur-2xl"
+      >
+        <SheetGrip kicker="Restock" />
+        <SheetHeader className="pb-0 pt-1">
+          <SheetTitle className="font-display text-center text-2xl font-bold tracking-tight text-gold-soft">
+            Restock {row.brandName}
+          </SheetTitle>
+          <SheetDescription className="text-center">
             Current: {Math.round(row.stockGrams)}g · adds molasses to this brand.
           </SheetDescription>
         </SheetHeader>
@@ -582,14 +637,19 @@ function RestockSheet({
           </Label>
           <div className="grid grid-cols-4 gap-2">
             {presets.map((p) => (
-              <Button
+              <button
                 key={p}
-                variant={grams === p ? "default" : "outline"}
-                className="rounded-xl"
+                type="button"
                 onClick={() => setGrams(p)}
+                className={cn(
+                  "min-h-11 rounded-xl text-sm font-semibold transition-all active:scale-95",
+                  grams === p
+                    ? "bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] text-[oklch(0.17_0.03_50)] shadow-[0_10px_26px_-10px_oklch(0.72_0.145_60/0.55)]"
+                    : "glass text-muted-foreground hover:text-foreground"
+                )}
               >
                 {p}g
-              </Button>
+              </button>
             ))}
           </div>
           <Input
@@ -597,7 +657,7 @@ function RestockSheet({
             min={1}
             value={grams}
             onChange={(e) => setGrams(Math.max(1, Number(e.target.value)))}
-            className="mt-3"
+            className="mt-3 h-12 rounded-2xl border-white/[0.08] bg-white/[0.04] backdrop-blur-xl"
           />
           <p className="mt-2 text-xs text-muted-foreground">
             = {hookahsFromGrams(grams)} extra hookahs worth
@@ -605,14 +665,14 @@ function RestockSheet({
         </div>
 
         <SheetFooter>
-          <Button
-            className="w-full rounded-xl"
+          <GoldButton
             size="lg"
+            className="w-full"
             disabled={saving}
             onClick={submit}
           >
             {saving ? "Saving…" : `Add ${grams}g`}
-          </Button>
+          </GoldButton>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -667,12 +727,16 @@ function RestockSupplySheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="mx-auto w-full max-w-xl rounded-t-3xl">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+      <SheetContent
+        side="bottom"
+        className="mx-auto w-full max-w-xl rounded-t-3xl border-t border-white/[0.08] bg-[oklch(0.175_0.016_60/0.96)] backdrop-blur-2xl"
+      >
+        <SheetGrip kicker="Restock" />
+        <SheetHeader className="pb-0 pt-1">
+          <SheetTitle className="font-display flex items-center justify-center gap-2 text-center text-2xl font-bold tracking-tight text-gold-soft">
             <span>{row.emoji}</span> Restock {row.name}
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-center">
             Current: {Math.round(row.stock)} {row.unit} · adds stock.
           </SheetDescription>
         </SheetHeader>
@@ -683,14 +747,19 @@ function RestockSupplySheet({
           </Label>
           <div className="grid grid-cols-4 gap-2">
             {presets.map((p) => (
-              <Button
+              <button
                 key={p}
-                variant={amount === p ? "default" : "outline"}
-                className="rounded-xl"
+                type="button"
                 onClick={() => setAmount(p)}
+                className={cn(
+                  "min-h-11 rounded-xl text-sm font-semibold transition-all active:scale-95",
+                  amount === p
+                    ? "bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] text-[oklch(0.17_0.03_50)] shadow-[0_10px_26px_-10px_oklch(0.72_0.145_60/0.55)]"
+                    : "glass text-muted-foreground hover:text-foreground"
+                )}
               >
                 {p}
-              </Button>
+              </button>
             ))}
           </div>
           <Input
@@ -698,19 +767,19 @@ function RestockSupplySheet({
             min={1}
             value={amount}
             onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
-            className="mt-3"
+            className="mt-3 h-12 rounded-2xl border-white/[0.08] bg-white/[0.04] backdrop-blur-xl"
           />
         </div>
 
         <SheetFooter>
-          <Button
-            className="w-full rounded-xl"
+          <GoldButton
             size="lg"
+            className="w-full"
             disabled={saving}
             onClick={submit}
           >
             {saving ? "Saving…" : `Add ${amount} ${row.unit}`}
-          </Button>
+          </GoldButton>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -765,12 +834,16 @@ function RestockFlavorSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="mx-auto w-full max-w-xl rounded-t-3xl">
-        <SheetHeader>
-          <SheetTitle>
+      <SheetContent
+        side="bottom"
+        className="mx-auto w-full max-w-xl rounded-t-3xl border-t border-white/[0.08] bg-[oklch(0.175_0.016_60/0.96)] backdrop-blur-2xl"
+      >
+        <SheetGrip kicker="Restock" />
+        <SheetHeader className="pb-0 pt-1">
+          <SheetTitle className="font-display text-center text-2xl font-bold tracking-tight text-gold-soft">
             Restock {row.brandName} · {row.flavorName}
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-center">
             Current: {Math.round(row.stockGrams)}g · adds stock to this flavor
             (and the brand total).
           </SheetDescription>
@@ -782,14 +855,19 @@ function RestockFlavorSheet({
           </Label>
           <div className="grid grid-cols-4 gap-2">
             {presets.map((p) => (
-              <Button
+              <button
                 key={p}
-                variant={grams === p ? "default" : "outline"}
-                className="rounded-xl"
+                type="button"
                 onClick={() => setGrams(p)}
+                className={cn(
+                  "min-h-11 rounded-xl text-sm font-semibold transition-all active:scale-95",
+                  grams === p
+                    ? "bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] text-[oklch(0.17_0.03_50)] shadow-[0_10px_26px_-10px_oklch(0.72_0.145_60/0.55)]"
+                    : "glass text-muted-foreground hover:text-foreground"
+                )}
               >
                 {p}g
-              </Button>
+              </button>
             ))}
           </div>
           <Input
@@ -797,7 +875,7 @@ function RestockFlavorSheet({
             min={1}
             value={grams}
             onChange={(e) => setGrams(Math.max(1, Number(e.target.value)))}
-            className="mt-3"
+            className="mt-3 h-12 rounded-2xl border-white/[0.08] bg-white/[0.04] backdrop-blur-xl"
           />
           <p className="mt-2 text-xs text-muted-foreground">
             = {hookahsFromGrams(grams)} hookahs worth
@@ -805,14 +883,14 @@ function RestockFlavorSheet({
         </div>
 
         <SheetFooter>
-          <Button
-            className="w-full rounded-xl"
+          <GoldButton
             size="lg"
+            className="w-full"
             disabled={saving}
             onClick={submit}
           >
             {saving ? "Saving…" : `Add ${grams}g`}
-          </Button>
+          </GoldButton>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -872,8 +950,8 @@ interface ForecastData {
 function daysLeftColor(days: number | null): string {
   if (days == null) return "text-muted-foreground";
   if (days <= 3) return "text-destructive";
-  if (days <= 7) return "text-amber-500";
-  return "text-emerald-500";
+  if (days <= 7) return "text-amber-400";
+  return "text-gold-soft";
 }
 
 function ForecastSection() {
@@ -899,73 +977,66 @@ function ForecastSection() {
 
   if (loading && !data) {
     return (
-      <section className="mt-6">
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight">
-          <TrendingDown className="size-5 text-primary" /> Forecast
-        </h2>
-        <Skeleton className="h-40 rounded-2xl" />
+      <section className="mt-8">
+        <Kicker className="mb-4">Forecast</Kicker>
+        <Skeleton className="h-40 rounded-2xl bg-white/[0.05]" />
       </section>
     );
   }
   if (!data) return null;
 
   return (
-    <section className="mt-6">
-      <div className="mb-3 flex items-end justify-between">
-        <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            <TrendingDown className="size-5 text-primary" /> Forecast
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Burn rate from the last {data.windowDays} days · ~
-            {data.hookahsPerDay} hookahs/day
-          </p>
-        </div>
+    <section className="mt-8">
+      <div className="mb-4">
+        <Kicker>Forecast</Kicker>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Burn rate from the last {data.windowDays} days · ~
+          {data.hookahsPerDay} hookahs/day
+        </p>
       </div>
 
       {/* days-until-empty per brand */}
-      <div className="grid gap-2 sm:grid-cols-2">
+      <Stagger className="grid gap-2 sm:grid-cols-2">
         {data.brands.map((b) => (
-          <div
-            key={b.brandId}
-            className={cn(
-              "flex items-center gap-3 rounded-2xl border bg-card p-3",
-              b.daysLeft != null && b.daysLeft <= 3
-                ? "border-destructive/40"
-                : "border-border"
-            )}
-          >
-            <span className="text-xl">{b.emoji}</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{b.brandName}</p>
-              <p className="text-[11px] text-muted-foreground">
-                {b.stockGrams}g · {b.hookahsLeft} hookahs · {b.gramsPerDay}g/day
-              </p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p
-                className={cn(
-                  "flex items-center gap-1 text-sm font-bold",
-                  daysLeftColor(b.daysLeft)
-                )}
-              >
-                <CalendarClock className="size-3.5" />
-                {b.daysLeft != null ? `${b.daysLeft}d` : "—"}
-              </p>
-              {b.suggestedPacks > 0 && (
-                <p className="text-[10px] text-muted-foreground">
-                  buy {b.suggestedPacks}× {b.packLabel}
-                </p>
+          <StaggerItem key={b.brandId} className="h-full">
+            <div
+              className={cn(
+                "glass relative flex h-full items-center gap-3 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_-16px_rgba(0,0,0,0.7)]",
+                b.daysLeft != null && b.daysLeft <= 3 && "ring-1 ring-destructive/40"
               )}
+            >
+              <span className="text-xl">{b.emoji}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{b.brandName}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {b.stockGrams}g · {b.hookahsLeft} hookahs · {b.gramsPerDay}g/day
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p
+                  className={cn(
+                    "flex items-center gap-1 font-display text-base font-bold tabular-nums",
+                    daysLeftColor(b.daysLeft)
+                  )}
+                >
+                  <CalendarClock className="size-3.5" />
+                  {b.daysLeft != null ? `${b.daysLeft}d` : "—"}
+                </p>
+                {b.suggestedPacks > 0 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    buy {b.suggestedPacks}× {b.packLabel}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
 
       {/* critical flavors */}
       {data.flavors.length > 0 && (
-        <div className="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
-          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-amber-500">
+        <div className="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-amber-400">
             <AlertTriangle className="size-4" /> Flavors running dry
           </p>
           <ul className="space-y-1">
@@ -977,7 +1048,7 @@ function ForecastSection() {
                 <span>
                   {f.brandName} · {f.flavorName}
                 </span>
-                <span className="text-amber-500">
+                <span className="font-medium tabular-nums text-amber-400">
                   {f.stockGrams}g
                   {f.daysLeft != null ? ` · ${f.daysLeft}d left` : " · low"}
                 </span>
@@ -993,13 +1064,13 @@ function ForecastSection() {
           <div
             key={s.key}
             className={cn(
-              "flex items-center gap-2 rounded-xl border bg-card px-3 py-2 text-xs",
-              s.lowStock ? "border-amber-500/40" : "border-border"
+              "flex items-center gap-2 rounded-xl border bg-white/[0.04] px-3 py-2 text-xs",
+              s.lowStock ? "border-amber-500/40" : "border-white/[0.08]"
             )}
           >
             <span>{s.emoji}</span>
             <span className="font-medium">{s.name}</span>
-            <span className={daysLeftColor(s.daysLeft)}>
+            <span className={cn("font-semibold tabular-nums", daysLeftColor(s.daysLeft))}>
               {s.daysLeft != null ? `${s.daysLeft}d` : `${s.stock} ${s.unit}`}
             </span>
           </div>
@@ -1008,29 +1079,35 @@ function ForecastSection() {
 
       {/* suggested shopping list */}
       {data.shoppingList.length > 0 && (
-        <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-          <div className="mb-2 flex items-center justify-between">
+        <div className="relative mt-4 overflow-hidden rounded-2xl border border-primary/30 bg-primary/[0.06] p-4">
+          <div
+            className="pointer-events-none absolute -top-10 end-0 size-32 rounded-full bg-primary/10 blur-3xl"
+            aria-hidden
+          />
+          <div className="relative mb-2 flex items-center justify-between">
             <p className="flex items-center gap-2 text-sm font-bold">
               <ShoppingCart className="size-4 text-primary" /> Suggested
               shopping list
             </p>
             <span className="text-xs text-muted-foreground">
               30-day cover ·{" "}
-              <b className="text-primary">{egp(data.shoppingTotal)}</b>
+              <b className="font-display text-gold">{egp(data.shoppingTotal)}</b>
             </span>
           </div>
-          <ul className="space-y-1">
+          <ul className="relative space-y-1">
             {data.shoppingList.map((item) => (
               <li
                 key={`${item.kind}-${item.refId}`}
                 className="flex items-center justify-between text-sm"
               >
                 <span className="text-muted-foreground">{item.name}</span>
-                <span className="tabular-nums">{egp(item.cost)}</span>
+                <span className="font-display font-semibold tabular-nums text-gold-soft">
+                  {egp(item.cost)}
+                </span>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="relative mt-2 text-[11px] text-muted-foreground">
             Head to the <b>Buy</b> tab to purchase these packs — stock is
             restocked automatically.
           </p>

@@ -632,3 +632,98 @@ Stage Summary:
 - `/` is now a cinematic, app-store-grade brand experience: preloader curtain → full-viewport hero (hookah photography melted into black with rising embers + drifting smoke + gold serif typography) → brand marquee → live-catalog menu peek → 3-act ritual storytelling → animated stats → glass feature cards → phone-mockup + QR app showcase → elegant footer — all bilingual EN/AR with full RTL, smooth-scrolled by Lenis, choreographed by Framer Motion, and fully respectful of reduced-motion.
 - The utility sign-in became a beautiful overlay reached through intent (Order Now / brand cards / Enter the lounge); returning signed-in users still land straight in the app; every PWA/deep-link surface still works on top of it.
 - Ready to deploy: commit → GitHub → Vercel auto-deploy (cloud APIs unreachable this recycle; deploy path via git remote verified in r54).
+
+---
+Task ID: 3e
+Agent: general-purpose (experience sheets cinematic redesign)
+Task: Applied the "Midnight Ember" cinematic redesign to the six experience surfaces — AI sommelier chat, favorites, get-the-app sheet, install landing, Mazaj+ loyalty panel, Wedjat sync panel — using the shared kit (ScreenShell, AppHeader, Kicker, GoldButton, SheetGrip, Stagger, StatTile, EmptyState). Visual-only: 100% of logic preserved.
+
+Work Log:
+- Read worklog tail + kit.tsx + canonical order-screen.tsx / sign-in.tsx to internalize the design vocabulary (glass, ember-hairline, text-gold, font-display, EASE).
+- sommelier-sheet.tsx: sheet surface → oklch(0.175…) glass w/ backdrop-blur-2xl; header = SheetGrip w/ "AI SOMMELIER" kicker + glass Wand2 icon w/ pulsing gold dot; user bubbles = gold-gradient (oklch 0.86→0.72) w/ dark text + logical rounded-ee/es corners; AI bubbles = glass; greeting card glass w/ warm corner glow; quick chips = glass pills; typing indicator = new TypingDots (pulsing gold dots w/ glow, reduced-motion safe); quick-add rows = glass hover-lift rows w/ font-display gold tabular-nums prices; input bar = glass bar + round GoldButton send; message entrances = blur-in EASE motions. All LLM/offline-engine/sessionStorage/addPick logic untouched.
+- favorites-sheet.tsx: glass sheet + centered font-display gold-soft title under SheetGrip; save-mix card glass w/ corner glow + GoldButton save; rows = glass hover-lift w/ gold filled-Heart accents, display-font mix names, gold prices; empty state → kit EmptyState; Stagger entrance. All API/cart logic untouched.
+- get-app-sheet.tsx: dialog → glass surface; centered marquee header (app icon w/ gold ring glow + Kicker "MAZAJ" + font-display title); QR in glass frame w/ 4 gold corner brackets + white QR w/ gold ring + glow; platform hints = glass rows w/ font-display gold step numbers; installNow → GoldButton lg; APK link → glass pill; sync explainer → Kicker + glass rows + glass feature chips; Separator → ember-hairline; Stagger sections. QR/platform/beforeinstallprompt logic untouched.
+- install-landing.tsx (production-critical): full cinematic uplift — ScreenShell w/ embers (density 0.4) inside the fixed overlay; MAZAJ font-display gold wordmark + مــزاج kicker + ember-hairline marquee; glass platform cards w/ Kicker headers + gold step numbers; APK primary CTA = gold-gradient pill w/ sheen sweep + gold pulsing shadow; instantAdd = glass button; orDivider = ember hairlines; desktop QR = glass card + white QR w/ gold ring; success = gold celebration (ring + CheckCircle2 gold + GoldButton); glass feature chips; close button = glass circle (end-4 logical). Platform state machine (idle|waiting|ready|prompting|success + in-app-browser fallback), beforeinstallprompt handling, appinstalled listener, session key, param stripping, simulate hooks, deep links — ALL byte-identical logic.
+- loyalty-panel.tsx: ScreenShell + AppHeader (Crown, glass action circles, GoldButton Enroll); program stats → 4 animated kit StatTiles (subs folded into labels); tier legend = glass card w/ Kicker + tier tiles keep data-driven cls colors; members = Kicker heading + glass search + glass hover-lift cards (display-font names, gold tabular-nums points, gold gradient progress bar, ember-hairline separators); empty → EmptyState w/ Enroll GoldButton; EnrollDialog = glass + GoldButton. All fetch/enroll/search logic untouched.
+- sync-panel.tsx: ScreenShell + AppHeader; connection card = glass w/ new SyncOrb (gold counter-rotating SVG arcs, spins while connected, reduced-motion safe) + semantic emerald/destructive status; action buttons = glass hover-lift rows; stats = glass tiles w/ font-display tabular-nums semantic colors; revoked/synced history = glass rows (amber/emerald accents); empty synced → EmptyState; Kicker section labels + sr-only h2s. Polling/sync logic untouched.
+- Verified: bun run lint clean; tsc --noEmit shows zero errors in the six files (remaining repo errors are pre-existing in examples/skills/native-app); curl localhost:3000 → 200; dev.log clean of any compile errors involving the six files. Dev server OOM-flapped during heavy tsc runs (sandbox-wide, pre-existing pattern) — platform watchdog restored it; confirmed stable 200s after.
+
+Stage Summary:
+- Files changed: src/components/hookah/{sommelier-sheet,favorites-sheet,get-app-sheet,install-landing,loyalty-panel,sync-panel}.tsx (visual redesign only; kit.tsx untouched; zero new i18n keys — all existing t() keys reused).
+- Key decisions: gold-gradient user bubbles w/ dark text (WCAG-safe contrast); "AI SOMMELIER"/"MAZAJ" used as literal Latin brand kickers (mirrors the MAZAJ wordmark + مــزاج pattern) instead of new i18n keys; semantic status colors (emerald/destructive/amber) retained for operational clarity in staff panels while all decorative accents are gold-only; install-landing success celebration switched emerald→gold for cinema consistency; StatTile refresh edge (stale count) avoided by the panel's own loading→skeleton→remount cycle; logical RTL utilities (start/end, rounded-ee/es, rtl:rotate-180, Send rtl flip) throughout; touch targets ≥ 44px, aria-labels preserved, reduced-motion respected in all new animations (TypingDots, SyncOrb, ember field via kit).
+
+---
+Task ID: 3a
+Agent: general-purpose (guest screens cinematic redesign — result delivered via file edits; report channel timed out, record reconstructed from git diff + evidence screenshots)
+Task: Apply the Midnight Ember cinematic redesign to guest-order.tsx and guest-tracking.tsx.
+
+Work Log:
+- guest-order.tsx: quick-action rail rebuilt as glass pill buttons with gold-ring icons + staggered entrance; call-shisha-man and coal-request dialogs glassified; get-app + sommelier entries restyled; all handlers/dialogs/deep-link logic untouched (kit=1, glass=7, display=4).
+- guest-tracking.tsx: tracking sheet rebuilt — glass order cards with gold status steppers, font-display headers, Stagger entrances, kit EmptyState; polling/status-mapping logic untouched (kit=1, glass=4, display=5).
+- E2E evidence captured: download/3a-after-guest-order-desktop.png, 3a-after-call-dialog.png, 3a-after-coal-dialog.png.
+
+Stage Summary:
+- Both guest surfaces now speak the cinematic language; behavior identical.
+
+---
+Task ID: 3b
+Agent: general-purpose (staff panels A cinematic redesign — result delivered via file edits; report channel timed out, record reconstructed from git diff)
+Task: Apply the Midnight Ember cinematic redesign to orders-panel, requests-panel, employees-panel, session-timer.
+
+Work Log:
+- orders-panel.tsx (402 lines changed): kit-style glass sticky header with font-display title, StatTile stats row, glass order cards with ring status pills, Stagger lists, EmptyState, GoldButton primaries; polling/refresh logic untouched.
+- requests-panel.tsx (315): glass request cards, gold status timeline, EmptyState, Stagger; acknowledge/done flows untouched.
+- employees-panel.tsx (427): glass staff cards/rows, gold-ring role badges, glass form inputs, GoldButton primary; CRUD logic untouched.
+- session-timer.tsx (143): cinematic glass timer card with gold progress and font-display readout.
+
+Stage Summary:
+- Staff operational surfaces now cinematic; all logic preserved; lint+tsc clean.
+
+---
+Task ID: 3c
+Agent: general-purpose (staff panels B cinematic redesign — result delivered via file edits; report channel timed out, record reconstructed from git diff)
+Task: Apply the Midnight Ember cinematic redesign to inventory-panel, profit-panel, purchases-panel, analytics-panel.
+
+Work Log:
+- inventory-panel.tsx (773): glass sticky header, gold-gradient stock meters, warm low-stock ring pills, restock sheet glass + GoldButton, StatTile totals, Stagger lists; all stock/restock logic untouched.
+- profit-panel.tsx (385): StatTile headline numbers, glass sections with font-display gold figures, Kicker labels.
+- purchases-panel.tsx (266): glass rows, GoldButton primary, EmptyState.
+- analytics-panel.tsx: StatTile KPIs, glass chart containers, Kicker labels, Stagger.
+
+Stage Summary:
+- Data panels now present like a flagship analytics product; logic preserved; lint+tsc clean.
+
+---
+Task ID: 3d
+Agent: general-purpose (commerce sheets cinematic redesign — result delivered via file edits; report channel timed out, record reconstructed from git diff)
+Task: Apply the Midnight Ember cinematic redesign to config-sheet, cart-drawer, checkout-dialog, barcode-modal, bowl-builder.
+
+Work Log:
+- config-sheet.tsx (340): SheetGrip header, glass flavor chips with gold selected state, glass qty stepper, font-display gold live price, GoldButton footer CTA; pricing/mix logic untouched.
+- cart-drawer.tsx (153): glass item rows, BYO options as selectable glass cards with gold ring, ember-hairline totals with font-display gold total, GoldButton checkout, EmptyState empty cart; totals/promo/addons untouched.
+- checkout-dialog.tsx (142): glass dialog, glass inputs, hairline summary, GoldButton place-order, cinematic gold-ring success state; validation/offline-queue/loyalty untouched.
+- barcode-modal.tsx (96): glass surface, gold-corner scan brackets, glass manual entry + brand rows; BarcodeDetector logic untouched.
+- bowl-builder.tsx (853): staff order entry fully reskinned to the kit language (glass=13, display=17) — category/brand/flavor selection, cart, checkout all cinematic; logic untouched.
+
+Stage Summary:
+- The entire purchase funnel is now cinematic; lint+tsc clean.
+
+---
+Task ID: r56 (main)
+Agent: main (Z.ai Code — COO/CTO/UI architect)
+Task: "Do same for rest of pages and screens" — propagate the r55 Midnight Ember cinematic design system across EVERY app screen (21 components + shared kit), verified end-to-end.
+
+Work Log:
+- BUILT THE SHARED KIT (src/components/hookah/kit/kit.tsx, ~560 lines): ScreenShell (ember-glow + grain + vignette + optional fixed EmberField canvas), AppHeader (glass-on-scroll top bar, font-display wordmark, gold hairline), Kicker, CineCard, GoldButton (gold-gradient CTA + sheen sweep), TabBar (glass bottom nav, layoutId animated gold pill), Stagger/StaggerItem (cinema-ease blur-rise lists), StatTile (animated counting stat), EmptyState, Wordmark, SheetGrip, FadeSwap, EASE constant. All reduced-motion safe, RTL-logical, ≥44px targets.
+- FLAGSHIPS (main agent): sign-in.tsx (cinematic gateway — ember canvas backdrop, MAZAJ display wordmark + مــزاج kicker, glass role cards, molten-gold PIN dots with glow, GoldButton guest CTA), order-screen.tsx (glass AppHeader, cinematic hero with vignette + display headline + blur-in promos, glass search, gold preset tiles, StatTile-style legend, glass category cards, footer with Wordmark + hairline, spring floating cart bar with GoldButton), brand-card.tsx (glass + per-brand glow + display name + brand-color price + gold Build pill after VLM feedback), employee-dashboard.tsx (kit TabBar with gold pill, FadeSwap panel transitions, expanding gold FAB cluster).
+- SUBAGENT FLEET (5 dispatched in parallel; 4 hit the sandbox context-deadline but ALL completed their file edits — verified via git diff + kit-adoption audit (kit=1 glass/display counts across all 21 files); 3e reported fully): guest screens, staff panels A (orders/requests/employees/session-timer), staff panels B (inventory/profit/purchases/analytics), commerce sheets (config/cart/checkout/barcode/bowl-builder), experience surfaces (sommelier/favorites/get-app/install-landing/loyalty/sync).
+- i18n: +1 key (priceList) × EN/AR.
+- E2E VERIFIED (agent-browser, iPhone 14 + desktop 1440): landing → ORDER NOW → redesigned sign-in overlay → guest check-in "Salma" → category → brand cards → config sheet → cart (BYO 2-for-1 verified: 250→125) → checkout → ORDER PLACED → DB row confirmed (Salma · Table 7 · 125 EGP · guest_call) → live tracking sheet (#S7XZLI, gold status stepper, ~11min ETA, push opt-in) → order visible in employee Queue → PIN 3131 (Ember QA super_admin; sandbox DB hint text is stale — real employees differ) → dashboard: all 10 tabs (Queue badge, Inventory meters, Requests empty-state, Loyalty, Stats StatTiles), AR RTL (dir=rtl + Arabic tabs), zero horizontal overflow (390=390), zero console errors after fixes.
+- VLM QA (5 rounds): sign-in/guest-home/config/cart/tracking/brands/fab-fan/bowl-builder/desktop landing/desktop sign-in → ALL PASS after two fixes: (1) brand-card Build pills de-saturated to gold (VLM: red/pink clashed), (2) floating action stack → single expanding gold FAB + panel bottom padding pb-28→pb-44 (VLM: stack obscured queue cards).
+- BUGS FIXED: nested <button> hydration error (LangToggle wrapped in motion.button → motion.div), framer-motion "transparent not animatable" (PIN dots → oklch alpha-0), agent-browser eval click artifacts root-caused (stale test state, NOT app bugs — pad is deterministic: leftover "13" + clicks "3","1" → POST "1331" exactly as expected).
+- OPS: dev server OOM-flapped twice under parallel tsc/browser load (4GB sandbox) — restarted detached each time, final state stable 200; tsc --noEmit: 0 errors in src/; eslint: 0/0.
+
+Stage Summary:
+- Every screen of the platform now speaks the same cinematic language as the landing: the sign-in gateway, the full guest journey (order → cart → checkout → tracking), the entire staff suite (10 panels + bowl builder), and every sheet (config, cart, checkout, barcode, sommelier, favorites, get-app, install landing) — glass surfaces, gold serif typography, ember atmosphere, cinema-ease choreography, bilingual EN/AR with RTL, reduced-motion safe.
+- Evidence: download/r56-*.png (mobile: landing, signin, guest-home, brands, config-sheet, cartbar, cart-drawer, cart-byo, checkout, order-placed, tracking, pinpad, employee-dash, employee-queue, fab-fan, inventory, requests, loyalty, stats, bowlbuilder, ar-rtl ×2; desktop: landing, signin, getapp).
+- Ready to ship: commit → push → Vercel.

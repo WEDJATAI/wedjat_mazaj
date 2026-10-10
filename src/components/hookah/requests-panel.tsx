@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -17,6 +16,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  AppHeader,
+  EmptyState,
+  GoldButton,
+  Kicker,
+  StatTile,
+  Stagger,
+  StaggerItem,
+} from "./kit/kit";
 
 interface ServiceRequest {
   id: string;
@@ -39,6 +47,14 @@ function timeAgo(iso: string): string {
   if (hr < 24) return `${hr}h ago`;
   return new Date(iso).toLocaleDateString();
 }
+
+/* ── Midnight Ember shared bits (panel-local) ─────────────────────────── */
+
+const glassIconBtn =
+  "glass grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-all hover:border-primary/50 hover:text-foreground active:scale-95";
+
+const donePillBtn =
+  "inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 text-sm font-semibold text-emerald-500 transition-all hover:bg-emerald-500/20 active:scale-[0.97]";
 
 export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
   const [requests, setRequests] = React.useState<ServiceRequest[]>([]);
@@ -88,101 +104,108 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
   const done = requests.filter((r) => r.status === "done");
 
   return (
-    <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
+    <div className="dark relative flex min-h-screen flex-col text-foreground">
       <div className="ember-glow pointer-events-none absolute inset-0" />
       <div className="relative flex min-h-screen flex-col">
-        <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
-              <BellRing className="size-5" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-base font-bold tracking-tight smoke-text">
-                Requests
-              </p>
-              <p className="-mt-0.5 text-[11px] text-muted-foreground">
-                Guest calls for the shisha man
-              </p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
+        <AppHeader
+          icon={<BellRing className="size-5" />}
+          title="Requests"
+          subtitle="Guest calls for the shisha man"
+          actions={
+            <>
               {pending.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="gap-1 border border-primary/30 bg-primary/15 text-primary"
-                >
-                  <BellRing className="size-3" /> {pending.length} new
-                </Badge>
+                <span className="hidden items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary ring-1 ring-primary/40 sm:inline-flex">
+                  <BellRing className="size-3.5" /> {pending.length} new
+                </span>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
+              <button
+                type="button"
                 onClick={load}
                 aria-label="Refresh"
+                title="Refresh"
+                className={glassIconBtn}
               >
                 <RefreshCw className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
+              </button>
+              <button
+                type="button"
                 onClick={onSignOut}
                 aria-label="Sign out"
+                title="Sign out"
+                className={glassIconBtn}
               >
                 <LogOut className="size-4" />
-              </Button>
-            </div>
-          </div>
-        </header>
+              </button>
+            </>
+          }
+        />
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-44 pt-6 sm:px-5">
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 rounded-2xl" />
+                <Skeleton key={i} className="h-32 rounded-2xl bg-white/[0.05]" />
               ))}
             </div>
           ) : requests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-              <div className="grid size-16 place-items-center rounded-full bg-muted/50">
-                <HandHelping className="size-7 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium">No requests yet</p>
-                <p className="text-sm text-muted-foreground">
-                  When a guest calls the shisha man, it shows up here.
-                </p>
-              </div>
-            </div>
+            <EmptyState
+              className="mt-6"
+              icon={<HandHelping className="size-6" />}
+              title="No requests yet"
+              description="When a guest calls the shisha man, it shows up here."
+            />
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-8">
+              {/* Live request pulse — gold stat tiles */}
+              <div className="grid grid-cols-3 gap-3">
+                <StatTile
+                  icon={<BellRing className="size-4" />}
+                  text={String(pending.length)}
+                  label="Pending"
+                />
+                <StatTile
+                  icon={<HandHelping className="size-4" />}
+                  text={String(active.length)}
+                  label="In progress"
+                />
+                <StatTile
+                  icon={<CheckCheck className="size-4" />}
+                  text={String(done.length)}
+                  label="Done"
+                />
+              </div>
+
               {pending.length > 0 && (
                 <Section title="Pending" count={pending.length}>
                   {pending.map((r) => (
-                    <RequestCard
-                      key={r.id}
-                      req={r}
-                      onAck={() => acknowledge(r, "acknowledged")}
-                    />
+                    <StaggerItem key={r.id}>
+                      <RequestCard
+                        req={r}
+                        onAck={() => acknowledge(r, "acknowledged")}
+                      />
+                    </StaggerItem>
                   ))}
                 </Section>
               )}
               {active.length > 0 && (
                 <Section title="In progress" count={active.length}>
                   {active.map((r) => (
-                    <RequestCard
-                      key={r.id}
-                      req={r}
-                      onAck={() => acknowledge(r, "done")}
-                      ackLabel="Mark done"
-                    />
+                    <StaggerItem key={r.id}>
+                      <RequestCard
+                        req={r}
+                        onAck={() => acknowledge(r, "done")}
+                        ackLabel="Mark done"
+                      />
+                    </StaggerItem>
                   ))}
                 </Section>
               )}
               {done.length > 0 && (
                 <Section title="Done" count={done.length} muted>
                   {done.map((r) => (
-                    <RequestCard key={r.id} req={r} />
+                    <StaggerItem key={r.id}>
+                      <RequestCard req={r} />
+                    </StaggerItem>
                   ))}
                 </Section>
               )}
@@ -190,10 +213,10 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
           )}
         </main>
 
-        <footer className="relative mt-auto border-t border-border bg-background/60 py-6">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-1.5 px-4 text-center text-xs text-muted-foreground">
-            <Flame className="size-3 text-primary" />
-            Auto-refreshes every 15 seconds
+        <footer className="relative mt-auto border-t border-white/[0.06] bg-[oklch(0.135_0.014_60/0.6)] py-6">
+          <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-2 px-4 text-center text-xs text-muted-foreground">
+            <Flame className="size-3.5 text-primary" aria-hidden />
+            <span>Auto-refreshes every 15 seconds</span>
           </div>
         </footer>
       </div>
@@ -213,21 +236,82 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <div className="mb-2 flex items-center gap-2">
-        <h2
+    <section>
+      <div className="mb-3 flex items-center gap-2.5">
+        <Kicker className={muted ? "opacity-60" : undefined}>{title}</Kicker>
+        <span
           className={cn(
-            "text-sm font-semibold",
-            muted ? "text-muted-foreground" : "text-foreground"
+            "grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[10px] font-bold ring-1",
+            muted
+              ? "bg-white/[0.04] text-muted-foreground ring-white/10"
+              : "bg-primary/15 text-primary ring-primary/35"
           )}
+          aria-label={`${count} requests`}
         >
-          {title}
-        </h2>
-        <Badge variant="secondary" className="bg-muted/60 text-muted-foreground">
           {count}
-        </Badge>
+        </span>
       </div>
-      <div className="space-y-3">{children}</div>
+      <Stagger className="space-y-3">{children}</Stagger>
+    </section>
+  );
+}
+
+/* ── Gold status stepper — Requested → Acknowledged → Done ────────────── */
+
+const STEP_LABELS = ["Requested", "Acknowledged", "Done"] as const;
+
+function GoldStepper({ status }: { status: string }) {
+  const current =
+    status === "done" ? 2 : status === "acknowledged" ? 1 : 0;
+  return (
+    <div className="mt-3.5" aria-label={`Status: ${status}`}>
+      <div className="flex items-center">
+        {STEP_LABELS.map((label, i) => (
+          <React.Fragment key={label}>
+            {i > 0 && (
+              <span
+                className={cn(
+                  "h-px flex-1 transition-colors duration-500",
+                  i <= current ? "bg-primary/55" : "bg-white/10"
+                )}
+                aria-hidden
+              />
+            )}
+            <span
+              className={cn(
+                "grid size-6 shrink-0 place-items-center rounded-full text-[10px] font-bold transition-all duration-500",
+                i < current &&
+                  "bg-primary/20 text-primary ring-1 ring-primary/50",
+                i === current &&
+                  status !== "done" &&
+                  "bg-primary/15 text-primary ring-1 ring-primary/60 shadow-[0_0_12px_oklch(0.78_0.15_65/0.4)] animate-pulse motion-reduce:animate-none",
+                i === current &&
+                  status === "done" &&
+                  "bg-primary text-primary-foreground ring-1 ring-primary shadow-[0_0_14px_oklch(0.78_0.15_65/0.55)]",
+                i > current &&
+                  "bg-white/[0.04] text-muted-foreground/70 ring-1 ring-white/10"
+              )}
+            >
+              {i < current ? <CheckCheck className="size-3" /> : i + 1}
+            </span>
+          </React.Fragment>
+        ))}
+      </div>
+      <div className="mt-1.5 flex items-center justify-between">
+        {STEP_LABELS.map((label, i) => (
+          <span
+            key={label}
+            className={cn(
+              "text-[10px] font-medium tracking-wide",
+              i === 0 && "text-start",
+              i === STEP_LABELS.length - 1 && "text-end",
+              i <= current ? "text-gold-soft" : "text-muted-foreground/70"
+            )}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -247,46 +331,50 @@ function RequestCard({
     : req.type === "call_shisha_man"
     ? "Call the shisha man"
     : req.type;
+  const statusLabel =
+    req.status.charAt(0).toUpperCase() + req.status.slice(1);
+
+  const pillCls =
+    req.status === "pending"
+      ? isCoal
+        ? "rounded-full border-transparent bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/45"
+        : "rounded-full border-transparent bg-primary/15 text-primary ring-1 ring-primary/45"
+      : req.status === "acknowledged"
+      ? "rounded-full border-transparent bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/40"
+      : "rounded-full border-transparent bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/40";
+
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-card p-4",
-        req.status === "pending"
-          ? isCoal
-            ? "border-amber-500/50"
-            : "border-primary/50"
-          : req.status === "acknowledged"
-          ? "border-amber-500/40"
-          : "border-border opacity-70"
+        "glass relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]",
+        req.status === "pending" &&
+          (isCoal ? "ring-1 ring-amber-500/40" : "ring-1 ring-primary/45"),
+        req.status === "acknowledged" && "ring-1 ring-amber-500/30",
+        req.status === "done" && "opacity-70"
       )}
     >
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            "grid size-10 shrink-0 place-items-center rounded-xl",
+            "grid size-11 shrink-0 place-items-center rounded-xl ring-1",
             isCoal
-              ? "bg-amber-500/15 text-amber-500"
-              : "bg-primary/15 text-primary"
+              ? "bg-amber-500/15 text-amber-500 ring-amber-500/30"
+              : "bg-primary/15 text-primary ring-primary/30"
           )}
         >
-          {isCoal ? <Flame className="size-5" /> : <HandHelping className="size-5" />}
+          {isCoal ? (
+            <Flame className="size-5" />
+          ) : (
+            <HandHelping className="size-5" />
+          )}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">{title}</p>
-            <Badge
-              variant="secondary"
-              className={cn(
-                req.status === "pending"
-                  ? isCoal
-                    ? "border border-amber-500/30 bg-amber-500/15 text-amber-500"
-                    : "border border-primary/30 bg-primary/15 text-primary"
-                  : req.status === "acknowledged"
-                  ? "border border-amber-500/30 bg-amber-500/15 text-amber-500"
-                  : "bg-muted/60 text-muted-foreground"
-              )}
-            >
-              {req.status}
+            <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
+              {title}
+            </p>
+            <Badge variant="secondary" className={pillCls}>
+              {statusLabel}
             </Badge>
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -300,25 +388,32 @@ function RequestCard({
                 <MapPin className="size-3" /> {req.table}
               </span>
             )}
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 tabular-nums">
               <Clock className="size-3" /> {timeAgo(req.createdAt)}
             </span>
           </div>
           {req.note && (
-            <p className="mt-2 rounded-lg bg-muted/40 px-3 py-2 text-sm text-foreground/80">
+            <p className="mt-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2.5 text-sm italic text-foreground/80">
               “{req.note}”
             </p>
           )}
         </div>
       </div>
+
+      <GoldStepper status={req.status} />
+
       {onAck && (
-        <Button
-          className="mt-3 w-full rounded-xl"
-          variant={req.status === "pending" ? "default" : "outline"}
-          onClick={onAck}
-        >
-          <CheckCheck className="size-4" /> {ackLabel}
-        </Button>
+        <div className="mt-3.5">
+          {req.status === "pending" ? (
+            <GoldButton className="h-11 w-full text-sm" onClick={onAck}>
+              <CheckCheck className="size-4" /> {ackLabel}
+            </GoldButton>
+          ) : (
+            <button type="button" className={donePillBtn} onClick={onAck}>
+              <CheckCheck className="size-4" /> {ackLabel}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

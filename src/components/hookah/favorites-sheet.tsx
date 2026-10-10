@@ -10,22 +10,24 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Heart,
   Plus,
   Trash2,
-  Star,
   Loader2,
   Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
+import {
+  EmptyState,
+  GoldButton,
+  SheetGrip,
+  Stagger,
+  StaggerItem,
+} from "./kit/kit";
 
 export interface FavoriteMix {
   id: string;
@@ -146,37 +148,42 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="slim-scroll mx-auto max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl border-t border-border p-0"
+        className="slim-scroll mx-auto max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl border-t border-white/[0.08] bg-[oklch(0.175_0.015_60/0.92)] p-0 backdrop-blur-2xl"
       >
-        <SheetHeader className="px-5 pt-5 pb-2">
-          <SheetTitle className="flex items-center gap-2">
-            <Heart className="size-5 text-primary" /> {t("favTitle")}
+        <SheetHeader className="px-5 pb-1 pt-2">
+          <SheetGrip />
+          <SheetTitle className="font-display text-center text-2xl font-bold tracking-tight text-gold-soft">
+            {t("favTitle")}
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-center text-xs">
             {t("favDesc")}, {guestName}.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-5 px-5 pb-5">
+        <div className="space-y-5 px-5 pb-8 pt-3">
           {/* Save current mix */}
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-3">
-            <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+          <div className="glass relative overflow-hidden rounded-2xl p-3.5">
+            <div
+              className="pointer-events-none absolute -end-8 -top-10 size-28 rounded-full bg-primary/15 opacity-50 blur-3xl"
+              aria-hidden
+            />
+            <p className="relative mb-2.5 flex items-center gap-1.5 text-sm font-semibold">
               <Sparkles className="size-4 text-primary" /> {t("saveCurrentMix")}
             </p>
             {canSave ? (
-              <div className="flex gap-2">
+              <div className="relative flex gap-2">
                 <Input
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder={t("favPlaceholder")}
                   aria-label="Favorite name"
-                  className="flex-1"
+                  className="h-11 flex-1 rounded-full border-white/[0.09] bg-white/[0.04] px-4 text-sm"
                   onKeyDown={(e) => e.key === "Enter" && saveFavorite()}
                 />
-                <Button
+                <GoldButton
                   onClick={saveFavorite}
                   disabled={!label.trim() || savingLabel}
-                  className="rounded-xl"
+                  className="shrink-0"
                 >
                   {savingLabel ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -185,10 +192,10 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
                       <Plus className="size-4" /> {t("saveBtn")}
                     </>
                   )}
-                </Button>
+                </GoldButton>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="relative text-xs text-muted-foreground">
                 {t("favHint")}
               </p>
             )}
@@ -198,56 +205,54 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 2 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 rounded-2xl" />
+                <Skeleton key={i} className="h-24 rounded-2xl bg-white/[0.05]" />
               ))}
             </div>
           ) : favorites.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-              {t("noFavs")}
-            </div>
+            <EmptyState
+              icon={<Heart className="size-6" />}
+              title={t("noFavs")}
+            />
           ) : (
-            <ul className="space-y-2">
+            <Stagger className="space-y-2">
               {favorites.map((fav) => {
                 const comps = parsedComponents(fav.componentsJson);
                 const unit = mixPrice(comps.map((c) => c.brandId));
                 return (
-                  <li
-                    key={fav.id}
-                    className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3"
-                  >
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
-                      <Star className="size-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{fav.label}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {comps.map((c) => `${c.brandName} ${c.flavorName}`).join(" + ")}
-                      </p>
-                      <p className="mt-0.5 text-xs font-semibold text-primary">
-                        {egp(unit)}
-                      </p>
+                  <StaggerItem key={fav.id}>
+                    <div className="glass group flex items-center gap-3 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary ring-1 ring-primary/25">
+                        <Heart className="size-5 fill-current" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display truncate text-base font-bold tracking-tight text-gold-soft">
+                          {fav.label}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {comps.map((c) => `${c.brandName} ${c.flavorName}`).join(" + ")}
+                        </p>
+                        <p className="font-display mt-0.5 text-xs font-bold tabular-nums text-gold">
+                          {egp(unit)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-1.5">
+                        <GoldButton size="sm" onClick={() => applyFavorite(fav)}>
+                          {t("addBtn")}
+                        </GoldButton>
+                        <button
+                          type="button"
+                          onClick={() => deleteFavorite(fav.id)}
+                          className="grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Delete ${fav.label}`}
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Button
-                        size="sm"
-                        className="rounded-lg"
-                        onClick={() => applyFavorite(fav)}
-                      >
-                        {t("addBtn")}
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => deleteFavorite(fav.id)}
-                        className="grid place-items-center rounded-lg p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`Delete ${fav.label}`}
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
-                  </li>
+                  </StaggerItem>
                 );
               })}
-            </ul>
+            </Stagger>
           )}
         </div>
       </SheetContent>

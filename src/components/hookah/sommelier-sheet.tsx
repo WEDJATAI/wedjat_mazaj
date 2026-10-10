@@ -8,10 +8,10 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sparkles, Send, Trash2, Plus, Loader2, Wand2 } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { egp, getBrand, BOWL_PRESETS, MOLASSES_GRAMS } from "@/lib/catalog";
 import type { SommPick } from "@/lib/sommelier";
@@ -24,6 +24,7 @@ import {
 import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
+import { EASE, GoldButton, SheetGrip } from "./kit/kit";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -251,16 +252,17 @@ export function SommelierSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="mx-auto flex h-[88vh] w-full max-w-xl flex-col rounded-t-3xl border-t border-border p-0"
+        className="mx-auto flex h-[88vh] w-full max-w-xl flex-col rounded-t-3xl border-t border-white/[0.08] bg-[oklch(0.175_0.015_60/0.92)] p-0 backdrop-blur-2xl"
       >
-        <SheetHeader className="border-b border-border px-5 pb-3 pt-5">
+        <SheetHeader className="border-b border-white/[0.06] px-5 pb-3 pt-2">
+          <SheetGrip kicker="AI SOMMELIER" />
           <div className="flex items-center gap-3">
-            <span className="relative grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/15 text-primary">
+            <span className="relative grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary ring-1 ring-primary/25">
               <Wand2 className="size-5" />
-              <span className="absolute -right-1 -top-1 size-3 animate-pulse rounded-full bg-primary" />
+              <span className="absolute -end-1 -top-1 size-3 animate-pulse rounded-full bg-primary shadow-[0_0_10px_oklch(0.78_0.15_65/0.7)]" />
             </span>
             <div className="min-w-0 flex-1">
-              <SheetTitle className="flex flex-wrap items-center gap-2 text-lg">
+              <SheetTitle className="flex flex-wrap items-center gap-2 font-display text-lg font-bold tracking-tight text-gold-soft">
                 {t("aiSommelier")}
                 <Badge
                   variant="secondary"
@@ -275,15 +277,14 @@ export function SommelierSheet({
               </SheetDescription>
             </div>
             {messages.length > 0 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 shrink-0 rounded-full"
+              <button
+                type="button"
                 onClick={clearChat}
                 aria-label={t("clearChat")}
+                className="glass grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
               >
                 <Trash2 className="size-4" />
-              </Button>
+              </button>
             )}
           </div>
         </SheetHeader>
@@ -295,21 +296,26 @@ export function SommelierSheet({
         >
           {messages.length === 0 && (
             <div className="space-y-4 pt-2">
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                <p className="text-sm leading-relaxed text-foreground/90">
+              <div className="glass relative overflow-hidden rounded-2xl p-4">
+                <div
+                  className="pointer-events-none absolute -end-8 -top-10 size-28 rounded-full bg-primary/15 opacity-50 blur-3xl"
+                  aria-hidden
+                />
+                <p className="relative text-sm leading-relaxed text-foreground/90">
                   {t("sommelierGreeting")}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {quickChips.map((c) => (
-                  <button
+                  <motion.button
                     key={c.label}
                     type="button"
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => send(c.query)}
-                    className="rounded-full border border-primary/40 bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary transition-all hover:bg-primary/20 active:scale-95"
+                    className="glass rounded-full px-3.5 py-2 text-xs font-semibold text-gold-soft transition-all duration-300 hover:border-primary/40 hover:text-primary"
                   >
                     {c.label}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>
@@ -319,19 +325,29 @@ export function SommelierSheet({
             <div key={i} className="space-y-2">
               {m.role === "user" ? (
                 <div className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm text-primary-foreground">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, filter: "blur(3px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    transition={{ duration: 0.4, ease: EASE }}
+                    className="max-w-[85%] rounded-2xl rounded-ee-md bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] px-3.5 py-2.5 text-sm font-medium text-[oklch(0.17_0.03_50)] shadow-[0_8px_24px_-10px_oklch(0.72_0.145_60/0.55)]"
+                  >
                     {m.content}
-                  </div>
+                  </motion.div>
                 </div>
               ) : (
                 <div className="flex justify-start">
                   <div className="max-w-[92%] space-y-2">
-                    <div className="rounded-2xl rounded-bl-md border border-border bg-card px-3.5 py-2.5 text-sm leading-relaxed">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, filter: "blur(3px)" }}
+                      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                      transition={{ duration: 0.4, ease: EASE }}
+                      className="glass rounded-2xl rounded-es-md px-3.5 py-2.5 text-sm leading-relaxed"
+                    >
                       <Typewriter
                         text={m.content}
                         animate={i === messages.length - 1}
                       />
-                    </div>
+                    </motion.div>
                     {m.source === "engine" && (
                       <p className="px-1 text-[10px] text-muted-foreground">
                         {t("engineBadge")}
@@ -339,17 +355,18 @@ export function SommelierSheet({
                     )}
                     {m.picks && m.picks.length > 0 && mode === "guest" && (
                       <div className="space-y-1.5">
-                        <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-gold-soft">
                           {t("quickAdd")}
                         </p>
                         {m.picks.map((p) => (
-                          <button
+                          <motion.button
                             key={p.id}
                             type="button"
+                            whileTap={{ scale: 0.99 }}
                             onClick={() => addPick(p)}
-                            className="group flex w-full items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 text-start transition-all hover:border-primary/60 hover:bg-primary/5 active:scale-[0.99]"
+                            className="group glass flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_14px_36px_-16px_rgba(0,0,0,0.7)]"
                           >
-                            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary transition-transform group-hover:scale-105">
+                            <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary transition-transform group-hover:scale-105">
                               <Plus className="size-4" />
                             </span>
                             <span className="min-w-0 flex-1">
@@ -362,10 +379,10 @@ export function SommelierSheet({
                                 </span>
                               )}
                             </span>
-                            <span className="shrink-0 text-sm font-bold text-primary">
+                            <span className="font-display shrink-0 text-sm font-bold tabular-nums text-gold">
                               {egp(p.price)}
                             </span>
-                          </button>
+                          </motion.button>
                         ))}
                       </div>
                     )}
@@ -377,12 +394,8 @@ export function SommelierSheet({
 
           {thinking && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-border bg-card px-3.5 py-2.5">
-                <span className="flex gap-1">
-                  <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:0ms]" />
-                  <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
-                  <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:300ms]" />
-                </span>
+              <div className="glass flex items-center gap-2.5 rounded-2xl rounded-es-md px-4 py-3">
+                <TypingDots />
                 <span className="text-xs text-muted-foreground">
                   {t("thinking")}
                 </span>
@@ -392,7 +405,7 @@ export function SommelierSheet({
         </div>
 
         {/* Input */}
-        <div className="border-t border-border bg-background/80 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+        <div className="border-t border-white/[0.06] bg-[oklch(0.155_0.014_60/0.72)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl">
           <form
             className="flex items-center gap-2"
             onSubmit={(e) => {
@@ -404,15 +417,14 @@ export function SommelierSheet({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t("askPlaceholder")}
-              className="h-11 flex-1 rounded-full border-border bg-card px-4 text-sm"
+              className="h-11 flex-1 rounded-full border-white/[0.09] bg-white/[0.04] px-4 text-sm"
               maxLength={400}
               dir={lang === "ar" ? "rtl" : "ltr"}
               aria-label={t("askPlaceholder")}
             />
-            <Button
+            <GoldButton
               type="submit"
-              size="icon"
-              className="size-11 shrink-0 rounded-full"
+              className="size-11 shrink-0 rounded-full p-0"
               disabled={!input.trim() || thinking}
               aria-label={t("sendBtn")}
             >
@@ -421,14 +433,43 @@ export function SommelierSheet({
               ) : (
                 <Send className="size-4 rtl:-scale-x-100" />
               )}
-            </Button>
+            </GoldButton>
           </form>
           <p className="mt-1.5 flex items-center justify-center gap-1 text-center text-[10px] text-muted-foreground">
-            <Sparkles className="size-3" /> {t("sommelierTagline")}
+            <Sparkles className="size-3 text-primary" /> {t("sommelierTagline")}
           </p>
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** Pulsing gold dots — the sommelier is composing. */
+function TypingDots() {
+  const reduced = useReducedMotion();
+  return (
+    <span className="flex gap-1.5" aria-hidden>
+      {[0, 1, 2].map((i) =>
+        reduced ? (
+          <span
+            key={i}
+            className="size-1.5 rounded-full bg-primary/70"
+          />
+        ) : (
+          <motion.span
+            key={i}
+            className="size-1.5 rounded-full bg-primary shadow-[0_0_8px_oklch(0.78_0.15_65/0.6)]"
+            animate={{ opacity: [0.25, 1, 0.25], scale: [0.8, 1.2, 0.8] }}
+            transition={{
+              duration: 1.1,
+              repeat: Infinity,
+              delay: i * 0.18,
+              ease: "easeInOut",
+            }}
+          />
+        )
+      )}
+    </span>
   );
 }
 

@@ -1,12 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
   Crown,
   RefreshCw,
@@ -28,6 +25,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AppHeader,
+  EmptyState,
+  GoldButton,
+  Kicker,
+  ScreenShell,
+  StatTile,
+  Stagger,
+  StaggerItem,
+} from "./kit/kit";
 
 interface MemberRow {
   id: string;
@@ -83,149 +90,176 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
     : members;
 
   return (
-    <div className="dark relative flex min-h-screen flex-col bg-background text-foreground">
-      <div className="ember-glow pointer-events-none absolute inset-0" />
-      <div className="relative flex min-h-screen flex-col">
-        <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
-              <Crown className="size-5" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-base font-bold tracking-tight smoke-text">
-                Mazaj+ Loyalty
-              </p>
-              <p className="-mt-0.5 text-[11px] text-muted-foreground">
-                Rewards members, points &amp; tiers
-              </p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                size="sm"
-                className="gap-2 rounded-xl"
-                onClick={() => setEnrollOpen(true)}
-              >
-                <UserPlus className="size-4" />
-                <span className="hidden sm:inline">Enroll</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
-                onClick={load}
-                aria-label="Refresh"
-              >
-                <RefreshCw className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
-                onClick={onSignOut}
-                aria-label="Sign out"
-              >
-                <LogOut className="size-4" />
-              </Button>
-            </div>
-          </div>
-        </header>
+    <ScreenShell className="min-h-screen">
+      <AppHeader
+        icon={<Crown className="size-5" />}
+        title="Mazaj+ Loyalty"
+        subtitle="Rewards members, points & tiers"
+        actions={
+          <>
+            <GoldButton size="sm" onClick={() => setEnrollOpen(true)}>
+              <UserPlus className="size-3.5" />
+              <span className="hidden sm:inline">Enroll</span>
+            </GoldButton>
+            <button
+              type="button"
+              onClick={load}
+              aria-label="Refresh"
+              className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <RefreshCw className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onSignOut}
+              aria-label="Sign out"
+              className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </>
+        }
+      />
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6">
-          {loading || !stats ? (
-            <div className="space-y-4">
-              <Skeleton className="h-28 rounded-2xl" />
-              <Skeleton className="h-64 rounded-2xl" />
-            </div>
-          ) : (
-            <>
-              {/* Program stats */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Stat
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-44 pt-6 sm:px-5">
+        {loading || !stats ? (
+          <div className="space-y-4">
+            <Skeleton className="h-28 rounded-2xl bg-white/[0.05]" />
+            <Skeleton className="h-64 rounded-2xl bg-white/[0.05]" />
+          </div>
+        ) : (
+          <>
+            {/* Program stats */}
+            <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StaggerItem>
+                <StatTile
                   icon={<Crown className="size-4" />}
+                  value={stats.members}
                   label="Members"
-                  value={String(stats.members)}
-                  accent
                 />
-                <Stat
+              </StaggerItem>
+              <StaggerItem>
+                <StatTile
                   icon={<Coins className="size-4" />}
-                  label="Points outstanding"
-                  value={stats.pointsOutstanding.toLocaleString()}
-                  sub="redeemable balance"
+                  value={stats.pointsOutstanding}
+                  label={
+                    <>
+                      Points outstanding
+                      <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal opacity-70">
+                        redeemable balance
+                      </span>
+                    </>
+                  }
                 />
-                <Stat
+              </StaggerItem>
+              <StaggerItem>
+                <StatTile
                   icon={<Sparkles className="size-4" />}
-                  label="Points earned"
-                  value={stats.pointsEarned.toLocaleString()}
-                  sub="all-time"
+                  value={stats.pointsEarned}
+                  label={
+                    <>
+                      Points earned
+                      <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal opacity-70">
+                        all-time
+                      </span>
+                    </>
+                  }
                 />
-                <Stat
+              </StaggerItem>
+              <StaggerItem>
+                <StatTile
                   icon={<Gift className="size-4" />}
-                  label="Points redeemed"
-                  value={stats.pointsRedeemed.toLocaleString()}
-                  sub={`≈ ${egp((stats.pointsRedeemed / 100) * 25)} given back`}
+                  value={stats.pointsRedeemed}
+                  label={
+                    <>
+                      Points redeemed
+                      <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal opacity-70">
+                        ≈ {egp((stats.pointsRedeemed / 100) * 25)} given back
+                      </span>
+                    </>
+                  }
+                />
+              </StaggerItem>
+            </Stagger>
+
+            {/* Tier legend */}
+            <section className="glass mt-4 rounded-2xl p-4">
+              <Kicker className="mb-3 justify-start">How Mazaj+ works</Kicker>
+              <div className="grid gap-2 sm:grid-cols-4">
+                {TIERS.map((t) => (
+                  <div
+                    key={t.key}
+                    className={cn("rounded-xl p-2.5 backdrop-blur-sm", t.cls)}
+                  >
+                    <p className="font-display text-sm font-bold">
+                      {t.emoji} {t.label}
+                    </p>
+                    <p className="text-[11px] opacity-80">
+                      {t.min}+ lifetime pts · ×{t.multiplier} earn
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                1 pt per 1 EGP · 100 pts = {egp(25)} off · new members get a
+                50-pt welcome bonus. Guests join automatically when they
+                order with a phone number.
+              </p>
+            </section>
+
+            {/* Members */}
+            <section className="mt-6">
+              <h2 className="sr-only">
+                Members ({filtered.length})
+              </h2>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <Kicker className="justify-start">
+                  Members · {filtered.length}
+                </Kicker>
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search name / phone…"
+                  className="h-10 w-44 rounded-full border-white/[0.09] bg-white/[0.04] text-sm sm:w-56"
+                  aria-label="Search members"
                 />
               </div>
-
-              {/* Tier legend */}
-              <section className="mt-4 rounded-2xl border border-border bg-card/60 p-4">
-                <p className="text-sm font-semibold">How Mazaj+ works</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-4">
-                  {TIERS.map((t) => (
-                    <div
-                      key={t.key}
-                      className={cn("rounded-xl border p-2.5", t.cls)}
-                    >
-                      <p className="text-sm font-bold">
-                        {t.emoji} {t.label}
-                      </p>
-                      <p className="text-[11px] opacity-80">
-                        {t.min}+ lifetime pts · ×{t.multiplier} earn
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  1 pt per 1 EGP · 100 pts = {egp(25)} off · new members get a
-                  50-pt welcome bonus. Guests join automatically when they
-                  order with a phone number.
-                </p>
-              </section>
-
-              {/* Members */}
-              <section className="mt-6">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-bold tracking-tight">
-                    Members ({filtered.length})
-                  </h2>
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search name / phone…"
-                    className="h-9 w-44 rounded-xl text-sm sm:w-56"
-                    aria-label="Search members"
-                  />
-                </div>
-                {filtered.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                    {members.length === 0
-                      ? "No members yet — guests join automatically when ordering with a phone number, or enroll them manually."
-                      : "No members match your search."}
-                  </div>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {filtered.map((m) => {
-                      const td = tierDef(m.tier);
-                      const prog = nextTierProgress(m.lifetimePoints);
-                      return (
-                        <div
-                          key={m.id}
-                          className="rounded-2xl border border-border bg-card p-4"
-                        >
+              {filtered.length === 0 ? (
+                <EmptyState
+                  icon={<UserPlus className="size-6" />}
+                  title={
+                    members.length === 0
+                      ? "No members yet"
+                      : "No members match your search."
+                  }
+                  description={
+                    members.length === 0
+                      ? "Guests join automatically when ordering with a phone number, or enroll them manually."
+                      : undefined
+                  }
+                  action={
+                    members.length === 0 ? (
+                      <GoldButton size="sm" onClick={() => setEnrollOpen(true)}>
+                        <UserPlus className="size-3.5" /> Enroll a member
+                      </GoldButton>
+                    ) : undefined
+                  }
+                />
+              ) : (
+                <Stagger className="grid gap-3 sm:grid-cols-2">
+                  {filtered.map((m) => {
+                    const td = tierDef(m.tier);
+                    const prog = nextTierProgress(m.lifetimePoints);
+                    return (
+                      <StaggerItem key={m.id}>
+                        <div className="glass group rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)]">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2.5">
-                              <span className="text-2xl">{td.emoji}</span>
+                              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-xl ring-1 ring-primary/20">
+                                {td.emoji}
+                              </span>
                               <div className="min-w-0">
-                                <p className="truncate font-semibold">
+                                <p className="font-display truncate text-base font-bold tracking-tight text-gold-soft">
                                   {m.name}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
@@ -233,65 +267,70 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                                 </p>
                               </div>
                             </div>
-                            <div className="shrink-0 text-right">
-                              <p className="text-lg font-bold text-primary">
+                            <div className="shrink-0 text-end">
+                              <p className="font-display text-lg font-bold tabular-nums text-gold">
                                 {m.points}
                                 <span className="text-xs font-normal text-muted-foreground">
                                   {" "}
                                   pts
                                 </span>
                               </p>
-                              <Badge
-                                variant="secondary"
-                                className={cn("mt-0.5", td.cls)}
+                              <span
+                                className={cn(
+                                  "mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                                  td.cls
+                                )}
                               >
                                 {td.label}
-                              </Badge>
+                              </span>
                             </div>
                           </div>
 
                           {/* next tier progress */}
                           {prog.next ? (
                             <div className="mt-3">
-                              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
                                 <div
-                                  className="h-full rounded-full bg-primary transition-all"
+                                  className="h-full rounded-full bg-gradient-to-r from-[oklch(0.72_0.145_60)] to-[oklch(0.86_0.13_74)] transition-all"
                                   style={{ width: `${prog.pct}%` }}
                                 />
                               </div>
                               <p className="mt-1 text-[11px] text-muted-foreground">
                                 {prog.remaining} pts to{" "}
                                 {prog.next.emoji} {prog.next.label} ·{" "}
-                                {m.lifetimePoints} lifetime
+                                <span className="font-display font-semibold text-gold-soft">
+                                  {m.lifetimePoints}
+                                </span>{" "}
+                                lifetime
                               </p>
                             </div>
                           ) : (
-                            <p className="mt-3 text-[11px] font-medium text-primary">
+                            <p className="font-display mt-3 text-[11px] font-semibold text-gold-soft">
                               💎 Top tier — {m.lifetimePoints} lifetime points
                             </p>
                           )}
-                          <Separator className="my-2" />
+                          <div className="ember-hairline my-2.5" aria-hidden />
                           <p className="text-[11px] text-muted-foreground">
                             Member since{" "}
                             {new Date(m.createdAt).toLocaleDateString()}
                           </p>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            </>
-          )}
-        </main>
-      </div>
+                      </StaggerItem>
+                    );
+                  })}
+                </Stagger>
+              )}
+            </section>
+          </>
+        )}
+      </main>
 
       <EnrollDialog
         open={enrollOpen}
         onOpenChange={setEnrollOpen}
         onEnrolled={() => load()}
       />
-    </div>
+    </ScreenShell>
   );
 }
 
@@ -345,10 +384,13 @@ function EnrollDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !sending && onOpenChange(o)}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="border-white/[0.08] bg-[oklch(0.175_0.015_60/0.92)] backdrop-blur-2xl sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="size-5 text-primary" /> Enroll a member
+          <DialogTitle className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight text-gold-soft">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary ring-1 ring-primary/25">
+              <UserPlus className="size-4" />
+            </span>
+            Enroll a member
           </DialogTitle>
           <DialogDescription>
             They start with a 50-point welcome bonus (100 pts = {egp(25)} off).
@@ -364,6 +406,7 @@ function EnrollDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Ahmed Hassan"
+              className="h-11 rounded-xl border-white/[0.09] bg-white/[0.04]"
             />
           </div>
           <div className="space-y-1.5">
@@ -376,11 +419,12 @@ function EnrollDialog({
               onChange={(e) => setPhone(e.target.value)}
               placeholder="01xxxxxxxxx"
               inputMode="tel"
+              className="h-11 rounded-xl border-white/[0.09] bg-white/[0.04]"
             />
           </div>
         </div>
-        <Button
-          className="w-full rounded-xl"
+        <GoldButton
+          className="w-full"
           disabled={sending}
           onClick={submit}
         >
@@ -391,47 +435,8 @@ function EnrollDialog({
           ) : (
             "Enroll member"
           )}
-        </Button>
+        </GoldButton>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Stat({
-  icon,
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border bg-card/60 p-4",
-        accent ? "border-primary/40 bg-primary/5" : "border-border"
-      )}
-    >
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className={accent ? "text-primary" : "text-muted-foreground"}>
-          {icon}
-        </span>
-        {label}
-      </div>
-      <p
-        className={cn(
-          "mt-1 text-xl font-bold",
-          accent ? "text-primary" : "text-foreground"
-        )}
-      >
-        {value}
-      </p>
-      {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
-    </div>
   );
 }
