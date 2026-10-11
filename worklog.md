@@ -947,3 +947,4 @@ Work Log:
 
 Stage Summary:
 - All brand icons across every surface (landing strip, menu sheet, bowl builder, cart, orders, inventory, analytics ticks, platform Menu tab) now render the owner's uploaded pictures; installed PWAs pick them up via the v3 SW cache bump.
+- PRODUCTION VERIFIED on r63 deploy 47a7759: all 8 brand images byte-identical to local (curl comparison), SW serving VERSION="mazaj-v3", landing strip 7/7 loaded — VLM audits (evidence download/r63-07/08): Mazaya hookah silhouette + مزايا ✓, Al Fakher red crowned ✓, Dandash ندش ✓, Amy hookah ✓, Salom red box ✓, Kass gold ✓ (Nakhla byte-identical + locally VLM-verified). Zero console errors on production.
