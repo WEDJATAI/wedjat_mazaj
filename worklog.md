@@ -980,3 +980,23 @@ Work Log:
 Stage Summary:
 - The picking UI is readable everywhere (root-caused to the missing dark class, not per-element styling); guests order by table number with a one-tap confirm card; Call & Coal work end-to-end and legacy requests are visible to staff again; the brand logo now animates constantly on every device. EN/AR symmetric throughout.
 - PRODUCTION VERIFIED on r65 deploy 15d627d (evidence r65-26..30): dark class live (html.dark), logo rendering the animated mzA variant with 14 animate elements and the halo breathing loop sampled live on production (computed opacity 0.653→0.532); guest check-in = table number only; table 21 → Mazaya → Pack my Shisha → CONFIRM CARD popped (VLM: "PASS — professional, crisp, fully readable") → order placed on Neon (customerName "Table 21", table "21", 125 EGP, guest_call); Call + Coal both delivered from guest Table 21 and visible in the branch request feed (Zamalek Corniche); ZERO console errors / hydration warnings on production.
+
+---
+Task ID: r65-final
+Agent: main (Z.ai Code — COO/CTO/PM)
+Task: Owner directive: "push to cloud and database" — ensure all r65 work is pushed to GitHub/Vercel and the production database is current and verified.
+
+Work Log:
+- STATE CHECK: local tree clean at 7d5ca35 (r65 fixes 15d627d + evidence 7d5ca35). GitHub remote main == 7d5ca35 byte-identical (git ls-remote) — the r65 push had completed. Production /api/health: {"ok":true,"db":"up","latencyMs":191,"deployment":{"commit":"7d5ca35…","env":"production","region":"iad1"}} — Vercel auto-deploy of the evidence commit was already live. Nothing unpushed.
+- SCHEMA-TO-DB CHECK: git diff 5d3ed36..7d5ca35 -- prisma/ is EMPTY — r65 changed no database schema, so Neon's structure is already current by construction (15 tables, r64-verified); nothing to migrate.
+- PRODUCTION DATABASE VERIFIED THROUGH THE APP (the sanctioned path; no raw credentials stored on disk by policy — /tmp/r64/reference.json was wiped in the workspace re-provision):
+  · Public APIs: /api/branches → 4 branches (Zamalek Corniche flagship), /api/menu/pricing → full server-authoritative price map (Mazaya 125/145 … Salom flat 45) — live Neon reads.
+  · Auth: POST /api/auth/employee {pin:9999} → Platform Owner (production employee id cmv2fuezl000colsnmr0lasnx).
+  · Deep aggregation: GET /api/platform/pulse → ok, dbUp:true, latency 69ms; network 3 venues (2 active/1 pending) / 4 branches; today 1 order / 125 EGP / 15 commission / 6 WEDJAT gross (the r65 Table-21 guest order); 7-day trend intact (250, 510, 125, 125…).
+  · r65 data backfill confirmed: GET /api/requests?branchId=all → ALL 6 requests carry branchId cmv2fue7s… (Zamalek Corniche): the 3 legacy backfilled rows (Sara, mmmm ×2) + OwnerTest connectivity check + Table 21 Call & Coal. Default-scope GET (no param) resolves to the flagship branch by design (resolveBranchScope), which is why that shape omits branch names — not a data issue.
+  · Orders: GET /api/orders → 7 orders; latest = Table 21 · guest_call · 125 EGP · pending (the r65 express confirm-card flow writing straight to Neon).
+- LOCAL DEV RESTORED: the workspace re-provision emptied local sqlite again → bun run db:seed (8 employees, 3 venues, 4 branches, 7 brands/43 flavors inventory, sample request/order/favorite) — PIN 9999/8888/1111/1234 all working locally for future sessions.
+- This worklog entry committed & pushed (worklog-only change; Vercel auto-deploys it — zero app-code delta).
+
+Stage Summary:
+- Cloud: GitHub main == local HEAD (byte-identical), Vercel production serving it with db:up (69ms). Database: schema unchanged in r65 (nothing to migrate), Neon data verified live through the app — branches, pricing, platform pulse aggregations, all 6 service requests correctly branched (r65 backfill intact), 7 orders incl. the new table-number-only guest flow. Local dev re-seeded. End state: code, cloud, and database are fully in sync at 7d5ca35 (+ this worklog commit).
