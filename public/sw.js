@@ -30,7 +30,7 @@
  * the network, never HMR sockets).
  */
 
-const VERSION = "mazaj-v2";
+const VERSION = "mazaj-v3";
 const STATIC_CACHE = `${VERSION}-static`;
 const API_CACHE = `${VERSION}-api`;
 const SHELL_URL = "/";

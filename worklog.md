@@ -932,3 +932,18 @@ Work Log:
 
 Stage Summary:
 - One commit. One tree. One live deployment, provenance-verified. The platform cannot roll back to older git — the engineering history now lives in worklog.md, and the only recovery artifact is the local backup vault (backups/).
+
+---
+Task ID: r63
+Agent: main (Z.ai Code — COO/CTO/PM)
+Task: Owner uploaded 7 pictures (upload/) — "update the icons with the uploaded pictures": mazaya.png, alfakher.jpg, Dandash.png, nakhla.jpg, Amy.jpg, salloum.jpeg, Regular.png.
+
+Work Log:
+- VLM-IDENTIFIED every upload before touching anything: Mazaya (hookah silhouette مزايا), Al Fakher (crowned wordmark), Dandash (ندش calligraphy), Nakhla (palm · Since 1913), Amy Deluxe (full hookah), Moassel Saloum (معسل سالم tobacco box), and Regular.png = a Khalil Mamoon ornate hookah → maps to the "Regular shisha" CATEGORY tile (same intent as the owner's original Oct-8 upload of the same file). Kass keeps its r59 gold wordmark (no Kass picture provided).
+- scripts/update-brand-images-r63.ts — same proven normalization pipeline as r59 (flatten white → trim near-white borders → contain 512² with 6% margin → mozjpeg q86), sources = owner uploads, catalog paths unchanged (all .jpg). 7 outputs replaced; stale Oct-8 originals (mazaya.png, regular.png, dandash.png, salom.jpeg) removed from public/images/brands/ (never referenced by code — verified by grep).
+- SERVICE-WORKER CACHE BUMP mazaj-v2 → mazaj-v3 (public/sw.js): /images/* is served cache-first, so installed PWAs would have shown the old logos forever; the activate handler purges non-v3 caches, so every client refreshes to the new icons on next visit.
+- LOCAL E2E (agent-browser iPhone 14 + VLM, evidence download/r63-01..06): landing brand strip 7/7 logos loaded (naturalWidth 512) — VLM: logos well-centered in white rounded chips, undistorted, consistent framing; platform Menu tab (PIN 9999) — VLM verified each card logo matches its brand: Mazaya=black hookah silhouette ✓, Al Fakher=red crowned ✓, Dandash=ندش calligraphy ✓, Nakhla=red palm/Since 1913 ✓, Amy=Deluxe hookah ✓, Salom=red tobacco box ✓, Kass=gold wordmark ✓. Zero browser console errors; eslint clean.
+- Note: Al Fakher / Nakhla / Salom tiles keep their authentic RED brand backgrounds by design (that is the brands' real identity; the pipeline's white frame + margin still applies).
+
+Stage Summary:
+- All brand icons across every surface (landing strip, menu sheet, bowl builder, cart, orders, inventory, analytics ticks, platform Menu tab) now render the owner's uploaded pictures; installed PWAs pick them up via the v3 SW cache bump.
