@@ -19,6 +19,14 @@ export interface Translations {
   guestCheckIn: string;
   yourName: string;
   tableOptional: string;
+  /** r65: guest check-in — table number (the only required field) */
+  tableNumberLabel: string;
+  tableNumberPlaceholder: string;
+  /** r65: guest express confirm card */
+  confirmOrderCta: string;
+  confirmOrderTitle: string;
+  confirmOrderDesc: string;
+  tableNeeded: string;
   startOrdering: string;
   back: string;
   cancel: string;
@@ -771,6 +779,12 @@ export const translations: Record<Lang, Partial<Translations>> = {
     guestCheckIn: "Guest check-in",
     yourName: "Your name",
     tableOptional: "Table number (optional)",
+    tableNumberLabel: "Table number",
+    tableNumberPlaceholder: "e.g. 5",
+    confirmOrderCta: "Confirm my order",
+    confirmOrderTitle: "Confirm your order",
+    confirmOrderDesc: "One tap and the lounge gets to work",
+    tableNeeded: "Please enter your table number",
     startOrdering: "Start ordering",
     back: "Back",
     cancel: "Cancel",
@@ -1546,6 +1560,12 @@ export const translations: Record<Lang, Partial<Translations>> = {
     guestCheckIn: "تسجيل الضيف",
     yourName: "اسمك",
     tableOptional: "رقم الطاولة (اختياري)",
+    tableNumberLabel: "رقم الطاولة",
+    tableNumberPlaceholder: "مثلاً: ٥",
+    confirmOrderCta: "أكّد طلبي",
+    confirmOrderTitle: "أكّد طلبك",
+    confirmOrderDesc: "لمسة واحدة ويبدأ الصالة العمل",
+    tableNeeded: "من فضلك اكتب رقم الطاولة",
     startOrdering: "ابدأ الطلب",
     back: "رجوع",
     cancel: "إلغاء",

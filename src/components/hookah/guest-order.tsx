@@ -155,7 +155,10 @@ export function GuestOrder() {
     <>
       <OrderScreen
         title={t("guestOrderTitle")}
-        subtitle={`${guest.name}${guest.table ? ` · ${guest.table}` : ""}`}
+        /* r65 — the guest identity is the table; the session name IS the
+         * table label (e.g. "Table 7") so queue/tracking/call/coal key
+         * on it everywhere. */
+        subtitle={guest.table ? guest.name : guest.name}
         source="guest_call"
         orderedByName={guest.name}
         defaultCustomer={guest.name}
@@ -166,6 +169,9 @@ export function GuestOrder() {
         enableScan
         onOrderPlaced={handleOrderPlaced}
         onAmended={() => setTrackOpen(true)}
+        /* r65 — guests confirm their order from a popup card; no cart,
+         no name — the table number is the order identity. */
+        expressCheckout
         headerExtra={
           <Stagger className="flex items-center gap-1" delay={0.22}>
             <StaggerItem>
@@ -404,15 +410,16 @@ function CallShishaManDialog({
         </DialogHeader>
 
         <div className="glass relative rounded-2xl p-3.5 text-sm">
+          {/* r65 — the table is the identity; one clean row */}
           <div className="relative flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{t("nameLabel")}</span>
-            <span className="font-semibold">{guest.name}</span>
+            <span className="text-muted-foreground">{t("tableNumberLabel")}</span>
+            <span className="font-display text-base font-bold text-gold">
+              {guest.table || guest.name}
+            </span>
           </div>
-          <div className="ember-hairline my-2.5" aria-hidden />
-          <div className="relative flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{t("tableLabel")}</span>
-            <span className="font-semibold">{guest.table || "—"}</span>
-          </div>
+          {guest.table && (
+            <span className="sr-only">Table {guest.table}</span>
+          )}
         </div>
 
         <Textarea
@@ -507,15 +514,16 @@ function CoalRequestDialog({
         </DialogHeader>
 
         <div className="glass relative rounded-2xl p-3.5 text-sm">
+          {/* r65 — the table is the identity; one clean row */}
           <div className="relative flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{t("nameLabel")}</span>
-            <span className="font-semibold">{guest.name}</span>
+            <span className="text-muted-foreground">{t("tableNumberLabel")}</span>
+            <span className="font-display text-base font-bold text-gold">
+              {guest.table || guest.name}
+            </span>
           </div>
-          <div className="ember-hairline my-2.5" aria-hidden />
-          <div className="relative flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{t("tableLabel")}</span>
-            <span className="font-semibold">{guest.table || "—"}</span>
-          </div>
+          {guest.table && (
+            <span className="sr-only">Table {guest.table}</span>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

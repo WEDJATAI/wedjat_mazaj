@@ -88,6 +88,9 @@ interface OrderScreenProps {
   onOrderPlaced?: (orderId: string) => void;
   /** r58: fired after an amend session saves (parent lists refresh). */
   onAmended?: () => void;
+  /** r65 — guest express flow: "Pack my Shisha" pops the confirm card
+   *  straight away (no cart step) and the header cart button disappears. */
+  expressCheckout?: boolean;
 }
 
 export function OrderScreen({
@@ -108,6 +111,7 @@ export function OrderScreen({
   bottomInset = 0,
   onOrderPlaced,
   onAmended,
+  expressCheckout = false,
 }: OrderScreenProps) {
   const mounted = useMounted();
   const t = useI18n((s) => s.t);
@@ -145,6 +149,13 @@ export function OrderScreen({
   const handleCheckout = () => {
     setCartOpen(false);
     setTimeout(() => setCheckoutOpen(true), 180);
+  };
+
+  // r65 express — the bowl was packed: pop the confirm card immediately
+  // (the config sheet has already closed itself; a beat lets the sheet's
+  // exit animation land before the card springs in).
+  const handleExpressPacked = () => {
+    setTimeout(() => setCheckoutOpen(true), 220);
   };
 
   const inCartFor = (brandId: string) =>
@@ -290,20 +301,23 @@ export function OrderScreen({
             <span className="hidden rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-[11px] text-muted-foreground md:inline-flex">
               20g / {t("perHookah")}
             </span>
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              className="glass relative inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              aria-label={t("cartBtn")}
-            >
-              <ShoppingBag className="size-4" />
-              <span className="hidden sm:inline">{t("cartBtn")}</span>
-              {cartCount > 0 && (
-                <span className="absolute -top-1.5 -end-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] px-1 text-[11px] font-bold text-[oklch(0.17_0.03_50)] shadow-lg">
-                  {cartCount}
-                </span>
-              )}
-            </button>
+            {/* r65: guests confirm from the card — no cart surface */}
+            {!expressCheckout && (
+              <button
+                type="button"
+                onClick={() => setCartOpen(true)}
+                className="glass relative inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={t("cartBtn")}
+              >
+                <ShoppingBag className="size-4" />
+                <span className="hidden sm:inline">{t("cartBtn")}</span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -end-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] px-1 text-[11px] font-bold text-[oklch(0.17_0.03_50)] shadow-lg">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            )}
             {onSignOut && (
               <button
                 type="button"
@@ -749,6 +763,12 @@ export function OrderScreen({
                 {t("amendBarCta")}
                 <ArrowRight className="size-4 rtl:rotate-180" />
               </GoldButton>
+            ) : expressCheckout ? (
+              /* r65 — guests confirm their order from the card, not a cart */
+              <GoldButton className="ms-auto" onClick={handleCheckout}>
+                {t("confirmOrderCta")}
+                <ArrowRight className="size-4 rtl:rotate-180" />
+              </GoldButton>
             ) : (
               <GoldButton className="ms-auto" onClick={() => setCartOpen(true)}>
                 {t("viewCart")}
@@ -763,6 +783,7 @@ export function OrderScreen({
         brand={selectedBrand}
         open={configOpen}
         onOpenChange={setConfigOpen}
+        onPacked={expressCheckout ? handleExpressPacked : undefined}
       />
       <CartDrawer
         open={cartOpen}
@@ -781,6 +802,7 @@ export function OrderScreen({
         defaultTableId={defaultTableId}
         branchId={branchId}
         onOrderPlaced={onOrderPlaced}
+        variant={expressCheckout ? "express" : "full"}
       />
 
       {enableScan && (

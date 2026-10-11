@@ -473,7 +473,7 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
   const lang = useI18n((s) => s.lang);
   const signIn = useSession((s) => s.signInGuest);
   const tableCtx = useTableContext();
-  const [name, setName] = React.useState("");
+  // r65 — the guest identity IS the table: no name, just the table number.
   const [table, setTable] = React.useState("");
   // r57 — which branch is this guest sitting at?
   const [branches, setBranches] = React.useState<
@@ -509,20 +509,26 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
     }
   }, []);
 
-  const valid = name.trim().length > 0;
+  // r65 — table number is the one required field (owner directive:
+  // "no need for name for guest to order, just table number"). The
+  // session "name" becomes the table label so every downstream surface
+  // (orders queue, call/coal, tracking, favorites) keys on the table.
+  const valid = table.trim().length > 0;
   const selectedBranch = branches.find((b) => b.id === branchId) ?? null;
 
   const submit = () => {
     if (!valid) return;
+    const tableLabel =
+      lang === "ar" ? `طاولة ${table.trim()}` : `Table ${table.trim()}`;
     signIn({
-      name: name.trim(),
+      name: tableLabel,
       table: table.trim(),
       branchId: branchId || null,
       branchName: selectedBranch
         ? (lang === "ar" && selectedBranch.nameAr) || selectedBranch.name
         : null,
     });
-    toast.success(`Welcome, ${name.trim()}! 🎉`);
+    toast.success(`${tableLabel} 🎉`);
   };
 
   return (
@@ -538,41 +544,30 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
       </Kicker>
 
       <div className="relative space-y-4">
+        {/* r65 — table number: the single required check-in field */}
         <div className="space-y-2">
-          <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground/85">
             <Sparkles className="size-3 text-primary" />
-            {t("yourName")}
+            {t("tableNumberLabel")}
           </Label>
           <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("namePlaceholder")}
-            aria-label="Guest name"
+            value={table}
+            onChange={(e) => setTable(e.target.value)}
+            placeholder={t("tableNumberPlaceholder")}
+            aria-label={t("tableNumberLabel")}
+            inputMode="numeric"
             className="h-12 rounded-xl border-white/[0.09] bg-white/[0.04] text-base"
             autoFocus
             onKeyDown={(e) => e.key === "Enter" && submit()}
           />
         </div>
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold text-foreground/85">
-            {t("tableOptional")}
-          </Label>
-          <Input
-            value={table}
-            onChange={(e) => setTable(e.target.value)}
-            placeholder={t("tablePlaceholder")}
-            aria-label="Guest table"
-            className="h-12 rounded-xl border-white/[0.09] bg-white/[0.04] text-base"
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-          {tableCtx.fromPosLink && (tableCtx.tableId != null || tableCtx.tableName) && (
-            <p className="flex items-center gap-1.5 text-xs text-primary">
-              <Store className="size-3.5" aria-hidden />
-              {t("linkedPosNote")}
-              {tableCtx.tableName ? ` · ${tableCtx.tableName}` : ""}
-            </p>
-          )}
-        </div>
+        {tableCtx.fromPosLink && (tableCtx.tableId != null || tableCtx.tableName) && (
+          <p className="flex items-center gap-1.5 text-xs text-primary">
+            <Store className="size-3.5" aria-hidden />
+            {t("linkedPosNote")}
+            {tableCtx.tableName ? ` · ${tableCtx.tableName}` : ""}
+          </p>
+        )}
 
         {/* r57 — the branch picker (only when the venue has multiple) */}
         {branches.length > 1 && (

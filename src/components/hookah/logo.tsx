@@ -48,8 +48,12 @@ export function MazajMark({
   className?: string;
   idPrefix?: string;
 }) {
-  const reduced = useReducedMotion();
-  const live = animated && !reduced;
+  // r65 — CONSTANT ANIMATION (owner directive): the brand mark always
+  // breathes — halo, smoke, coals, sparks and the drifting turbulence
+  // field run regardless of the OS "reduce motion" setting. The mark is
+  // the platform's living identity; only the explicit `animated={false}`
+  // prop (e.g. static rasters) can switch it off.
+  const live = animated;
   // r60-c — deterministic SVG ids (NOT React.useId).
   // useId() values are positional, and with Next 16 (Turbopack) static
   // prerendering the ids baked into the prerendered HTML can differ from
@@ -299,8 +303,8 @@ export function MazajLogo({
   tagline?: React.ReactNode;
   as?: "div" | "h1" | "h2";
 }) {
-  const reduced = useReducedMotion();
-  const live = animated && !reduced;
+  // r65 — constant animation, same policy as MazajMark.
+  const live = animated;
   const Tag = as;
 
   return (

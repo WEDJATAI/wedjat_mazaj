@@ -98,7 +98,7 @@ function AppBody({
       <div className="dark relative flex min-h-screen items-center justify-center bg-background">
         <div className="ember-glow pointer-events-none absolute inset-0" />
         <div className="relative flex flex-col items-center gap-1">
-          <MazajMark size={44} animated={false} className="animate-pulse" />
+          <MazajMark size={44} />
           <p className="text-sm text-muted-foreground">Mazaj…</p>
         </div>
       </div>

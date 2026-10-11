@@ -61,9 +61,13 @@ interface ConfigSheetProps {
   brand: Brand | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** r65 guest express flow: when provided, "Pack my Shisha" packs the
+   *  bowl and immediately hands it to the parent (which pops the confirm
+   *  card) instead of leaving it in a cart. */
+  onPacked?: () => void;
 }
 
-export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
+export function ConfigSheet({ brand, open, onOpenChange, onPacked }: ConfigSheetProps) {
   const t = useI18n((s) => s.t);
   const reduced = useReducedMotion();
   const addItem = useCart((s) => s.addItem);
@@ -144,6 +148,13 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
     });
 
     haptic("light");
+    if (onPacked) {
+      // r65 express: straight to the confirm card — the card itself is
+      // the feedback, no "added to cart" toast (there is no cart).
+      onOpenChange(false);
+      onPacked();
+      return;
+    }
     const summary =
       components.length === 1
         ? `${brand.name} · ${components[0].flavorName}`
@@ -216,7 +227,7 @@ export function ConfigSheet({ brand, open, onOpenChange }: ConfigSheetProps) {
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium">
+                        <span className="block text-sm font-semibold tracking-tight">
                           {FLAVOR_LABELS[f]}
                         </span>
                         <span className="font-display block text-sm font-bold tabular-nums text-gold">

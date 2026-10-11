@@ -57,6 +57,9 @@ interface CheckoutDialogProps {
   /** R49: called with the placed order id — lets the guest flow open
    * the live tracking view straight from the confirmation. */
   onOrderPlaced?: (orderId: string) => void;
+  /** r65 — "express": the guest confirm card. Table number is the only
+   *  required field (no name); the CTA confirms the order directly. */
+  variant?: "full" | "express";
 }
 
 interface PlaceOrderPayload {
@@ -115,8 +118,10 @@ export function CheckoutDialog({
   favoriteMixId,
   branchId,
   onOrderPlaced,
+  variant = "full",
 }: CheckoutDialogProps) {
   const t = useI18n((s) => s.t);
+  const express = variant === "express";
   const reduced = useReducedMotion();
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
@@ -199,14 +204,22 @@ export function CheckoutDialog({
 
   // r54: an order needs a name OR a table so staff know where it goes
   // (previously any order could be placed with zero context).
-  const valid = name.trim().length > 0 || table.trim().length > 0;
+  // r65 express: the guest confirms from a table number only.
+  const valid = express
+    ? table.trim().length > 0
+    : name.trim().length > 0 || table.trim().length > 0;
 
   const submit = async () => {
     if (!valid || submitting) return;
     setSubmitting(true);
     haptic("light");
     const payload: PlaceOrderPayload = {
-      customerName: name.trim(),
+      // r65 express: guests are identified by their table — the table
+      // label IS the customer name (queue, tracking, call/coal all key
+      // on it); staff keep the free-form name.
+      customerName: express
+        ? defaultCustomer?.trim() || table.trim()
+        : name.trim(),
       phone: phone.trim(),
       table: table.trim(),
       tableId: tableTouched ? null : (defaultTableId ?? null),
@@ -430,28 +443,32 @@ export function CheckoutDialog({
           <>
             <DialogHeader className="gap-1 px-6 pt-6">
               <DialogTitle className="font-display text-2xl font-bold tracking-tight text-gold-soft">
-                {t("checkout")}
+                {express ? t("confirmOrderTitle") : t("checkout")}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                {source === "employee"
+                {express
+                  ? t("confirmOrderDesc")
+                  : source === "employee"
                   ? `${orderedByName} → ${defaultCustomer ?? "—"}`
                   : `${defaultCustomer ?? "—"}${table ? ` · ${table}` : ""}`}
               </DialogDescription>
             </DialogHeader>
 
             <div className="slim-scroll max-h-[60vh] space-y-4 overflow-y-auto px-6 pb-2">
-              <Field
-                label={t("customerNameOptional")}
-                icon={<User className="size-3.5" />}
-              >
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("customerNameOptional")}
-                  aria-label={t("customerName")}
-                  className="h-11 rounded-xl border-white/[0.08] bg-white/[0.04]"
-                />
-              </Field>
+              {!express && (
+                <Field
+                  label={t("customerNameOptional")}
+                  icon={<User className="size-3.5" />}
+                >
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t("customerNameOptional")}
+                    aria-label={t("customerName")}
+                    className="h-11 rounded-xl border-white/[0.08] bg-white/[0.04]"
+                  />
+                </Field>
+              )}
               <Field
                 label={`${t("phone")} · ${t("loyalty")}`}
                 icon={<Phone className="size-3.5" />}
@@ -530,15 +547,16 @@ export function CheckoutDialog({
                   </div>
                 )}
               </Field>
-              <Field label={t("tableRoom")} icon={<Hash className="size-3.5" />}>
+              <Field label={express ? t("tableNumberLabel") : t("tableRoom")} icon={<Hash className="size-3.5" />}>
                 <Input
                   value={table}
                   onChange={(e) => {
                     setTable(e.target.value);
                     setTableTouched(true);
                   }}
-                  placeholder={t("tablePlaceholder2")}
+                  placeholder={express ? t("tableNumberPlaceholder") : t("tablePlaceholder2")}
                   aria-label={t("tableRoom")}
+                  inputMode={express ? "numeric" : undefined}
                   className="h-11 rounded-xl border-white/[0.08] bg-white/[0.04]"
                 />
                 {!tableTouched && defaultTableId != null && (
@@ -558,7 +576,12 @@ export function CheckoutDialog({
                 />
               </Field>
 
-              {!valid && (
+              {express && !valid && (
+                <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-500">
+                  {t("tableNeeded")}
+                </p>
+              )}
+              {!express && !valid && (
                 <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-500">
                   {t("nameOrTableHint")}
                 </p>
@@ -614,6 +637,8 @@ export function CheckoutDialog({
                     <Loader2 className="size-4 animate-spin" />{" "}
                     {t("placingOrder")}
                   </>
+                ) : express ? (
+                  `${t("confirmOrderCta")} · ${egp(finalTotal)}`
                 ) : (
                   `${t("placeOrder")} · ${egp(finalTotal)}`
                 )}
