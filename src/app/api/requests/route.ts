@@ -17,6 +17,34 @@ export async function GET(req: NextRequest) {
     const raw = req.nextUrl.searchParams.get("branchId");
     const { branchId } = await resolveBranchScope(raw);
 
+    // r68-audit housekeeping: requests still pending/acknowledged after 4h
+    // are auto-closed so the staff feed never fills with stale calls (the
+    // note keeps the auto-close honest for the history view).
+    const staleCutoff = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    const stale = await db.serviceRequest.findMany({
+      where: {
+        status: { in: ["pending", "acknowledged"] },
+        createdAt: { lt: staleCutoff },
+      },
+      select: { id: true, note: true },
+      take: 50,
+    });
+    if (stale.length > 0) {
+      await Promise.all(
+        stale.map((r) =>
+          db.serviceRequest.update({
+            where: { id: r.id },
+            data: {
+              status: "done",
+              note: r.note
+                ? `${r.note} [auto-closed after 4h]`
+                : "[auto-closed after 4h]",
+            },
+          })
+        )
+      );
+    }
+
     const requests = await db.serviceRequest.findMany({
       where: branchId ? { branchId } : undefined,
       orderBy: { createdAt: "desc" },

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { catalogSummary, recommend, SommLang } from "@/lib/sommelier";
+import {
+  catalogSummary,
+  filterPicksByStock,
+  recommend,
+  SommLang,
+} from "@/lib/sommelier";
+import { MOLASSES_GRAMS } from "@/lib/catalog";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -15,6 +21,9 @@ const BodySchema = z.object({
   messages: z.array(MessageSchema).min(1).max(12),
   lang: z.enum(["en", "ar"]).default("en"),
   guestName: z.string().trim().max(80).optional(),
+  /** r68-audit — the branch the guest is sitting at: the sommelier then
+   *  only recommends flavors that branch can pour RIGHT NOW. */
+  branchId: z.string().trim().optional(),
 });
 
 // Simple in-memory rate limit: 20 requests / minute / IP.
@@ -66,14 +75,37 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const { messages, lang, guestName } = parsed.data;
+    const { messages, lang, guestName, branchId } = parsed.data;
+
+    // r68-audit — live availability for this branch: the LLM menu and the
+    // quick-add picks only ever contain jars with a full bowl (20g) left.
+    let available: Set<string> | undefined;
+    if (branchId) {
+      try {
+        const jars = await db.flavorStock.findMany({
+          where: { brand: { branchId } },
+          select: { brandIdRaw: true, flavorName: true, stockGrams: true },
+        });
+        if (jars.length > 0) {
+          available = new Set(
+            jars
+              .filter((j) => j.stockGrams >= MOLASSES_GRAMS)
+              .map((j) => `${j.brandIdRaw}:${j.flavorName}`)
+          );
+        }
+      } catch {
+        // stock unknown → fail open (full menu, server still guards orders)
+      }
+    }
 
     // Reliable quick-add picks are ALWAYS computed locally from the last
     // user message (the LLM never gates the add-to-cart action).
+    // r68-audit — dry flavors are filtered out of the picks too.
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const local = lastUser
       ? recommend(lastUser.content, lang as SommLang)
       : { reply: "", picks: [] };
+    local.picks = filterPicksByStock(local.picks, available);
 
     // Personal context: recent orders + saved favorites (read-only).
     let context = "";
@@ -134,7 +166,7 @@ export async function POST(req: NextRequest) {
         lang === "ar"
           ? "جاوب في ٦٠ كلمة كحد أقصى، بنبرة ودودة. رشّح من المنيو فقط بالأسعار بالجنيه المصري. منساش إن الجبلة = ٢٠ جرام والمكس بياخد أغلى سعر مكس."
           : "Keep every reply under 60 words, warm tone. ONLY recommend items from this menu with EGP prices. Every hookah is 20g; a mix bowl costs the highest mix price of its brands.",
-        "MENU:\n" + catalogSummary(),
+        "MENU:\n" + catalogSummary(available),
         context ? `GUEST CONTEXT: ${context}` : "",
         lang === "ar"
           ? "لو العميل مش محدد، اسأله عن مزاجه بكلمة واحدة."
