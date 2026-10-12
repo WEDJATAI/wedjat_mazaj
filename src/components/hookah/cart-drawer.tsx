@@ -247,6 +247,11 @@ export function CartDrawer({ open, onOpenChange, onCheckout, onAmended }: CartDr
                           size="sm"
                           className="mt-0.5"
                         />
+                      ) : it.primaryBrandId === "own-molasses" ? (
+                        /* r67 — own-molasses shisha: backpack chip instead of a brand mark */
+                        <span className="mt-0.5 grid size-10 place-items-center rounded-xl bg-primary/15 text-xl ring-1 ring-primary/25">
+                          🎒
+                        </span>
                       ) : (
                         <BrandMark brandId={it.primaryBrandId} size="md" />
                       )}

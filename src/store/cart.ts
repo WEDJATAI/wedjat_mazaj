@@ -6,10 +6,12 @@ import {
   chargeableQty,
   FlavorType,
   getBrand,
+  AMY_SESSION_PRICE,
   mixPrice,
   MOLASSES_GRAMS,
   FLAVOR_LABELS,
   splitGrams,
+  type HookahType,
 } from "@/lib/catalog";
 
 /** A single flavor component inside a hookah. */
@@ -34,6 +36,15 @@ export interface CartItem {
   molassesGrams: number; // 20
   unitPrice: number;
   qty: number;
+  /** r67 — the pipe this shisha is smoked on. "amy" = the premium Amy
+   * pipe: the session prices flat (AMY_SESSION_PRICE) regardless of the
+   * molasses brand. Optional for legacy items (defaults to regular). */
+  hookahType?: HookahType;
+  /** r67 — per-shisha BYO answer ("I brought my own molasses/hookah").
+   * Each shisha at a table can carry its own 2-for-1. */
+  ownType?: OwnType;
+  /** r67 — who this shisha is for (the per-person label at a shared table) */
+  forName?: string;
 }
 
 export type OwnType = "hookah" | "molasses" | null;
@@ -63,6 +74,8 @@ interface CartState {
   addItem: (item: Omit<CartItem, "id">) => void;
   removeItem: (id: string) => void;
   setQty: (id: string, qty: number) => void;
+  /** r67 — replace an item in place (edit-a-shisha from the table order). */
+  updateItem: (id: string, item: Omit<CartItem, "id">) => void;
   clear: () => void;
   setOwnType: (own: OwnType) => void;
   toggleAddon: (key: string) => void;
@@ -78,17 +91,24 @@ interface CartState {
   endAmend: () => void;
 }
 
-/** Build a stable id from the primary brand, flavor type and the component signature. */
+/** Build a stable id from the primary brand, flavor type, the component
+ * signature AND the r67 per-shisha attributes (pipe type, BYO answer,
+ * person label) — two people at one table ordering identical bowls stay
+ * separate lines so each keeps its own identity. */
 function makeId(
   primaryBrandId: string,
   flavor: FlavorType,
-  components: FlavorComponent[]
+  components: FlavorComponent[],
+  extra?: { hookahType?: HookahType; ownType?: OwnType; forName?: string }
 ): string {
   const sig = components
     .map((c) => `${c.brandId}:${c.flavorName}`)
     .sort()
     .join("|");
-  return `${primaryBrandId}:${flavor}:${sig}`;
+  const ex = extra?.hookahType ?? "regular";
+  const own = extra?.ownType ?? "none";
+  const who = (extra?.forName ?? "").trim().toLowerCase();
+  return `${primaryBrandId}:${flavor}:${sig}:${ex}:${own}:${who}`;
 }
 
 /**
@@ -146,6 +166,9 @@ function normalizeItem(raw: unknown): CartItem | null {
     molassesGrams: (r.molassesGrams as number) ?? MOLASSES_GRAMS,
     unitPrice: (r.unitPrice as number) ?? 0,
     qty: typeof r.qty === "number" && r.qty > 0 ? r.qty : 1,
+    hookahType: (r.hookahType as HookahType) ?? "regular",
+    ownType: (r.ownType as OwnType) ?? null,
+    forName: (r.forName as string) || undefined,
   };
 }
 
@@ -170,7 +193,11 @@ export const useCart = create<CartState>()(
       amendStash: null,
       addItem: (item) =>
         set((state) => {
-          const id = makeId(item.primaryBrandId, item.flavor, item.components);
+          const id = makeId(item.primaryBrandId, item.flavor, item.components, {
+            hookahType: item.hookahType,
+            ownType: item.ownType,
+            forName: item.forName,
+          });
           const existing = state.items.find((i) => i.id === id);
           if (existing) {
             return {
@@ -181,6 +208,12 @@ export const useCart = create<CartState>()(
           }
           return { items: [...state.items, { ...item, id }] };
         }),
+      updateItem: (id, item) =>
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.id === id ? { ...item, id } : i
+          ),
+        })),
       removeItem: (id) =>
         set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
       setQty: (id, qty) =>
@@ -232,6 +265,13 @@ export const useCart = create<CartState>()(
         items: state.items,
         ownType: state.ownType,
         addons: state.addons,
+        // r67 — persist the amend session too: a reload mid-amend used to
+        // drop the amend context while keeping the edited items in the
+        // cart, which would send a DUPLICATE order instead of a revision.
+        amendOrderId: state.amendOrderId,
+        amendActorName: state.amendActorName,
+        amendOriginal: state.amendOriginal,
+        amendStash: state.amendStash,
       }),
       // Rehydrate legacy persisted carts (pre-`components` schema) into the
       // current CartItem shape so the UI never sees a missing `components`.
@@ -263,15 +303,21 @@ export interface CartTotals {
 }
 
 export function computeTotals(items: CartItem[], ownType: OwnType): CartTotals {
-  const bogo = getBogo(ownType);
+  const orderBogo = getBogo(ownType);
   let subtotal = 0;
   let total = 0;
   let totalQty = 0;
+  let bogo = orderBogo;
   for (const it of items) {
+    // r67 — the 2-for-1 can be answered per shisha (each person at the
+    // table brings their own), so an item's own answer wins over the
+    // order-level fallback.
+    const itemBogo = getBogo(it.ownType ?? null) || orderBogo;
+    bogo = bogo || itemBogo;
     const unit = typeof it.unitPrice === "number" ? it.unitPrice : 0;
     const qty = typeof it.qty === "number" && it.qty > 0 ? it.qty : 0;
     subtotal += unit * qty;
-    total += unit * chargeableQty(qty, bogo);
+    total += unit * chargeableQty(qty, itemBogo);
     totalQty += qty;
   }
   const discount = Math.max(0, subtotal - total);
@@ -280,13 +326,17 @@ export function computeTotals(items: CartItem[], ownType: OwnType): CartTotals {
 
 /**
  * Compute the unit price for a configured hookah.
+ *  - amy pipe (r67): flat AMY_SESSION_PRICE for fruits or mix.
+ *  - own molasses (r67): no components → pipe+service price.
  *  - fruits / flat: the brand's own price.
  *  - fruits-mix: cross-brand => max mix price among involved brands; single brand => that brand's mix price.
  */
 export function priceForConfig(
   flavor: FlavorType,
-  components: FlavorComponent[] | undefined
+  components: FlavorComponent[] | undefined,
+  hookahType: HookahType = "regular"
 ): number {
+  if (hookahType === "amy") return AMY_SESSION_PRICE;
   if (!components || components.length === 0) return 0;
   const primary = getBrand(components[0].brandId);
   if (flavor === "fruits") return primary?.pricing.fruits ?? 0;

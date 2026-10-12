@@ -12,7 +12,7 @@ import {
   brandsForCategory,
   normalizeSearchQuery,
 } from "@/lib/catalog";
-import { useCart, computeTotals, splitGrams } from "@/store/cart";
+import { useCart, computeTotals, splitGrams, type CartItem } from "@/store/cart";
 import {
   useFlavorStock,
   isBrandAvailable,
@@ -24,6 +24,8 @@ import { BrandMark, BrandStack } from "./brand-mark";
 import { ConfigSheet } from "./config-sheet";
 import { CartDrawer } from "./cart-drawer";
 import { CheckoutDialog } from "./checkout-dialog";
+import { OrderWizard, type WizardSession } from "./order-wizard";
+import { TableOrderSheet } from "./table-order-sheet";
 import { Input } from "@/components/ui/input";
 import {
   ShoppingBag,
@@ -38,6 +40,7 @@ import {
   PenLine,
   Trash2,
   Check,
+  Users,
 } from "lucide-react";
 import { BarcodeModal } from "./barcode-modal";
 import { SessionTimer } from "./session-timer";
@@ -150,6 +153,32 @@ export function OrderScreen({
   const [shishaCat, setShishaCat] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
 
+  // r67 — the guided guest flow: the wizard session (restart / edit-a-
+  // shisha / scanned barcode) + the table-order sheet (per-shisha manage)
+  const [wizSession, setWizSession] = React.useState<WizardSession>({
+    seed: 0,
+    edit: null,
+    scanBrandId: null,
+  });
+  const [tableSheetOpen, setTableSheetOpen] = React.useState(false);
+
+  const scrollToWizard = () => {
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      // non-fatal
+    }
+  };
+
+  const restartWizard = () => {
+    setWizSession((s) => ({ seed: s.seed + 1, edit: null, scanBrandId: null }));
+    scrollToWizard();
+  };
+  const editShisha = (item: CartItem) => {
+    setWizSession((s) => ({ ...s, edit: item, scanBrandId: null }));
+    scrollToWizard();
+  };
+
   const cartCount = mounted ? totals.totalQty : 0;
 
   const handleSelectBrand = (brand: Brand) => {
@@ -159,10 +188,17 @@ export function OrderScreen({
 
   const handleScan = (brandId: string) => {
     const brand = BRANDS.find((b) => b.id === brandId);
-    if (brand) {
-      setSelectedBrand(brand);
-      setConfigOpen(true);
+    if (!brand || brand.hidden) return;
+    if (expressCheckout) {
+      // r67 — a scan funnels straight into the wizard: the molasses is
+      // locked, the guest just picks the pipe and flavors.
+      toast.success(`${t("wizScanFound")}: ${brand.name}`);
+      setWizSession((s) => ({ seed: s.seed + 1, edit: null, scanBrandId: brand.id }));
+      scrollToWizard();
+      return;
     }
+    setSelectedBrand(brand);
+    setConfigOpen(true);
   };
 
   const handleCheckout = () => {
@@ -170,30 +206,18 @@ export function OrderScreen({
     setTimeout(() => setCheckoutOpen(true), 180);
   };
 
-  // r66 express — packing the bowl simply summons the corner order card
-  // (modify / delete / confirm live there until the guest confirms).
-  const handleExpressPacked = () => {
-    haptic("light");
-  };
-
-  // r66 — corner card actions
-  const handleModifyOrder = () => setCartOpen(true);
-  const handleDeleteOrder = () => {
-    haptic("error");
-    if (amending) {
-      endAmend();
-    } else {
-      clearCart();
-    }
-    toast(t("orderCardDeleted"));
-  };
+  // r67 — express “send table order”: guests confirm from the express
+  // card; an amend session saves from the drawer instead.
   const handleConfirmOrder = () => {
     if (amending) {
-      setCartOpen(true); // amend saves from the drawer
+      setCartOpen(true);
       return;
     }
     handleCheckout();
   };
+
+  // r67 — the wizard handles packing in express mode; no cart, no
+  // config sheet, no auto-popup. The corner card is the table order.
 
   const inCartFor = (brandId: string) =>
     items.filter((i) => i.primaryBrandId === brandId).reduce((s, i) => s + i.qty, 0);
@@ -213,6 +237,8 @@ export function OrderScreen({
     if (!searchActive) return [];
     const out: { brand: Brand; flavor: string }[] = [];
     for (const brand of BRANDS) {
+      // r67 — hidden brands (Amy: a pipe type, not molasses) never surface
+      if (brand.hidden) continue;
       // r66 — guests only ever see flavors this branch can pour
       if (!brandLive(brand)) continue;
       for (const flavor of brand.flavors) {
@@ -236,7 +262,7 @@ export function OrderScreen({
   const brandMatches = React.useMemo(() => {
     if (!searchActive) return [];
     return BRANDS.filter(
-      (b) => brandLive(b) && matchTerms(terms, b.name.toLowerCase())
+      (b) => !b.hidden && brandLive(b) && matchTerms(terms, b.name.toLowerCase())
     );
      
   }, [terms, searchActive, brandLive]);
@@ -407,8 +433,35 @@ export function OrderScreen({
           </section>
         )}
 
-        {/* Menu search (r54) */}
-        <section className="mb-6" aria-label={t("searchMenu")}>
+        {expressCheckout ? (
+          /* ── r67 — THE GUIDED RITUAL: one organized wizard replaces the
+           * scattered browse UI (hero, promos, legend, categories, search).
+           * Every guest order starts with “Who's this shisha for?” then
+           * “Did you bring your own?” and flows step by step to review. */
+          <div className="space-y-4">
+            <OrderWizard
+              session={wizSession}
+              stockMap={isGuest ? stockMap : null}
+              onSend={handleConfirmOrder}
+              onRestart={restartWizard}
+              onCancelEdit={() =>
+                setWizSession((s) => ({ ...s, edit: null, scanBrandId: null }))
+              }
+            />
+            {isGuest && (
+              <p className="flex items-center justify-center gap-1.5 pb-2 text-center text-[11px] font-medium text-emerald-300/90">
+                <span className="relative flex size-1.5" aria-hidden>
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400/70" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                </span>
+                {t("stockNote")}
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+          {/* Menu search (r54) */}
+          <section className="mb-6" aria-label={t("searchMenu")}>
           <div className="relative">
             <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -658,7 +711,7 @@ export function OrderScreen({
                 <LegendCard
                   title={t("legendAmy")}
                   price="180 EGP"
-                  sub=""
+                  sub={t("wizPriceFlatNote")}
                   badge="Premium"
                 />
                 <LegendCard
@@ -803,6 +856,8 @@ export function OrderScreen({
             </section>
           </>
         )}
+          </>
+        )}
       </main>
 
       {/* Footer */}
@@ -814,16 +869,126 @@ export function OrderScreen({
         </div>
       </footer>
 
-      {/* r66 — corner order card: while a bowl is being ordered, a compact
-          glass card lives in the bottom-end corner with the three order
-          actions — Modify / Delete / Confirm. (In AMEND mode it becomes
-          the living-order editor card.) */}
-      {mounted && (cartCount > 0 || amending) && (
+      {/* r67 — corner TABLE ORDER card (express/guest flow): once the first
+          shisha is packed, a compact glass card lives in the bottom-end
+          corner with the table's stack — tap to manage each shisha, [+]
+          to add another person's shisha, ✓ to send. In AMEND mode it
+          becomes the living-order editor (saves from the drawer). */}
+      {mounted && expressCheckout && cartCount > 0 && (
         <motion.div
           initial={{ y: 70, opacity: 0, scale: 0.92 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 340, damping: 26 }}
-          className="fixed end-4 z-40 w-[min(20.5rem,calc(100vw-2rem))]"
+          className="fixed end-4 z-40 w-in(20.5rem,calc(100vw-2rem))]"
+          style={{
+            bottom: `calc(${bottomInset}px + max(1rem, env(safe-area-inset-bottom)))`,
+          }}
+          role="complementary"
+          aria-label={t("wizTableOrder")}
+        >
+          <div
+            className={cn(
+              "glass-card rounded-3xl p-3.5",
+              amending && "ring-1 ring-primary/50"
+            )}
+          >
+            {/* warm corner glow */}
+            <div
+              className="pointer-events-none absolute -end-8 -top-10 size-32 rounded-full bg-primary/15 opacity-60 blur-3xl"
+              aria-hidden
+            />
+            {/* summary row — tap to open the table order sheet */}
+            <button
+              type="button"
+              onClick={() => setTableSheetOpen(true)}
+              className="relative flex w-full items-center gap-2.5 rounded-2xl text-start transition-opacity hover:opacity-90"
+              aria-label={t("wizTableOrder")}
+            >
+              <span
+                className={cn(
+                  "relative grid size-10 shrink-0 place-items-center rounded-xl ring-1",
+                  amending
+                    ? "bg-primary/20 text-primary ring-primary/40"
+                    : "bg-primary/15 text-primary ring-primary/25"
+                )}
+              >
+                {amending ? <PenLine className="size-4" /> : <Users className="size-4" />}
+                {amending && (
+                  <span
+                    className="absolute -end-0.5 -top-0.5 size-2.5 animate-pulse rounded-full bg-primary"
+                    aria-hidden
+                  />
+                )}
+              </span>
+              <div className="min-w-0 leading-tight">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  {amending
+                    ? `${t("amendBarTitle")} #${amendOrderId?.slice(-6).toUpperCase()}`
+                    : t("wizTableOrder")}
+                </p>
+                <p className="font-display text-xl font-bold tabular-nums text-gold">
+                  {cartCount} × {t("wizShishaCount")} · {egp(totals.total)}
+                </p>
+                {totals.bogo && (
+                  <p className="text-[10px] font-semibold text-emerald-300">
+                    {t("wizByoBadge")}
+                  </p>
+                )}
+              </div>
+              <span
+                className="glass ms-auto grid size-9 shrink-0 place-items-center rounded-xl text-primary ring-1 ring-primary/25"
+                aria-hidden
+              >
+                <BrandStack
+                  brandIds={items
+                    .flatMap((i) => i.components.map((c) => c.brandId))
+                    .slice(0, 2)}
+                  size="sm"
+                  max={2}
+                />
+              </span>
+            </button>
+
+            {/* actions — add another shisha / send the table order */}
+            <div className="relative mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={restartWizard}
+                className="glass flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-xs font-semibold text-muted-foreground transition-all duration-300 hover:border-primary/40 hover:text-primary active:scale-[0.97]"
+                aria-label={t("wizAddAnother")}
+              >
+                <Plus className="size-4" />
+                {t("wizAddAnother")}
+              </button>
+              <GoldButton
+                className="h-11 flex-[1.3] justify-center"
+                onClick={handleConfirmOrder}
+              >
+                {amending ? (
+                  <>
+                    <PenLine className="size-4" />
+                    {t("amendBarCta")}
+                  </>
+                ) : (
+                  <>
+                    <Check className="size-4" />
+                    {t("wizSendTable")}
+                  </>
+                )}
+              </GoldButton>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* r66 — corner order card (staff / amend flow): Modify / Delete /
+          Confirm while an order is being edited in the cart surfaces. */}
+      {mounted && !expressCheckout && (cartCount > 0 || amending) && (
+        <motion.div
+          initial={{ y: 70, opacity: 0, scale: 0.92 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 340, damping: 26 }}
+          className="fixed end-4 z-40 w-in(20.5rem,calc(100vw-2rem))]"
           style={{
             bottom: `calc(${bottomInset}px + max(1rem, env(safe-area-inset-bottom)))`,
           }}
@@ -907,7 +1072,11 @@ export function OrderScreen({
                 <>
                   <button
                     type="button"
-                    onClick={handleDeleteOrder}
+                    onClick={() => {
+                      haptic("error");
+                      endAmend();
+                      toast(t("orderCardDeleted"));
+                    }}
                     className="glass flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-xs font-semibold text-muted-foreground transition-all duration-300 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive active:scale-[0.97]"
                     aria-label={t("orderCardDelete")}
                   >
@@ -926,7 +1095,7 @@ export function OrderScreen({
                 <>
                   <button
                     type="button"
-                    onClick={handleModifyOrder}
+                    onClick={() => setCartOpen(true)}
                     className="glass flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-xs font-semibold text-muted-foreground transition-all duration-300 hover:border-primary/40 hover:text-primary active:scale-[0.97]"
                     aria-label={t("orderCardModify")}
                   >
@@ -935,7 +1104,11 @@ export function OrderScreen({
                   </button>
                   <button
                     type="button"
-                    onClick={handleDeleteOrder}
+                    onClick={() => {
+                      haptic("error");
+                      clearCart();
+                      toast(t("orderCardDeleted"));
+                    }}
                     className="glass flex h-11 items-center justify-center gap-1.5 rounded-2xl px-3 text-xs font-semibold text-muted-foreground transition-all duration-300 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive active:scale-[0.97]"
                     aria-label={t("orderCardDelete")}
                   >
@@ -944,7 +1117,7 @@ export function OrderScreen({
                   </button>
                   <GoldButton
                     className="h-11 flex-[1.4] justify-center"
-                    onClick={handleConfirmOrder}
+                    onClick={handleCheckout}
                   >
                     <Check className="size-4" />
                     {t("orderCardConfirm")}
@@ -956,19 +1129,34 @@ export function OrderScreen({
         </motion.div>
       )}
 
-      <ConfigSheet
-        brand={selectedBrand}
-        open={configOpen}
-        onOpenChange={setConfigOpen}
-        onPacked={expressCheckout ? handleExpressPacked : undefined}
-        stockMap={isGuest ? stockMap : null}
-      />
-      <CartDrawer
-        open={cartOpen}
-        onOpenChange={setCartOpen}
-        onCheckout={handleCheckout}
-        onAmended={onAmended}
-      />
+      {/* r67 — express (guest) flow: the wizard + table-order sheet own the
+       * whole configuration; staff / amend flows keep the classic sheets. */}
+      {!expressCheckout && (
+        <ConfigSheet
+          brand={selectedBrand}
+          open={configOpen}
+          onOpenChange={setConfigOpen}
+          stockMap={isGuest ? stockMap : null}
+        />
+      )}
+      {(!expressCheckout || amending) && (
+        <CartDrawer
+          open={cartOpen}
+          onOpenChange={setCartOpen}
+          onCheckout={handleCheckout}
+          onAmended={onAmended}
+        />
+      )}
+      {expressCheckout && (
+        <TableOrderSheet
+          open={tableSheetOpen}
+          onOpenChange={setTableSheetOpen}
+          tableLabel={defaultTable || subtitle}
+          onEdit={editShisha}
+          onAddAnother={restartWizard}
+          onSend={handleConfirmOrder}
+        />
+      )}
       <CheckoutDialog
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}

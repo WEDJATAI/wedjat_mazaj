@@ -206,7 +206,9 @@ export function GuestTrackingSheet({
             i &&
             typeof i.primaryBrandId === "string" &&
             Array.isArray(i.components) &&
-            i.components.length > 0
+            // r67 — own-molasses shishas legitimately carry ZERO
+            // components (the guest brings the tobacco); keep them.
+            (i.components.length > 0 || i.ownType === "molasses")
         );
       }
     } catch {

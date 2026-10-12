@@ -79,6 +79,69 @@ export interface Translations {
   orderCardDeleted: string;
   stockNote: string;
   noStockCategory: string;
+
+  // ── r67: the guided order wizard (guest ritual flow) ──────────────
+  wizTitle: string;
+  wizSubtitle: string;
+  wizStepWho: string;
+  wizStepSetup: string;
+  wizStepPipe: string;
+  wizStepMolasses: string;
+  wizStepFlavors: string;
+  wizStepReview: string;
+  wizForWhomTitle: string;
+  wizForWhomDesc: string;
+  wizForWhomPlaceholder: string;
+  wizShishaNum: string;
+  wizSetupTitle: string;
+  wizSetupDesc: string;
+  wizOwnMolasses: string;
+  wizOwnMolassesDesc: string;
+  wizOwnHookah: string;
+  wizOwnHookahDesc: string;
+  wizFromMenu: string;
+  wizFromMenuDesc: string;
+  wizByoBadge: string;
+  wizPipeTitle: string;
+  wizPipeDesc: string;
+  wizPipeRegular: string;
+  wizPipeRegularDesc: string;
+  wizPipeAmy: string;
+  wizPipeAmyDesc: string;
+  wizMolassesTitle: string;
+  wizMolassesDesc: string;
+  wizFlavorsTitle: string;
+  wizFlavorsDesc: string;
+  wizOwnMolassesNote: string;
+  wizQtyTitle: string;
+  wizReviewTitle: string;
+  wizReviewFor: string;
+  wizReviewSetup: string;
+  wizReviewPipe: string;
+  wizReviewMolasses: string;
+  wizAddCta: string;
+  wizContinue: string;
+  wizAddAnother: string;
+  wizAddAnotherDesc: string;
+  wizSendTable: string;
+  wizAddedToast: string;
+  wizOwnMolassesTag: string;
+  wizOwnHookahTag: string;
+  wizAmyPipeTag: string;
+  wizRegularPipeTag: string;
+  wizTableOrder: string;
+  wizShishaCount: string;
+  wizEditShisha: string;
+  wizRemoveShisha: string;
+  wizEmptyTable: string;
+  wizQuickPicks: string;
+  wizQuickPicksDesc: string;
+  wizOwnMolassesSaved: string;
+  wizScanFound: string;
+  wizAmyNoBudget: string;
+  wizPriceFlatNote: string;
+  wizBogoYou: string;
+  wizBogoYouDesc: string;
   change: string;
   brands: string;
   popularBowls: string;
@@ -843,6 +906,69 @@ export const translations: Record<Lang, Partial<Translations>> = {
     orderCardDeleted: "Bowl removed",
     stockNote: "Showing only what's available at this branch",
     noStockCategory: "Nothing available here right now — try the other category",
+
+    // ── r67: the guided order wizard ─────────────────────────────────
+    wizTitle: "Order a shisha",
+    wizSubtitle: "A few quick steps — we'll take it from there",
+    wizStepWho: "You",
+    wizStepSetup: "Setup",
+    wizStepPipe: "Pipe",
+    wizStepMolasses: "Molasses",
+    wizStepFlavors: "Flavors",
+    wizStepReview: "Review",
+    wizForWhomTitle: "Who's this shisha for?",
+    wizForWhomDesc: "Someone else at the table can order their own right after — each shisha gets its own setup.",
+    wizForWhomPlaceholder: "Name or seat (optional)",
+    wizShishaNum: "Shisha",
+    wizSetupTitle: "Did you bring your own?",
+    wizSetupDesc: "Your setup decides what we prepare for you — and unlocks the 2-for-1.",
+    wizOwnMolasses: "My own molasses",
+    wizOwnMolassesDesc: "You bring the tobacco — we prepare the pipe & service",
+    wizOwnHookah: "My own hookah",
+    wizOwnHookahDesc: "You bring the pipe — we pour our molasses",
+    wizFromMenu: "From the menu",
+    wizFromMenuDesc: "Our pipe, our molasses — the full experience",
+    wizByoBadge: "2-for-1",
+    wizPipeTitle: "Choose your pipe",
+    wizPipeDesc: "The Amy pipe is our premium rig — flat price on any premium molasses.",
+    wizPipeRegular: "Regular",
+    wizPipeRegularDesc: "The classic lounge pipe",
+    wizPipeAmy: "Amy",
+    wizPipeAmyDesc: "Premium pipe · 180 EGP flat · premium molasses only",
+    wizMolassesTitle: "Choose your molasses",
+    wizMolassesDesc: "Only what this branch can pour right now.",
+    wizFlavorsTitle: "Pick your flavors",
+    wizFlavorsDesc: "One flavor or a mix — 20g per bowl either way.",
+    wizOwnMolassesNote: "Your own molasses — no flavor pick needed. We'll prep the pipe and coals.",
+    wizQtyTitle: "How many?",
+    wizReviewTitle: "Your shisha",
+    wizReviewFor: "For",
+    wizReviewSetup: "Setup",
+    wizReviewPipe: "Pipe",
+    wizReviewMolasses: "Molasses",
+    wizAddCta: "Add to table order",
+    wizContinue: "Continue",
+    wizAddAnother: "Add another shisha",
+    wizAddAnotherDesc: "For someone else at the table",
+    wizSendTable: "Send table order",
+    wizAddedToast: "Shisha added to your table order",
+    wizOwnMolassesTag: "own molasses",
+    wizOwnHookahTag: "own hookah",
+    wizAmyPipeTag: "Amy pipe",
+    wizRegularPipeTag: "Regular pipe",
+    wizTableOrder: "Table order",
+    wizShishaCount: "shisha",
+    wizEditShisha: "Edit",
+    wizRemoveShisha: "Remove",
+    wizEmptyTable: "No shishas yet — start the ritual above",
+    wizQuickPicks: "Quick picks",
+    wizQuickPicksDesc: "One tap, straight to review",
+    wizOwnMolassesSaved: "Own molasses — you save every 2nd one",
+    wizScanFound: "Molasses found",
+    wizAmyNoBudget: "Not on the Amy pipe — pick a premium brand",
+    wizPriceFlatNote: "flat — any molasses",
+    wizBogoYou: "2-for-1 unlocked",
+    wizBogoYouDesc: "You brought your own — every second shisha is free",
     change: "Change",
     brands: "brands",
     popularBowls: "Popular bowls",
@@ -968,7 +1094,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     addBtn: "Add",
     legendFruits: "Regular fruits",
     legendMix: "Fruits mix",
-    legendAmy: "Amy (premium)",
+    legendAmy: "Amy pipe (premium)",
     legendSpecial: "Salom / Kass",
     legendFlatSub: "Everyday flat price",
     priceList: "The price list",
@@ -1628,6 +1754,69 @@ export const translations: Record<Lang, Partial<Translations>> = {
     orderCardDeleted: "تم حذف الجبلة",
     stockNote: "نعرض فقط المتوفر في هذا الفرع",
     noStockCategory: "لا يوجد متوفر الآن — جرّب الفئة الأخرى",
+
+    // ── r67: the guided order wizard ─────────────────────────────────
+    wizTitle: "اطلب شيشة",
+    wizSubtitle: "خطوات سريعة — والباقي علينا",
+    wizStepWho: "أنت",
+    wizStepSetup: "التحضير",
+    wizStepPipe: "الأنبوب",
+    wizStepMolasses: "المعسل",
+    wizStepFlavors: "النكهات",
+    wizStepReview: "مراجعة",
+    wizForWhomTitle: "لمن هذه الشيشة؟",
+    wizForWhomDesc: "أي شخص آخر على الطاولة يمكنه طلب شيشته الخاصة بعد ذلك — لكل شيشة تحضيرها الخاص.",
+    wizForWhomPlaceholder: "الاسم أو المقعد (اختياري)",
+    wizShishaNum: "شيشة",
+    wizSetupTitle: "هل أحضرت معك؟",
+    wizSetupDesc: "إجابتك تحدد ما سنحضّره لك — وتفتح عرض 2 بسعر 1.",
+    wizOwnMolasses: "معسلي الخاص",
+    wizOwnMolassesDesc: "أنت تحضر المعسل — ونحن نجهّز الأنبوب والخدمة",
+    wizOwnHookah: "شيشتي الخاصة",
+    wizOwnHookahDesc: "أنت تحضر الأنبوب — ونحن نضع معسلنا",
+    wizFromMenu: "من المنيو",
+    wizFromMenuDesc: "آنابوبنا ومعسلنا — التجربة الكاملة",
+    wizByoBadge: "2 بسعر 1",
+    wizPipeTitle: "اختر الأنبوب",
+    wizPipeDesc: "أنبوب Amy هو جهازنا الفاخر — سعر ثابت مع أي معسل فاخر.",
+    wizPipeRegular: "عادي",
+    wizPipeRegularDesc: "الأنبوب الكلاسيكي",
+    wizPipeAmy: "Amy",
+    wizPipeAmyDesc: "أنبوب فاخر · 180 جنيه ثابت · معسل فاخر فقط",
+    wizMolassesTitle: "اختر المعسل",
+    wizMolassesDesc: "فقط ما يمكن صبّه في هذا الفرع الآن.",
+    wizFlavorsTitle: "اختر نكهاتك",
+    wizFlavorsDesc: "نكهة واحدة أو مزيج — 20 جرام للجبلة.",
+    wizOwnMolassesNote: "معسلك الخاص — لا حاجة لاختيار نكهة. سنجهّز الأنبوب والفحم.",
+    wizQtyTitle: "كم عدد؟",
+    wizReviewTitle: "شيشتك",
+    wizReviewFor: "لـ",
+    wizReviewSetup: "التحضير",
+    wizReviewPipe: "الأنبوب",
+    wizReviewMolasses: "المعسل",
+    wizAddCta: "أضف لطلب الطاولة",
+    wizContinue: "متابعة",
+    wizAddAnother: "أضف شيشة أخرى",
+    wizAddAnotherDesc: "لشخص آخر على الطاولة",
+    wizSendTable: "أرسل طلب الطاولة",
+    wizAddedToast: "تمت إضافة الشيشة لطلب طاولتك",
+    wizOwnMolassesTag: "معسل خاص",
+    wizOwnHookahTag: "شيشة خاصة",
+    wizAmyPipeTag: "أنبوب Amy",
+    wizRegularPipeTag: "أنبوب عادي",
+    wizTableOrder: "طلب الطاولة",
+    wizShishaCount: "شيشة",
+    wizEditShisha: "تعديل",
+    wizRemoveShisha: "إزالة",
+    wizEmptyTable: "لا شيشات بعد — ابدأ من الأعلى",
+    wizQuickPicks: "اختيارات سريعة",
+    wizQuickPicksDesc: "ضغطة واحدة، مباشرة للمراجعة",
+    wizOwnMolassesSaved: "معسل خاص — كل ثانية شيشة مجانية",
+    wizScanFound: "تم العثور على المعسل",
+    wizAmyNoBudget: "غير متاح على أنبوب Amy — اختر علامة فاخرة",
+    wizPriceFlatNote: "ثابت — أي معسل",
+    wizBogoYou: "تم تفعيل 2 بسعر 1",
+    wizBogoYouDesc: "أحضرت معك — كل شيشة ثانية مجانية",
     change: "تغيير",
     brands: "علامة تجارية",
     popularBowls: "جبلات شائعة",
@@ -1748,7 +1937,7 @@ export const translations: Record<Lang, Partial<Translations>> = {
     addBtn: "أضف",
     legendFruits: "فواكه عادية",
     legendMix: "مكس فواكه",
-    legendAmy: "أمي (بريميوم)",
+    legendAmy: "أنبوب أمي (بريميوم)",
     legendSpecial: "سلوم / كاس",
     legendFlatSub: "سعر ثابت يومي",
     priceList: "قائمة الأسعار",

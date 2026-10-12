@@ -7,6 +7,7 @@ import {
   MIXABLE_BRANDS,
   BOWL_PRESETS,
   MOLASSES_GRAMS,
+  AMY_SESSION_PRICE,
   egp,
   brandColor,
   getBrand,
@@ -61,6 +62,9 @@ interface Bowl {
   flavor: FlavorType;
   components: FlavorComp[];
   qty: number;
+  /** r67 — the pipe this bowl is smoked on; "amy" = the premium pipe
+   * (flat 180 session price regardless of the molasses brand). */
+  hookahType: "regular" | "amy";
 }
 
 // --- helpers ---
@@ -71,6 +75,8 @@ const FLAVOR_TYPES: { key: FlavorType; label: string; icon: React.ReactNode }[] 
 ];
 
 function bowlUnitPrice(b: Bowl): number {
+  // r67 — an Amy-pipe session prices flat no matter the molasses
+  if (b.hookahType === "amy") return AMY_SESSION_PRICE;
   if (b.flavor === "fruits") {
     return getBrand(b.primaryBrandId)?.pricing.fruits ?? 0;
   }
@@ -217,6 +223,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
       flavor: brand?.flavorTypes[0] ?? "fruits",
       components: [],
       qty: 1,
+      // r67 — the chosen shisha type IS the pipe the bowl rides on
+      hookahType: shishaCat === "amy" ? "amy" : "regular",
     };
     setEditing(b);
   };
@@ -270,6 +278,9 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
           molassesGrams: MOLASSES_GRAMS,
           unitPrice: bowlUnitPrice(b),
           qty: b.qty,
+          // r67 — the pipe type rides along so the server prices the
+          // premium Amy sessions flat (and keeps amends consistent)
+          hookahType: b.hookahType,
         };
       });
       const subtotal = bowls.reduce((s, b) => s + bowlUnitPrice(b) * b.qty, 0);
@@ -498,6 +509,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                         flavor: "fruits-mix",
                         components: comps,
                         qty: 1,
+                        // presets pour into the classic pipe
+                        hookahType: "regular",
                       };
                       setBowls((prev) => [...prev, b]);
                       toast.success(`${p.name} added`, {
@@ -579,6 +592,11 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                               {getBrand(b.primaryBrandId)?.name} ·{" "}
                               {b.flavor === "fruits" ? "Fruits" : "Mix"}
                               {b.qty > 1 && ` × ${b.qty}`}
+                              {b.hookahType === "amy" && (
+                                <span className="ms-1.5 inline-flex items-center gap-0.5 rounded-full border border-primary/30 bg-primary/15 px-1.5 py-0.5 align-middle text-[9px] font-bold text-primary">
+                                  👑 Amy pipe · 180 flat
+                                </span>
+                              )}
                             </p>
                             <p className="truncate text-xs text-muted-foreground">
                               {b.components.length === 0
@@ -955,8 +973,11 @@ function BowlEditor({
             <div className="mb-4 grid grid-cols-2 gap-2">
               {FLAVOR_TYPES.map((ft) => {
                 const active = draft.flavor === ft.key;
+                // r67 — the Amy pipe prices flat (fruits and mix alike)
                 const price =
-                  ft.key === "fruits"
+                  draft.hookahType === "amy"
+                    ? AMY_SESSION_PRICE
+                    : ft.key === "fruits"
                     ? brand?.pricing.fruits ?? 0
                     : brand?.pricing.fruitsMix ?? 0;
                 return (

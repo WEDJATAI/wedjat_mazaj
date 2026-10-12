@@ -15,11 +15,24 @@ export type BrandCategory = "regular" | "premium" | "special";
 /**
  * Top-level shisha category for the two-step selection flow.
  *  - "regular": every brand incl. the everyday Salom/Kass line
- *  - "amy":     the Amy premium pipe — every brand EXCEPT Salom & Kass
- *               (r66: the owner's rule — the premium hookah carries the
- *               premium-grade molasses only)
+ *  - "amy":     the Amy premium PIPE (a shisha type, not molasses) — every
+ *               molasses brand EXCEPT Salom & Kass (r66 owner's rule) and
+ *               except Amy itself (r67: Amy is a pipe type, so it never
+ *               appears as a molasses/flavor choice).
  */
 export type ShishaCategory = "regular" | "amy";
+
+/** r67 — the pipe/hookah type an item is smoked on. "amy" = the premium
+ * Amy Deluxe pipe: the session prices flat (fruits or mix) regardless of
+ * the molasses brand poured into it. */
+export type HookahType = "regular" | "amy";
+
+/** r67 — flat session price on the premium Amy pipe (fruits AND mix). */
+export const AMY_SESSION_PRICE = 180;
+
+/** r67 — flat session price on a regular pipe when the guest brings their
+ * own molasses (pipe + service only). */
+export const OWN_MOLASSES_REGULAR_PRICE = 125;
 
 export interface ShishaCategoryDef {
   key: ShishaCategory;
@@ -49,11 +62,13 @@ export const SHISHA_CATEGORIES: ShishaCategoryDef[] = [
   {
     key: "amy",
     label: "Amy shisha",
-    desc: "Mazaya · Al Fakher · Dandash · Nakhla · Amy",
+    desc: "Premium pipe · every molasses except Salom & Kass",
     emoji: "👑",
     logo: "/images/brands/amy.jpg",
-    // r66 — pressing "Amy" shows ALL brands except Salloum & Kass
-    brandIds: ["mazaya", "al-fakher", "dandash", "nakhla", "amy"],
+    // r66 — pressing "Amy" shows ALL brands except Salloum & Kass.
+    // r67 — the Amy MOLASSES brand is gone from the list too: Amy is a
+    // pipe type, not a flavor (it never appears in flavor lists anymore).
+    brandIds: ["mazaya", "al-fakher", "dandash", "nakhla"],
   },
 ];
 
@@ -98,6 +113,16 @@ export interface Brand {
   /** purchasable pack sizes for this brand (Egyptian market wholesale) */
   packs: PackOption[];
   badge?: string;
+  /** r67 — hidden brands never appear in the ordering UI (flavor pickers,
+   * brand grids, search, presets). The Amy "brand" stays in the catalog
+   * for stock, inventory, purchase history and legacy orders — Amy is a
+   * shisha TYPE now, priced via AMY_SESSION_PRICE, not a molasses choice. */
+  hidden?: boolean;
+}
+
+/** r67 — ordering surfaces must offer only visible (non-hidden) brands. */
+export function visibleBrands(): Brand[] {
+  return BRANDS.filter((b) => !b.hidden);
 }
 
 /** A purchasable pack of molasses. */
@@ -246,6 +271,10 @@ export const BRANDS: Brand[] = [
       { grams: 1000, label: "1kg pack", costEgp: 380 },
     ],
     badge: "Premium",
+    // r67 — Amy is a shisha TYPE (the premium pipe), not a molasses brand.
+    // Hidden from every ordering surface; pricing for amy-type sessions
+    // comes from AMY_SESSION_PRICE instead.
+    hidden: true,
   },
   {
     id: "salom",
@@ -353,16 +382,6 @@ export const BOWL_PRESETS: BowlPreset[] = [
       { brandId: "dandash", flavorName: "Peach" },
     ],
   },
-  {
-    id: "amy-premium",
-    name: "Amy Premium Mix",
-    emoji: "👑",
-    tag: "Premium",
-    components: [
-      { brandId: "amy", flavorName: "Blueberry" },
-      { brandId: "amy", flavorName: "Mint" },
-    ],
-  },
 ];
 
 export function getBrand(id: string): Brand | undefined {
@@ -374,8 +393,12 @@ export function getBrandByBarcode(code: string): Brand | undefined {
   return BRANDS.find((b) => b.barcode.toUpperCase() === c);
 }
 
-/** All mixable brands (everything except flat Salom/Kass used as mix base). */
-export const MIXABLE_BRANDS = BRANDS.filter((b) => b.pricing.fruitsMix !== undefined);
+/** All mixable brands (everything except flat Salom/Kass used as mix base).
+ * r67 — hidden brands (Amy: a pipe type, not molasses) are excluded, so
+ * flavor pickers NEVER offer Amy as a flavor choice. */
+export const MIXABLE_BRANDS = BRANDS.filter(
+  (b) => b.pricing.fruitsMix !== undefined && !b.hidden
+);
 
 /** All known flavors grouped by brand, used by the mix picker. */
 export function flavorGroups(): { brandId: string; brandName: string; emoji: string; flavors: string[] }[] {
@@ -597,9 +620,17 @@ export function splitGrams(count: number): number[] {
 /** Authoritative unit price for a configured hookah, computed from the catalog. */
 export function serverUnitPrice(
   flavor: FlavorType,
-  components: { brandId: string }[]
+  components: { brandId: string }[],
+  /** r67 — the pipe the item is smoked on; amy prices flat */
+  hookahType?: HookahType | null
 ): number {
-  if (components.length === 0) return 0;
+  // r67 — an own-molasses session has no components: the price is the
+  // pipe + service (Amy premium pipe flat, regular pipe standard).
+  if (components.length === 0) {
+    return hookahType === "amy" ? AMY_SESSION_PRICE : OWN_MOLASSES_REGULAR_PRICE;
+  }
+  // r67 — an Amy-pipe session prices flat no matter which molasses is in it
+  if (hookahType === "amy") return AMY_SESSION_PRICE;
   if (flavor === "fruits") {
     return getBrand(components[0].brandId)?.pricing.fruits ?? 0;
   }
@@ -628,21 +659,29 @@ export function recomputeOrderTotals(
     flavor: FlavorType;
     components: { brandId: string }[];
     qty: number;
+    /** r67 — per-item pipe type (amy prices flat) */
+    hookahType?: HookahType | null;
+    /** r67 — per-item BYO (the 2-for-1 can be per shisha at a table) */
+    ownType?: string | null;
   }[],
   ownType: string | null
 ): ServerTotals {
-  const bogo = ownType === "hookah" || ownType === "molasses";
+  const orderBogo = ownType === "hookah" || ownType === "molasses";
   let subtotal = 0;
   let total = 0;
   let totalQty = 0;
+  let anyBogo = orderBogo;
   for (const it of items) {
-    const unit = serverUnitPrice(it.flavor, it.components);
+    const itemBogo =
+      it.ownType === "hookah" || it.ownType === "molasses" || orderBogo;
+    anyBogo = anyBogo || itemBogo;
+    const unit = serverUnitPrice(it.flavor, it.components, it.hookahType ?? null);
     subtotal += unit * it.qty;
-    total += unit * chargeableQty(it.qty, bogo);
+    total += unit * chargeableQty(it.qty, itemBogo);
     totalQty += it.qty;
   }
   const discount = Math.max(0, subtotal - total);
-  return { totalQty, subtotal, discount, total, bogo };
+  return { totalQty, subtotal, discount, total, bogo: anyBogo };
 }
 
 /**

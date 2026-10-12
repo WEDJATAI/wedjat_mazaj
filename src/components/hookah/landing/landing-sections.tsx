@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/store/i18n";
 import { usePwa } from "@/store/pwa";
-import { BRANDS, egp } from "@/lib/catalog";
+import { visibleBrands, egp } from "@/lib/catalog";
 import { QrCodeSvg } from "../qr-code";
 import { BrandMark } from "../brand-mark";
 import { Counter, Reveal, SectionKicker } from "./primitives";
@@ -29,10 +29,10 @@ const MARQUEE_BRANDS = [
   "AL FAKHER",
   "DANDASH",
   "NAKHLA",
-  "AMY",
   "SALOM",
   "KASS",
   "MAZAJ+",
+  // r67 — AMY removed: it's a shisha pipe TYPE now, not a molasses brand
 ];
 
 export function BrandMarquee() {
@@ -96,7 +96,8 @@ export function MenuPeek({ onOpen }: { onOpen: () => void }) {
 
         {/* horizontal brand strip */}
         <div className="no-scrollbar -mx-6 mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-2 sm:mt-14 sm:justify-center sm:overflow-visible">
-          {BRANDS.map((b, i) => (
+          {/* r67 — Amy is a pipe type now, never a molasses brand card */}
+          {visibleBrands().map((b, i) => (
             <Reveal key={b.id} delay={0.08 * i} className="snap-center">
               <button
                 type="button"

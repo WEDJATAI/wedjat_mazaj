@@ -41,10 +41,18 @@ const CartItemSchema = z.object({
   accent: z.string().default(""),
   flavor: z.enum(["fruits", "fruits-mix", "flat"]),
   flavorLabel: z.string(),
-  components: z.array(ComponentSchema).min(1),
+  // r67 — components may be EMPTY when the guest brings their own
+  // molasses (the venue only supplies the pipe + service).
+  components: z.array(ComponentSchema),
   molassesGrams: z.number().default(MOLASSES_GRAMS),
   unitPrice: z.number().nonnegative(),
   qty: z.number().int().positive().max(99),
+  /** r67 — the pipe this shisha is smoked on (amy = premium flat price) */
+  hookahType: z.enum(["regular", "amy"]).optional().nullable(),
+  /** r67 — per-shisha BYO answer (the 2-for-1 applies per person) */
+  ownType: z.enum(["hookah", "molasses"]).optional().nullable(),
+  /** r67 — who this shisha is for (label at a shared table) */
+  forName: z.string().trim().max(60).optional().nullable(),
 });
 
 const CreateOrderSchema = z.object({
@@ -100,6 +108,14 @@ export async function POST(req: NextRequest) {
 
     // --- Validate every component brandId exists in the catalog ---
     for (const it of data.items) {
+      // r67 — an own-molasses shisha has NO components; anything else
+      // (menu order / own hookah) must carry at least one flavor.
+      if (it.components.length === 0 && it.ownType !== "molasses") {
+        return NextResponse.json(
+          { ok: false, error: "A shisha needs flavors unless you bring your own molasses" },
+          { status: 400 }
+        );
+      }
       for (const c of it.components) {
         if (!getBrand(c.brandId)) {
           return NextResponse.json(
@@ -241,16 +257,20 @@ export async function POST(req: NextRequest) {
       const [brandIdRaw, flavorName] = k.split("|");
       return { brandIdRaw, flavorName, key: k };
     });
-    const flavorRows = await db.flavorStock.findMany({
-      where: {
-        OR: flavorKeys.map((k) => ({
-          brandIdRaw: k.brandIdRaw,
-          flavorName: k.flavorName,
-        })),
-        // r57: only this branch's flavor jars count
-        brand: { branchId: effectiveBranchId },
-      },
-    });
+    // r67 — own-molasses shishas deduct nothing: skip the jar lookups
+    const flavorRows =
+      flavorKeys.length > 0
+        ? await db.flavorStock.findMany({
+            where: {
+              OR: flavorKeys.map((k) => ({
+                brandIdRaw: k.brandIdRaw,
+                flavorName: k.flavorName,
+              })),
+              // r57: only this branch's flavor jars count
+              brand: { branchId: effectiveBranchId },
+            },
+          })
+        : [];
     const shortFlavors: { name: string; need: number; have: number }[] = [];
     for (const k of flavorKeys) {
       const need = flavorDeductions.get(k.key) ?? 0;

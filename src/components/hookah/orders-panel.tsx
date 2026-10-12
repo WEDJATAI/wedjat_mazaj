@@ -103,7 +103,8 @@ function parseFullItems(json: string): CartItem[] {
         i &&
         typeof i.primaryBrandId === "string" &&
         Array.isArray(i.components) &&
-        i.components.length > 0
+        // r67 — own-molasses shishas legitimately carry ZERO components
+        (i.components.length > 0 || i.ownType === "molasses")
     );
   } catch {
     return [];

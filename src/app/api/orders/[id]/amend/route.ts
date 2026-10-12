@@ -53,10 +53,17 @@ const CartItemSchema = z.object({
   accent: z.string().default(""),
   flavor: z.enum(["fruits", "fruits-mix", "flat"]),
   flavorLabel: z.string(),
-  components: z.array(ComponentSchema).min(1),
+  // r67 — empty allowed for own-molasses shishas
+  components: z.array(ComponentSchema),
   molassesGrams: z.number().default(MOLASSES_GRAMS),
   unitPrice: z.number().nonnegative(),
   qty: z.number().int().positive().max(99),
+  /** r67 — pipe type (amy = premium flat price) */
+  hookahType: z.enum(["regular", "amy"]).optional().nullable(),
+  /** r67 — per-shisha BYO answer */
+  ownType: z.enum(["hookah", "molasses"]).optional().nullable(),
+  /** r67 — who this shisha is for */
+  forName: z.string().trim().max(60).optional().nullable(),
 });
 
 const AmendSchema = z.object({
@@ -182,6 +189,13 @@ export async function POST(
 
     // ── validate + sanitize the new items (never trust the client) ──
     for (const it of data.items) {
+      // r67 — own-molasses shishas carry no components
+      if (it.components.length === 0 && it.ownType !== "molasses") {
+        return NextResponse.json(
+          { ok: false, error: "A shisha needs flavors unless you bring your own molasses" },
+          { status: 400 }
+        );
+      }
       for (const c of it.components) {
         if (!getBrand(c.brandId)) {
           return NextResponse.json(
@@ -299,15 +313,19 @@ export async function POST(
     const flavorKeys = [...flavorDelta.keys()].filter(
       (k) => (flavorDelta.get(k) ?? 0) > 0
     );
-    const flavorRows = await db.flavorStock.findMany({
-      where: {
-        OR: flavorKeys.map((k) => {
-          const [brandIdRaw, flavorName] = k.split("|");
-          return { brandIdRaw, flavorName };
-        }),
-        brand: { branchId },
-      },
-    });
+    // r67 — guard: own-molasses-only amendments touch no flavor jars
+    const flavorRows =
+      flavorKeys.length > 0
+        ? await db.flavorStock.findMany({
+            where: {
+              OR: flavorKeys.map((k) => {
+                const [brandIdRaw, flavorName] = k.split("|");
+                return { brandIdRaw, flavorName };
+              }),
+              brand: { branchId },
+            },
+          })
+        : [];
     const shortFlavors: string[] = [];
     for (const k of flavorKeys) {
       const [brandIdRaw, flavorName] = k.split("|");

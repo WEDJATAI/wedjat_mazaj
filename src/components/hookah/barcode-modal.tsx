@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { getBrandByBarcode, BRANDS, egp } from "@/lib/catalog";
+import { getBrandByBarcode, egp, visibleBrands } from "@/lib/catalog";
 import {
   Dialog,
   DialogContent,
@@ -67,7 +67,8 @@ export function BarcodeModal({ open, onOpenChange, onScan }: BarcodeModalProps) 
 
   const handleCode = React.useCallback((code: string) => {
     const brand = getBrandByBarcode(code);
-    if (brand) {
+    // r67 — hidden brands (Amy: a pipe type, not molasses) never resolve
+    if (brand && !brand.hidden) {
       toast.success(`Scanned: ${brand.name}`, {
         description: brand.barcode,
       });
@@ -281,7 +282,7 @@ export function BarcodeModal({ open, onOpenChange, onScan }: BarcodeModalProps) 
               <X className="size-3" /> No scanner? Pick directly:
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {BRANDS.map((b) => (
+              {visibleBrands().map((b) => (
                 <button
                   key={b.id}
                   type="button"
