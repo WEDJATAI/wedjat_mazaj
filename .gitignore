@@ -79,3 +79,5 @@ tool-results/
 # r62 backup vault (git bundles, source archives, data snapshots)
 /backups/
 .prisma-neon/
+test-results/
+playwright-report/
