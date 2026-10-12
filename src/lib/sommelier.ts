@@ -11,6 +11,7 @@ import {
   getBrand,
   flavorTags,
   mixPrice,
+  visibleBrands,
 } from "./catalog";
 
 export type SommLang = "en" | "ar";
@@ -174,7 +175,8 @@ function scoreCandidates(intent: Intent, query: string): ScoredCandidate[] {
   const t = query.toLowerCase();
   const out: ScoredCandidate[] = [];
 
-  for (const brand of BRANDS) {
+  // r67 — Amy is a pipe TYPE now, never a molasses recommendation
+  for (const brand of BRANDS.filter((b) => !b.hidden)) {
     const isPremium = brand.category === "premium";
     const isValue = brand.category === "special";
     for (const flavor of brand.flavors) {
@@ -393,7 +395,8 @@ export function presetToPick(id: string, lang: SommLang): SommPick {
 
 /** Compact catalog summary for the LLM system prompt. */
 export function catalogSummary(): string {
-  const lines = BRANDS.map((b) => {
+  // r67 — hidden brands (Amy: a pipe type) never reach the LLM prompt
+  const lines = visibleBrands().map((b) => {
     const price =
       b.category === "special"
         ? `${b.pricing.flat} EGP flat`
@@ -407,5 +410,5 @@ export function catalogSummary(): string {
         .map((c) => `${c.flavorName} (${getBrand(c.brandId)?.name})`)
         .join(" + ")}`
   );
-  return `BRANDS:\n${lines.join("\n")}\n\nHOUSE PRESETS:\n${presets.join("\n")}\n\nRULES: every hookah is 20g. A mix bowl splits 20g across chosen flavors and costs the highest mix price of the involved brands (Amy 180 wins, otherwise 145). Salom/Kass are flat 45 EGP.`;
+  return `BRANDS:\n${lines.join("\n")}\n\nHOUSE PRESETS:\n${presets.join("\n")}\n\nRULES: every hookah is 20g. A mix bowl splits 20g across chosen flavors and costs the highest mix price of the involved brands (145 EGP). Salom/Kass are flat 45 EGP. The Amy PIPE is premium hardware: any session on it prices 180 EGP flat (fruits or mix) — mention it when a guest asks for premium.`;
 }
