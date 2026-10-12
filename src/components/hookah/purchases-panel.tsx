@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useI18n } from "@/store/i18n";
+import { timeAgo as timeAgoT } from "@/lib/time-ago";
 import { BRANDS, SUPPLIES, egp, type PackOption } from "@/lib/catalog";
 import { BrandMark } from "./brand-mark";
 import {
@@ -49,18 +51,17 @@ interface PurchaseRow {
   createdAt: string;
 }
 
-function timeAgo(iso: string): string {
-  const d = new Date(iso).getTime();
-  const diff = Math.max(0, Date.now() - d);
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  return new Date(iso).toLocaleDateString();
+/** r69 — localized via the shared helper */
+function timeAgoLocal(
+  iso: string,
+  t: ReturnType<typeof useI18n.getState>["t"]
+): string {
+  return timeAgoT(iso, t);
 }
 
 export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
+  // r69 (audit ②) — staff i18n
+  const t = useI18n((s) => s.t);
   const [purchases, setPurchases] = React.useState<PurchaseRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [buyOpen, setBuyOpen] = React.useState(false);
@@ -77,14 +78,14 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
           data.purchases.reduce((s: number, p: PurchaseRow) => s + p.totalCost, 0)
         );
       } else {
-        toast.error("Could not load purchases");
+        toast.error(t("purchasesLoadFail"));
       }
     } catch {
-      toast.error("Could not load purchases");
+      toast.error(t("purchasesLoadFail"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     load();
@@ -101,10 +102,10 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
             </span>
             <div className="min-w-0 leading-tight">
               <h1 className="font-display truncate text-xl font-bold tracking-tight text-gold-soft">
-                Purchases
+                {t("purchases")}
               </h1>
               <p className="-mt-0.5 truncate text-[11px] text-muted-foreground">
-                Buy molasses packs &amp; supplies
+                {t("purchasesSub")}
               </p>
             </div>
             <div className="ms-auto flex shrink-0 items-center gap-2">
@@ -113,12 +114,12 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
                 className="min-h-10"
                 onClick={() => setBuyOpen(true)}
               >
-                <Plus className="size-4" /> Buy
+                <Plus className="size-4" /> {t("buyWord")}
               </GoldButton>
               <button
                 type="button"
                 onClick={load}
-                aria-label="Refresh"
+                aria-label={t("refresh")}
                 className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-all hover:text-foreground active:scale-95"
               >
                 <RefreshCw className="size-4" />
@@ -126,7 +127,7 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
               <button
                 type="button"
                 onClick={onSignOut}
-                aria-label="Sign out"
+                aria-label={t("signOut")}
                 className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-all hover:text-foreground active:scale-95"
               >
                 <LogOut className="size-4" />
@@ -142,22 +143,22 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
             <StatTile
               icon={<Coins className="size-4" />}
               text={egp(totalSpent)}
-              label="Total spent"
+              label={t("totalSpent")}
             />
             <StatTile
               key={purchases.length}
               value={purchases.length}
-              label="Purchases"
+              label={t("purchases")}
               icon={<ShoppingCart className="size-4" />}
             />
             <StatTile
               icon={<CalendarClock className="size-4" />}
-              text={purchases[0] ? timeAgo(purchases[0].createdAt) : "—"}
-              label="Last purchase"
+              text={purchases[0] ? timeAgoLocal(purchases[0].createdAt, t) : "—"}
+              label={t("lastPurchase")}
             />
           </div>
 
-          <Kicker className="mb-4">History</Kicker>
+          <Kicker className="mb-4">{t("historyWord")}</Kicker>
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -167,8 +168,8 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
           ) : purchases.length === 0 ? (
             <EmptyState
               icon={<ShoppingCart className="size-6" />}
-              title="No purchases yet"
-              description="Tap “Buy” to purchase molasses packs or supplies."
+              title={t("noPurchasesYet")}
+              description={t("noPurchasesDesc")}
             />
           ) : (
             <Stagger className="space-y-2">
@@ -182,7 +183,7 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
                       <p className="truncate font-semibold">{p.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {p.packCount} × {egp(p.unitCost)}/pack
-                        {p.buyerName ? ` · by ${p.buyerName}` : ""} · {timeAgo(p.createdAt)}
+                        {p.buyerName ? ` · ${p.buyerName}` : ""} · {timeAgoLocal(p.createdAt, t)}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
@@ -230,6 +231,8 @@ function BuySheet({
   onDone: () => void;
   buyerName: string;
 }) {
+  // r69 — staff i18n
+  const t = useI18n((s) => s.t);
   const [tab, setTab] = React.useState<"molasses" | "supply">("molasses");
   const [selected, setSelected] = React.useState<{
     kind: "molasses" | "supply";
@@ -266,8 +269,8 @@ function BuySheet({
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed");
-      toast.success("Purchase recorded", {
+      if (!res.ok || !data.ok) throw new Error(data.error ?? t("couldNotRecord"));
+      toast.success(t("purchaseRecorded"), {
         description: `${selected.name} × ${packCount} = ${egp(
           selected.unitCost * packCount
         )}`,
@@ -275,7 +278,7 @@ function BuySheet({
       onOpenChange(false);
       onDone();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not record purchase");
+      toast.error(err instanceof Error ? err.message : t("couldNotRecord"));
     } finally {
       setSaving(false);
     }
@@ -289,13 +292,13 @@ function BuySheet({
         side="bottom"
         className="slim-scroll mx-auto max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl border-t border-white/[0.08] bg-[oklch(0.175_0.016_60/0.96)] p-0 backdrop-blur-2xl"
       >
-        <SheetGrip kicker="Procurement" />
+        <SheetGrip kicker={t("procurementWord")} />
         <SheetHeader className="px-5 pt-1 pb-2">
           <SheetTitle className="font-display flex items-center gap-2 text-2xl font-bold tracking-tight text-gold-soft">
-            <ShoppingCart className="size-5 text-primary" /> Buy stock
+            <ShoppingCart className="size-5 text-primary" /> {t("buyStock")}
           </SheetTitle>
           <SheetDescription>
-            Purchasing restocks inventory automatically and records the cost.
+            {t("buyDesc")}
           </SheetDescription>
         </SheetHeader>
 
@@ -315,7 +318,7 @@ function BuySheet({
                 setSelected(null);
               }}
             >
-              Molasses packs
+              {t("molassesPacks")}
             </button>
             <button
               type="button"
@@ -330,7 +333,7 @@ function BuySheet({
                 setSelected(null);
               }}
             >
-              Supplies
+              {t("supplies")}
             </button>
           </div>
 
@@ -428,13 +431,13 @@ function BuySheet({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-medium text-muted-foreground">
-                    Selected
+                    {t("selectedWord")}
                   </Label>
                   <span className="text-sm font-medium">{selected.name}</span>
                 </div>
                 <div>
                   <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                    Quantity (packs)
+                    {t("quantityPacks")}
                   </Label>
                   <div className="glass flex items-center justify-between rounded-xl p-2">
                     <button
@@ -442,7 +445,7 @@ function BuySheet({
                       className="grid size-10 place-items-center rounded-full text-lg text-muted-foreground transition-all hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-40"
                       onClick={() => setPackCount((q) => Math.max(1, q - 1))}
                       disabled={packCount <= 1}
-                      aria-label="Decrease"
+                      aria-label={t("decreaseWord")}
                     >
                       −
                     </button>
@@ -453,7 +456,7 @@ function BuySheet({
                       type="button"
                       className="grid size-10 place-items-center rounded-full text-lg text-muted-foreground transition-all hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-40"
                       onClick={() => setPackCount((q) => Math.min(999, q + 1))}
-                      aria-label="Increase"
+                      aria-label={t("increaseWord")}
                     >
                       +
                     </button>
@@ -466,7 +469,7 @@ function BuySheet({
 
         <SheetFooter className="border-t border-white/[0.06] px-5 py-4">
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Total cost</span>
+            <span className="text-muted-foreground">{t("totalCost")}</span>
             <span className="font-display text-lg font-bold tabular-nums text-gold">
               {egp(total)}
             </span>
@@ -480,7 +483,7 @@ function BuySheet({
             {saving ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              `Buy & restock · ${egp(total)}`
+              `${t("buyAndRestock")} · ${egp(total)}`
             )}
           </GoldButton>
         </SheetFooter>

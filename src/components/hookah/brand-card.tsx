@@ -1,9 +1,15 @@
 "use client";
 
-import { Brand, egp, brandColor } from "@/lib/catalog";
+import {
+  Brand,
+  egp,
+  brandColor,
+  AMY_SESSION_PRICE,
+  type HookahType,
+} from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Crown, Plus } from "lucide-react";
 import { EASE } from "./kit/kit";
 
 interface BrandCardProps {
@@ -15,6 +21,10 @@ interface BrandCardProps {
   /** r66: number of flavors currently in stock at this branch — when
    *  provided, a live "N flavors" chip glows on the card (guest flow). */
   liveFlavors?: number;
+  /** r69 (audit ④) — the pipe context this card is being picked for:
+   *  "amy" cards price the 180 EGP flat session instead of "From X"
+   *  (which understated the Amy pipe by showing brand rates). */
+  hookahType?: HookahType;
 }
 
 export function BrandCard({
@@ -23,12 +33,15 @@ export function BrandCard({
   onSelect,
   index = 0,
   liveFlavors,
+  hookahType = "regular",
 }: BrandCardProps) {
-  const fromPrice =
-    brand.pricing.flat ??
-    brand.pricing.fruits ??
-    brand.pricing.fruitsMix ??
-    0;
+  const isAmySession = hookahType === "amy";
+  const fromPrice = isAmySession
+    ? AMY_SESSION_PRICE
+    : brand.pricing.flat ??
+      brand.pricing.fruits ??
+      brand.pricing.fruitsMix ??
+      0;
   const color = brandColor(brand.id);
 
   return (
@@ -99,8 +112,9 @@ export function BrandCard({
 
       <div className="relative mt-3 flex items-end justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/75">
-            From
+          <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/75">
+            {isAmySession && <Crown className="size-3 text-primary" aria-hidden />}
+            {isAmySession ? "Session" : "From"}
           </p>
           <p className="font-display text-2xl font-bold" style={{ color }}>
             {egp(fromPrice)}
@@ -121,20 +135,28 @@ export function BrandCard({
 
       {/* flavor type chips */}
       <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
-        {brand.flavorTypes.includes("fruits") && (
-          <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
-            Fruits · {egp(brand.pricing.fruits ?? 0)}
+        {isAmySession ? (
+          <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+            180 EGP flat · any type
           </span>
-        )}
-        {brand.flavorTypes.includes("fruits-mix") && (
-          <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
-            Mix · {egp(brand.pricing.fruitsMix ?? 0)}
-          </span>
-        )}
-        {brand.flavorTypes.includes("flat") && (
-          <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
-            20g · flat
-          </span>
+        ) : (
+          <>
+            {brand.flavorTypes.includes("fruits") && (
+              <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
+                Fruits · {egp(brand.pricing.fruits ?? 0)}
+              </span>
+            )}
+            {brand.flavorTypes.includes("fruits-mix") && (
+              <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
+                Mix · {egp(brand.pricing.fruitsMix ?? 0)}
+              </span>
+            )}
+            {brand.flavorTypes.includes("flat") && (
+              <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
+                20g · flat
+              </span>
+            )}
+          </>
         )}
         {/* r66 — live availability chip (guest flow): a fresh green pulse
             dot + how many flavors are pourable right now */}

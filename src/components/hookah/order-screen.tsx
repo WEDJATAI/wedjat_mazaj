@@ -139,7 +139,7 @@ export function OrderScreen({
   // r66 — guests order from what this branch can pour RIGHT NOW (staff see
   // the full menu; the server re-validates stock at placement anyway)
   const isGuest = source !== "employee";
-  const { map: stockMap } = useFlavorStock(branchId, isGuest);
+  const { map: stockMap, branchStocked } = useFlavorStock(branchId, isGuest);
   const brandLive = React.useCallback(
     (b: Brand) => !isGuest || isBrandAvailable(stockMap, b),
     [isGuest, stockMap]
@@ -442,6 +442,7 @@ export function OrderScreen({
             <OrderWizard
               session={wizSession}
               stockMap={isGuest ? stockMap : null}
+              branchStocked={isGuest ? branchStocked : true}
               onSend={handleConfirmOrder}
               onRestart={restartWizard}
               onCancelEdit={() =>
@@ -456,6 +457,18 @@ export function OrderScreen({
                 </span>
                 {t("stockNote")}
               </p>
+            )}
+            {/* r69 (audit ①) — clearance under the fixed corner TABLE ORDER
+                card: once the table stack is live the glass card floats over
+                the page's bottom-end corner (~9rem tall + safe-area offset).
+                Reserve that height so the wizard's footer actions and the
+                "added" step can always scroll clear of it instead of hiding
+                underneath. */}
+            {cartCount > 0 && (
+              <div
+                aria-hidden
+                style={{ height: `calc(9.5rem + ${bottomInset}px)` }}
+              />
             )}
           </div>
         ) : (
@@ -827,6 +840,7 @@ export function OrderScreen({
                             inCart={mounted ? inCartFor(brand.id) : 0}
                             onSelect={() => handleSelectBrand(brand)}
                             index={i}
+                            hookahType={shishaCat === "amy" ? "amy" : "regular"}
                             liveFlavors={
                               isGuest
                                 ? availableFlavorCount(stockMap, brand)
@@ -1137,6 +1151,7 @@ export function OrderScreen({
           open={configOpen}
           onOpenChange={setConfigOpen}
           stockMap={isGuest ? stockMap : null}
+          hookahType={shishaCat === "amy" ? "amy" : "regular"}
         />
       )}
       {(!expressCheckout || amending) && (

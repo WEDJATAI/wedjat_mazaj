@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { resolvePermissions, type Permission } from "@/lib/permissions";
 import { toBranchInfo } from "@/lib/branch-scope";
+import {
+  checkPinRateLimit,
+  clearPinFailures,
+  clientIp,
+  recordPinFailure,
+} from "@/lib/rate-limit";
 
 const Schema = z.object({
   pin: z
@@ -22,8 +28,24 @@ export async function POST(req: NextRequest) {
       );
     }
     const { pin } = parsed.data;
+
+    // r69 (audit ⑥) — brute-force guard: count recent failures for this
+    // device and this PIN before touching the employee table.
+    const ip = clientIp(req.headers);
+    const limit = await checkPinRateLimit(ip, pin);
+    if (!limit.ok) {
+      return NextResponse.json(
+        { ok: false, error: limit.message },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limit.retryAfterSec) },
+        }
+      );
+    }
+
     const emp = await db.employee.findUnique({ where: { pin } });
     if (!emp || !emp.active) {
+      await recordPinFailure(ip, pin);
       return NextResponse.json(
         { ok: false, error: "Invalid or inactive PIN" },
         { status: 401 }
@@ -44,6 +66,9 @@ export async function POST(req: NextRequest) {
       }
     }
     const permissions = resolvePermissions(emp.role, emp.permissions);
+
+    // r69 — a successful sign-in forgives this device's failures on this PIN
+    await clearPinFailures(ip, pin);
 
     // r57 multi-tenant context — which branches can this employee operate?
     let branches: ReturnType<typeof toBranchInfo>[] = [];

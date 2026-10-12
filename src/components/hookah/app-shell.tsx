@@ -9,12 +9,22 @@ import { PlatformControlCenter } from "./platform/control-center";
 import { PricingSync } from "./pricing-sync";
 import { PwaManager } from "./pwa-manager";
 import { tableContextFromUrl, useTableContext } from "@/store/table-context";
+import { installErrorReporter } from "@/lib/error-reporter";
 import { LogoSplash, MazajMark } from "./logo";
 
 function useHydrated() {
   const [h, setH] = React.useState(false);
   React.useEffect(() => setH(true), []);
   return h;
+}
+
+/** r69 — one uncaught client error / rejection now reaches the owner
+ *  (see /api/errors + the ErrorLog table) instead of dying in a console
+ *  nobody watches. */
+function useErrorReporter() {
+  React.useEffect(() => {
+    installErrorReporter();
+  }, []);
 }
 
 /** Capture the POS table context (?tableId=…&table=…) once on mount. */
@@ -68,6 +78,7 @@ export function AppShell() {
   const hydrated = useHydrated();
   usePosTableLink();
   usePendingTrackLink(role);
+  useErrorReporter();
 
   return (
     <>

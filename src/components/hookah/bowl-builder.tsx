@@ -43,6 +43,7 @@ import { useBranchScope } from "@/hooks/use-branch-scope";
 import { toast } from "sonner";
 import { queueOrder } from "@/lib/offline-queue";
 import { tierDef } from "@/lib/loyalty";
+import { useI18n } from "@/store/i18n";
 import { AppHeader, EmptyState, GoldButton, ScreenShell } from "./kit/kit";
 import { BrandMark, BrandStack } from "./brand-mark";
 
@@ -134,6 +135,8 @@ interface BowlBuilderProps {
 }
 
 export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilderProps) {
+  // r69 (audit ②) — the staff New tab speaks the guest's language now
+  const t = useI18n((s) => s.t);
   // r57: orders created here belong to the employee's working branch
   const { branchId: workingBranchId } = useBranchScope();
   const [bowls, setBowls] = React.useState<Bowl[]>([]);
@@ -246,8 +249,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
     if (bowls.length === 0 || sending) return;
     // Table number is mandatory for employees
     if (!table.trim()) {
-      toast.error("Table number is required", {
-        description: "Enter the table number before sending the order.",
+      toast.error(t("tableRequiredToast"), {
+        description: t("tableRequiredToastDesc"),
       });
       return;
     }
@@ -317,13 +320,12 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             branchId: workingBranchId ?? undefined,
             loyaltyPhone: loyaltyPhone.trim() || undefined,
           },
-          `${orderedByName} · Table ${table.trim()} · ${egp(total)}`
+          `${orderedByName} · ${t("tableWord")} ${table.trim()} · ${egp(total)}`
         );
         setSent({ id: item.id, total, queuedOffline: true });
         resetAfterSend();
-        toast.success("Order saved offline", {
-          description:
-            "It will sync to the kitchen automatically when you reconnect.",
+        toast.success(t("orderSavedOffline"), {
+          description: t("orderSavedOfflineDesc"),
         });
       };
 
@@ -359,17 +361,17 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
         return;
       }
       const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "Could not send");
+      if (!res.ok || !data.ok) throw new Error(data.error ?? t("couldNotSend"));
       setSent({ id: data.order.id, total });
       resetAfterSend();
-      toast.success("Order sent to kitchen!", {
+      toast.success(t("orderSentKitchen"), {
         description:
           data.loyalty && data.loyalty.pointsEarned > 0
-            ? `${totalHookahs} hookahs · ${egp(total)} · +${data.loyalty.pointsEarned} pts for ${data.loyalty.memberName}`
-            : `${totalHookahs} hookahs · ${egp(total)} · synced to Wedjat RSM`,
+            ? `${totalHookahs} ${t("hookahPlural")} · ${egp(total)} · ${t("ptsForMember", { n: data.loyalty.pointsEarned, name: data.loyalty.memberName })}`
+            : `${totalHookahs} ${t("hookahPlural")} · ${egp(total)} · ${t("syncedToRsm")}`,
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send order");
+      toast.error(err instanceof Error ? err.message : t("couldNotSend"));
     } finally {
       setSending(false);
     }
@@ -380,13 +382,13 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
       {/* App bar — cinematic glass header */}
       <AppHeader
         icon={<Flame className="size-5" />}
-        title="Bowl builder"
-        subtitle={`${orderedByName} · build & send`}
+        title={t("bbTitle")}
+        subtitle={`${orderedByName} · ${t("bbSubtitle")}`}
         actions={
           <button
             type="button"
             onClick={onSignOut}
-            aria-label="Sign out"
+            aria-label={t("signOut")}
             className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
           >
             <X className="size-4" />
@@ -409,8 +411,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
               <Input
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Customer (optional)"
-                aria-label="Customer name"
+                placeholder={t("customerOptional")}
+                aria-label={t("customerAria")}
                 className="h-11 rounded-xl border-white/[0.08] bg-white/[0.04]"
               />
               <div className="relative">
@@ -420,8 +422,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                     setTable(e.target.value);
                     setTableId(null); // manual typing → name-only reference
                   }}
-                  placeholder="Table number *"
-                  aria-label="Table number (required)"
+                  placeholder={t("tableNumberStar")}
+                  aria-label={t("tableRequiredAria")}
                   className={cn(
                     "h-11 rounded-xl border-white/[0.08] bg-white/[0.04]",
                     !table.trim() && "border-amber-500/50"
@@ -440,9 +442,9 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                       }
                     }}
                     className="absolute end-1 top-1/2 -translate-y-1/2 rounded-lg border border-white/[0.08] bg-[oklch(0.21_0.016_60/0.95)] px-2 py-1.5 text-xs text-muted-foreground backdrop-blur-xl"
-                    aria-label="Pick from Wedjat tables"
+                    aria-label={t("pickFromWedjatTables")}
                   >
-                    <option value="">📋 Pick</option>
+                    <option value="">{t("pickFromTables")}</option>
                     {wedjatTables
                       .filter((t) => t.status === "free" || t.status === "occupied")
                       .map((t) => (
@@ -458,9 +460,9 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                 <Input
                   value={loyaltyPhone}
                   onChange={(e) => setLoyaltyPhone(e.target.value)}
-                  placeholder="📱 Loyalty phone (optional — earn points for the customer)"
+                  placeholder={t("loyaltyPhoneOptional")}
                   inputMode="tel"
-                  aria-label="Loyalty phone (optional)"
+                  aria-label={t("loyaltyPhoneOptional")}
                   className={cn(
                     "h-11 rounded-xl border-white/[0.08] bg-white/[0.04]",
                     loyaltyChip &&
@@ -470,7 +472,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                 />
                 {loyaltyChip === "new" && (
                   <p className="mt-1 text-[11px] text-amber-500">
-                    New member — joins Mazaj+ automatically (50 bonus pts)
+                    {t("newMemberNote")}
                   </p>
                 )}
                 {loyaltyChip && loyaltyChip !== "new" && (
@@ -485,7 +487,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             {/* Quick presets */}
             <section className="mb-5">
               <p className="mb-2 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-gold-soft">
-                <Zap className="size-3.5 text-primary" /> Quick presets
+                <Zap className="size-3.5 text-primary" /> {t("quickPresets")}
               </p>
               <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
                 {BOWL_PRESETS.map((p) => (
@@ -540,9 +542,10 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             <section className="mb-4">
               <div className="mb-2 flex items-center justify-between">
                 <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
-                  This order{" "}
+                  {t("thisOrder")}{" "}
                   <span className="font-sans text-xs font-normal text-muted-foreground">
-                    ({bowls.length} bowl{bowls.length !== 1 ? "s" : ""})
+                    ({bowls.length}{" "}
+                    {bowls.length !== 1 ? t("bowlsWord") : t("bowlSingle")})
                   </span>
                 </p>
                 {bowls.length > 0 && (
@@ -551,7 +554,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                     onClick={() => setBowls([])}
                     className="text-xs text-muted-foreground hover:text-destructive"
                   >
-                    Clear all
+                    {t("clearAll")}
                   </button>
                 )}
               </div>
@@ -566,8 +569,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                   >
                     <EmptyState
                       icon={<span className="text-2xl">🌬️</span>}
-                      title="No bowls yet"
-                      description="Tap a brand below or a preset above to start."
+                      title={t("noBowlsYet")}
+                      description={t("noBowlsDesc")}
                     />
                   </motion.div>
                 ) : (
@@ -590,17 +593,17 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-semibold">
                               {getBrand(b.primaryBrandId)?.name} ·{" "}
-                              {b.flavor === "fruits" ? "Fruits" : "Mix"}
+                              {b.flavor === "fruits" ? t("fruits") : t("mix")}
                               {b.qty > 1 && ` × ${b.qty}`}
                               {b.hookahType === "amy" && (
                                 <span className="ms-1.5 inline-flex items-center gap-0.5 rounded-full border border-primary/30 bg-primary/15 px-1.5 py-0.5 align-middle text-[9px] font-bold text-primary">
-                                  👑 Amy pipe · 180 flat
+                                  👑 {t("amyFlatChip")}
                                 </span>
                               )}
                             </p>
                             <p className="truncate text-xs text-muted-foreground">
                               {b.components.length === 0
-                                ? "No flavors"
+                                ? t("noFlavors")
                                 : b.components
                                     .map((c) => c.flavorName)
                                     .join(" + ")}
@@ -618,7 +621,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                             type="button"
                             onClick={() => removeBowl(b.uid)}
                             className="grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            aria-label="Remove bowl"
+                            aria-label={t("removeBowlAria")}
                           >
                             <Trash2 className="size-4" />
                           </button>
@@ -635,7 +638,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
               {!shishaCat ? (
                 <div>
                   <p className="font-display mb-2 text-lg font-bold tracking-tight text-gold-soft">
-                    Choose shisha type
+                    {t("chooseShishaType")}
                   </p>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {SHISHA_CATEGORIES.map((cat) => (
@@ -678,7 +681,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                       onClick={() => setShishaCat(null)}
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                      ← Change
+                      ← {t("changeWord")}
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -707,7 +710,11 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                         </span>
                         <p className="relative text-sm font-semibold">{brand.name}</p>
                         <p className="font-display relative text-[10px] font-bold tabular-nums text-gold">
-                          from {egp(brand.pricing.flat ?? brand.pricing.fruits ?? 0)}
+                          {/* r69 (audit ④) — Amy-category bowls price the
+                              180 flat session, never "from" brand rates */}
+                          {shishaCat === "amy"
+                            ? `${AMY_SESSION_PRICE} EGP flat`
+                            : `from ${egp(brand.pricing.flat ?? brand.pricing.fruits ?? 0)}`}
                         </p>
                         {brand.badge && (
                           <Badge
@@ -731,7 +738,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
       <footer className="relative mt-auto border-t border-white/[0.06] bg-[oklch(0.135_0.014_60/0.6)] py-4">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-1.5 px-4 text-center text-xs text-muted-foreground">
           <Flame className="size-3 text-primary" />
-          20g per bowl · Profit shown live as you build
+          {t("profitLiveNote")}
         </div>
       </footer>
 
@@ -782,7 +789,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <>
-                  <Send className="size-4" /> Send order
+                  <Send className="size-4" /> {t("sendOrderCta")}
                 </>
               )}
             </GoldButton>
@@ -873,6 +880,7 @@ function BowlEditor({
   onCancel: () => void;
 }) {
   const reduced = useReducedMotion();
+  const t = useI18n((s) => s.t);
   const [draft, setDraft] = React.useState<Bowl>(bowl);
   const [pickerOpen, setPickerOpen] = React.useState(false);
 
@@ -942,10 +950,10 @@ function BowlEditor({
               onClick={onCancel}
               className="flex min-h-11 items-center gap-1 rounded-full px-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ChevronLeft className="size-4 rtl:rotate-180" /> Cancel
+              <ChevronLeft className="size-4 rtl:rotate-180" /> {t("cancel")}
             </button>
             <p className="font-display text-xl font-bold tracking-tight text-gold-soft">
-              Build bowl
+              {t("buildBowl")}
             </p>
             <div className="w-16" />
           </div>
@@ -962,8 +970,8 @@ function BowlEditor({
               </span>
               <p className="text-xs text-muted-foreground">
                 {draft.components.length === 0
-                  ? "Add flavors to fill the bowl"
-                  : `${draft.components.length} flavor${draft.components.length > 1 ? "s" : ""} · 20g`}
+                  ? t("addFlavorsFill")
+                  : `${draft.components.length} ${draft.components.length > 1 ? t("flavorPlural") : t("flavorSingle")} · 20g`}
               </p>
             </div>
           </div>
@@ -997,7 +1005,9 @@ function BowlEditor({
                       {ft.icon}
                     </span>
                     <div className="min-w-0 text-start">
-                      <p className="text-sm font-medium">{ft.label}</p>
+                      <p className="text-sm font-medium">
+                        {ft.key === "fruits" ? t("fruits") : t("mix")}
+                      </p>
                       <p className="font-display text-sm font-bold tabular-nums text-gold">
                         {egp(price)}
                       </p>
@@ -1031,7 +1041,7 @@ function BowlEditor({
                     type="button"
                     onClick={() => removeComponent(i)}
                     className="grid size-11 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    aria-label="Remove flavor"
+                    aria-label={t("removeBowlAria")}
                   >
                     <X className="size-3.5" />
                   </button>
@@ -1048,7 +1058,7 @@ function BowlEditor({
               className="mb-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-medium text-foreground transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
             >
               <Plus className="size-4" />
-              {draft.components.length === 0 ? "Add a flavor" : "Add another flavor"}
+              {draft.components.length === 0 ? t("addAFlavor") : t("addAnotherFlavor")}
             </button>
           )}
 
@@ -1074,7 +1084,7 @@ function BowlEditor({
               type="button"
               onClick={() => setDraft((d) => ({ ...d, qty: Math.max(1, d.qty - 1) }))}
               disabled={draft.qty <= 1}
-              aria-label="Decrease quantity"
+              aria-label={t("decreaseQty")}
               className="grid size-11 place-items-center rounded-full text-lg font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:opacity-40"
             >
               −
@@ -1085,7 +1095,7 @@ function BowlEditor({
             <button
               type="button"
               onClick={() => setDraft((d) => ({ ...d, qty: Math.min(99, d.qty + 1) }))}
-              aria-label="Increase quantity"
+              aria-label={t("increaseQty")}
               className="grid size-11 place-items-center rounded-full text-lg font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
             >
               +
@@ -1095,19 +1105,19 @@ function BowlEditor({
           {/* Live profit */}
           <div className="mb-4 grid grid-cols-3 gap-2">
             <div className="glass rounded-xl p-2.5 text-center">
-              <p className="text-[10px] text-muted-foreground">Revenue</p>
+              <p className="text-[10px] text-muted-foreground">{t("revenue")}</p>
               <p className="font-display text-sm font-bold tabular-nums text-gold">
                 {egp(unit * draft.qty)}
               </p>
             </div>
             <div className="glass rounded-xl p-2.5 text-center">
-              <p className="text-[10px] text-muted-foreground">Cost</p>
+              <p className="text-[10px] text-muted-foreground">{t("cost")}</p>
               <p className="font-display text-sm font-bold tabular-nums text-amber-500">
                 {egp(cost)}
               </p>
             </div>
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2.5 text-center">
-              <p className="text-[10px] text-muted-foreground">Profit</p>
+              <p className="text-[10px] text-muted-foreground">{t("profit")}</p>
               <p className="font-display text-sm font-bold tabular-nums text-emerald-500">
                 +{egp(profit.netProfit)}
               </p>
@@ -1122,7 +1132,7 @@ function BowlEditor({
             disabled={!canSave}
             onClick={() => onSave(draft)}
           >
-            <Check className="size-4" /> Add to order · {egp(unit * draft.qty)}
+            <Check className="size-4" /> {t("addToOrderCta")} · {egp(unit * draft.qty)}
           </GoldButton>
         </div>
 
@@ -1145,6 +1155,7 @@ function FlavorPickerModal({
   onPick: (brandId: string, flavorName: string) => void;
   onClose: () => void;
 }) {
+  const t = useI18n((s) => s.t);
   const [activeBrand, setActiveBrand] = React.useState(MIXABLE_BRANDS[0]?.id ?? "mazaya");
   const brand = getBrand(activeBrand) ?? MIXABLE_BRANDS[0]!;
 
@@ -1154,11 +1165,11 @@ function FlavorPickerModal({
       <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/15" aria-hidden />
       <div className="mb-3 flex items-center justify-between">
         <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
-          Pick a flavor
+          {t("pickFlavor")}
         </p>
         <button
           onClick={onClose}
-          aria-label="Close flavor picker"
+          aria-label={t("closeFlavorPicker")}
           className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
         >
           <X className="size-4" />
@@ -1211,6 +1222,7 @@ function SentConfirmation({
   onDone: () => void;
 }) {
   const reduced = useReducedMotion();
+  const t = useI18n((s) => s.t);
   return (
     <motion.div
       initial={reduced ? false : { opacity: 0, scale: 0.95 }}
@@ -1221,7 +1233,7 @@ function SentConfirmation({
       {queuedOffline && (
         <div className="glass flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-amber-300 ring-1 ring-amber-500/30">
           <CloudUpload className="size-4" />
-          Saved offline — syncs to the kitchen when you reconnect
+          {t("savedOfflineBadge")}
         </div>
       )}
       <motion.div
@@ -1238,7 +1250,7 @@ function SentConfirmation({
       </motion.div>
       <div>
         <p className="font-display text-2xl font-bold tracking-tight text-gold-soft">
-          Order sent!
+          {t("orderSent")}
         </p>
         <p className="text-sm text-muted-foreground">
           <span className="font-mono">#{orderId.slice(-6).toUpperCase()}</span> ·{" "}
@@ -1248,7 +1260,7 @@ function SentConfirmation({
         </p>
       </div>
       <GoldButton onClick={onDone}>
-        <Plus className="size-4" /> New order
+        <Plus className="size-4" /> {t("newOrder")}
       </GoldButton>
     </motion.div>
   );

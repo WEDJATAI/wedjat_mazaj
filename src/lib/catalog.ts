@@ -62,7 +62,11 @@ export const SHISHA_CATEGORIES: ShishaCategoryDef[] = [
   {
     key: "amy",
     label: "Amy shisha",
-    desc: "Premium pipe · every molasses except Salom & Kass",
+    // r69 (audit ④) — the tile used to say "every molasses except Salom &
+    // Kass", which wrongly implied the Amy MOLASSES brand was included.
+    // Amy is a pipe type, never a flavor: the session offers exactly these
+    // four brands at a flat 180 EGP.
+    desc: "Premium pipe · Mazaya · Al Fakher · Dandash · Nakhla · 180 flat",
     emoji: "👑",
     logo: "/images/brands/amy.jpg",
     // r66 — pressing "Amy" shows ALL brands except Salloum & Kass.

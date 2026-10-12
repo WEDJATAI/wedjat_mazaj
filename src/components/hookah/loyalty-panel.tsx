@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
 import { TIERS, tierDef, nextTierProgress } from "@/lib/loyalty";
 import { toast } from "sonner";
+import { useI18n } from "@/store/i18n";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,8 @@ interface Stats {
 }
 
 export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
+  // r69 (audit ②) — staff i18n
+  const t = useI18n((s) => s.t);
   const [members, setMembers] = React.useState<MemberRow[]>([]);
   const [stats, setStats] = React.useState<Stats | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -93,18 +96,18 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
     <ScreenShell className="min-h-screen">
       <AppHeader
         icon={<Crown className="size-5" />}
-        title="Mazaj+ Loyalty"
-        subtitle="Rewards members, points & tiers"
+        title={t("loyaltyTitleFull")}
+        subtitle={t("rewardsMembersSub")}
         actions={
           <>
             <GoldButton size="sm" onClick={() => setEnrollOpen(true)}>
               <UserPlus className="size-3.5" />
-              <span className="hidden sm:inline">Enroll</span>
+              <span className="hidden sm:inline">{t("enrollWord")}</span>
             </GoldButton>
             <button
               type="button"
               onClick={load}
-              aria-label="Refresh"
+              aria-label={t("refresh")}
               className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
             >
               <RefreshCw className="size-4" />
@@ -112,7 +115,7 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
             <button
               type="button"
               onClick={onSignOut}
-              aria-label="Sign out"
+              aria-label={t("signOut")}
               className="glass grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
             >
               <LogOut className="size-4" />
@@ -135,7 +138,7 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                 <StatTile
                   icon={<Crown className="size-4" />}
                   value={stats.members}
-                  label="Members"
+                  label={t("membersLabel")}
                 />
               </StaggerItem>
               <StaggerItem>
@@ -144,9 +147,9 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                   value={stats.pointsOutstanding}
                   label={
                     <>
-                      Points outstanding
+                      {t("pointsOutstanding")}
                       <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal opacity-70">
-                        redeemable balance
+                        {t("redeemableBalance")}
                       </span>
                     </>
                   }
@@ -158,9 +161,9 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                   value={stats.pointsEarned}
                   label={
                     <>
-                      Points earned
+                      {t("pointsEarnedWord")}
                       <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal opacity-70">
-                        all-time
+                        {t("allTimeWord")}
                       </span>
                     </>
                   }
@@ -172,9 +175,9 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                   value={stats.pointsRedeemed}
                   label={
                     <>
-                      Points redeemed
+                      {t("pointsRedeemedWord")}
                       <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal opacity-70">
-                        ≈ {egp((stats.pointsRedeemed / 100) * 25)} given back
+                        {t("givenBack", { v: egp((stats.pointsRedeemed / 100) * 25) })}
                       </span>
                     </>
                   }
@@ -184,26 +187,27 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
 
             {/* Tier legend */}
             <section className="glass mt-4 rounded-2xl p-4">
-              <Kicker className="mb-3 justify-start">How Mazaj+ works</Kicker>
+              <Kicker className="mb-3 justify-start">{t("howMazajWorks")}</Kicker>
               <div className="grid gap-2 sm:grid-cols-4">
-                {TIERS.map((t) => (
+                {TIERS.map((tier) => (
                   <div
-                    key={t.key}
-                    className={cn("rounded-xl p-2.5 backdrop-blur-sm", t.cls)}
+                    key={tier.key}
+                    className={cn("rounded-xl p-2.5 backdrop-blur-sm", tier.cls)}
                   >
                     <p className="font-display text-sm font-bold">
-                      {t.emoji} {t.label}
+                      {tier.emoji} {tier.label}
                     </p>
                     <p className="text-[11px] opacity-80">
-                      {t.min}+ lifetime pts · ×{t.multiplier} earn
+                      {t("lifetimePtsEarn", {
+                        min: String(tier.min),
+                        m: String(tier.multiplier),
+                      })}
                     </p>
                   </div>
                 ))}
               </div>
               <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-                1 pt per 1 EGP · 100 pts = {egp(25)} off · new members get a
-                50-pt welcome bonus. Guests join automatically when they
-                order with a phone number.
+                {t("loyaltyRules", { v: egp(25) })}
               </p>
             </section>
 
@@ -219,9 +223,9 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search name / phone…"
+                  placeholder={t("searchMembersPh")}
                   className="h-10 w-44 rounded-full border-white/[0.09] bg-white/[0.04] text-sm sm:w-56"
-                  aria-label="Search members"
+                  aria-label={t("searchMembersAria")}
                 />
               </div>
               {filtered.length === 0 ? (
@@ -229,12 +233,12 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                   icon={<UserPlus className="size-6" />}
                   title={
                     members.length === 0
-                      ? "No members yet"
-                      : "No members match your search."
+                      ? t("noMembersYet")
+                      : t("noMembersMatch")
                   }
                   description={
                     members.length === 0
-                      ? "Guests join automatically when ordering with a phone number, or enroll them manually."
+                      ? t("membersAutoJoin")
                       : undefined
                   }
                   action={
@@ -272,7 +276,7 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                                 {m.points}
                                 <span className="text-xs font-normal text-muted-foreground">
                                   {" "}
-                                  pts
+                                  {t("ptsWord")}
                                 </span>
                               </p>
                               <span
@@ -296,7 +300,7 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                                 />
                               </div>
                               <p className="mt-1 text-[11px] text-muted-foreground">
-                                {prog.remaining} pts to{" "}
+                                {prog.remaining} {t("ptsToWord")}{" "}
                                 {prog.next.emoji} {prog.next.label} ·{" "}
                                 <span className="font-display font-semibold text-gold-soft">
                                   {m.lifetimePoints}
@@ -343,6 +347,7 @@ function EnrollDialog({
   onOpenChange: (o: boolean) => void;
   onEnrolled: () => void;
 }) {
+  const t = useI18n((s) => s.t);
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [sending, setSending] = React.useState(false);
@@ -356,7 +361,7 @@ function EnrollDialog({
 
   const submit = async () => {
     if (!name.trim() || phone.trim().length < 5) {
-      toast.error("Name and a phone number (5+ digits) are required");
+      toast.error(t("enrollReq"));
       return;
     }
     setSending(true);
@@ -376,7 +381,7 @@ function EnrollDialog({
       onOpenChange(false);
       onEnrolled();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not enroll");
+      toast.error(err instanceof Error ? err.message : t("couldNotEnroll"));
     } finally {
       setSending(false);
     }
@@ -390,28 +395,28 @@ function EnrollDialog({
             <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-primary/25 to-primary/[0.06] text-primary ring-1 ring-primary/25">
               <UserPlus className="size-4" />
             </span>
-            Enroll a member
+            {t("enrollMember")}
           </DialogTitle>
           <DialogDescription>
-            They start with a 50-point welcome bonus (100 pts = {egp(25)} off).
+            {t("enrollDesc", { v: egp(25) })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="loyalty-name" className="text-xs text-muted-foreground">
-              Full name
+              {t("fullName")}
             </Label>
             <Input
               id="loyalty-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Ahmed Hassan"
+              placeholder={t("nameExample")}
               className="h-11 rounded-xl border-white/[0.09] bg-white/[0.04]"
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="loyalty-phone" className="text-xs text-muted-foreground">
-              Phone number (their loyalty ID)
+              {t("phoneLoyaltyId")}
             </Label>
             <Input
               id="loyalty-phone"
@@ -430,10 +435,10 @@ function EnrollDialog({
         >
           {sending ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Enrolling…
+              <Loader2 className="size-4 animate-spin" /> {t("enrollingWord")}
             </>
           ) : (
-            "Enroll member"
+            t("enrollMember")
           )}
         </GoldButton>
       </DialogContent>

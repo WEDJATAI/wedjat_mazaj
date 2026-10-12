@@ -24,6 +24,7 @@ import {
   tierForLifetime,
   SIGNUP_BONUS,
 } from "@/lib/loyalty";
+import { StockShortError, shortLine } from "@/lib/stock-guard";
 
 const ComponentSchema = z.object({
   brandId: z.string(),
@@ -233,105 +234,10 @@ export async function POST(req: NextRequest) {
     // --- Supply deductions (coal + foil, per hookah) ---
     const supplyDeductions = supplyConsumption(totalHookahs); // {key, amount}
 
-    // --- Validate molasses stock (brand + per-flavor) ---
-    const inventoryRows = await db.inventoryItem.findMany({
-      where: {
-        brandId: { in: [...molassesDeductions.keys()] },
-        branchId: effectiveBranchId,
-      },
-    });
-    const short: { name: string; need: number; have: number }[] = [];
-    for (const row of inventoryRows) {
-      const need = molassesDeductions.get(row.brandId) ?? 0;
-      if (need > row.stockGrams + 0.001) {
-        short.push({
-          name: row.brandName,
-          need: Math.round(need),
-          have: Math.round(row.stockGrams),
-        });
-      }
-    }
-
-    // Per-flavor validation
-    const flavorKeys = [...flavorDeductions.keys()].map((k) => {
-      const [brandIdRaw, flavorName] = k.split("|");
-      return { brandIdRaw, flavorName, key: k };
-    });
-    // r67 — own-molasses shishas deduct nothing: skip the jar lookups
-    const flavorRows =
-      flavorKeys.length > 0
-        ? await db.flavorStock.findMany({
-            where: {
-              OR: flavorKeys.map((k) => ({
-                brandIdRaw: k.brandIdRaw,
-                flavorName: k.flavorName,
-              })),
-              // r57: only this branch's flavor jars count
-              brand: { branchId: effectiveBranchId },
-            },
-          })
-        : [];
-    const shortFlavors: { name: string; need: number; have: number }[] = [];
-    for (const k of flavorKeys) {
-      const need = flavorDeductions.get(k.key) ?? 0;
-      const row = flavorRows.find(
-        (r) => r.brandIdRaw === k.brandIdRaw && r.flavorName === k.flavorName
-      );
-      const have = row?.stockGrams ?? 0;
-      if (need > have + 0.001) {
-        const brand = getBrand(k.brandIdRaw);
-        shortFlavors.push({
-          name: `${brand?.name ?? k.brandIdRaw} · ${k.flavorName}`,
-          need: Math.round(need),
-          have: Math.round(have),
-        });
-      }
-    }
-
-    const allShort = [...short, ...shortFlavors];
-    if (allShort.length > 0) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: `Not enough molasses: ${allShort
-            .map((s) => `${s.name} (need ${s.need}g, have ${s.have}g)`)
-            .join("; ")}`,
-        },
-        { status: 409 }
-      );
-    }
-
-    // --- Validate supply stock ---
-    const supplyRows = await db.supplyItem.findMany({
-      where: {
-        key: { in: supplyDeductions.map((d) => d.key) },
-        branchId: effectiveBranchId,
-      },
-    });
-    const shortSupplies: { name: string; need: number; have: number }[] = [];
-    for (const d of supplyDeductions) {
-      const row = supplyRows.find((r) => r.key === d.key);
-      const have = row?.stock ?? 0;
-      if (d.amount > have + 0.001) {
-        const def = SUPPLIES.find((s) => s.key === d.key);
-        shortSupplies.push({
-          name: def?.name ?? d.key,
-          need: d.amount,
-          have: Math.round(have),
-        });
-      }
-    }
-    if (shortSupplies.length > 0) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: `Not enough supplies: ${shortSupplies
-            .map((s) => `${s.name} (need ${s.need}, have ${s.have})`)
-            .join("; ")}`,
-        },
-        { status: 409 }
-      );
-    }
+    // r69 (audit ⑤) — stock validation moved INSIDE the write transaction
+    // below (with atomic conditional decrements). The pre-transaction reads
+    // here used to be the only guard: two concurrent orders could both
+    // pass against the same jar and both deduct it (oversell race).
 
     // Determine assignment: guest self-orders start unassigned; employee
     // orders are immediately theirs.
@@ -359,7 +265,103 @@ export async function POST(req: NextRequest) {
       balanceAfter: number;
       isNew: boolean;
     } | null = null;
-    const order = await db.$transaction(async (tx) => {
+    // r69 — StockShortError aborts the whole transaction (rolled back:
+    // no partial order, no negative stock) and surfaces as the same 409
+    // the pre-r69 pre-transaction validation used to return.
+    let order: Awaited<ReturnType<typeof db.order.create>>;
+    try {
+      order = await db.$transaction(async (tx) => {
+      // ── r69 (audit ⑤): validate stock INSIDE the transaction ─────────
+      // Same rules + messages as before — but on rows read after the
+      // transaction opened, and backed by conditional decrements below.
+      const inventoryRows = await tx.inventoryItem.findMany({
+        where: {
+          brandId: { in: [...molassesDeductions.keys()] },
+          branchId: effectiveBranchId,
+        },
+      });
+      const short: { name: string; need: number; have: number }[] = [];
+      for (const row of inventoryRows) {
+        const need = molassesDeductions.get(row.brandId) ?? 0;
+        if (need > row.stockGrams + 0.001) {
+          short.push({
+            name: row.brandName,
+            need: Math.round(need),
+            have: Math.round(row.stockGrams),
+          });
+        }
+      }
+
+      const flavorKeys = [...flavorDeductions.keys()].map((k) => {
+        const [brandIdRaw, flavorName] = k.split("|");
+        return { brandIdRaw, flavorName, key: k };
+      });
+      // r67 — own-molasses shishas deduct nothing: skip the jar lookups
+      const flavorRows =
+        flavorKeys.length > 0
+          ? await tx.flavorStock.findMany({
+              where: {
+                OR: flavorKeys.map((k) => ({
+                  brandIdRaw: k.brandIdRaw,
+                  flavorName: k.flavorName,
+                })),
+                // r57: only this branch's flavor jars count
+                brand: { branchId: effectiveBranchId },
+              },
+            })
+          : [];
+      const shortFlavors: { name: string; need: number; have: number }[] = [];
+      for (const k of flavorKeys) {
+        const need = flavorDeductions.get(k.key) ?? 0;
+        const row = flavorRows.find(
+          (r) => r.brandIdRaw === k.brandIdRaw && r.flavorName === k.flavorName
+        );
+        const have = row?.stockGrams ?? 0;
+        if (need > have + 0.001) {
+          const brand = getBrand(k.brandIdRaw);
+          shortFlavors.push({
+            name: `${brand?.name ?? k.brandIdRaw} · ${k.flavorName}`,
+            need: Math.round(need),
+            have: Math.round(have),
+          });
+        }
+      }
+      const allShort = [...short, ...shortFlavors];
+      if (allShort.length > 0) {
+        throw new StockShortError(
+          `Not enough molasses: ${allShort
+            .map((s) => `${s.name} (need ${s.need}g, have ${s.have}g)`)
+            .join("; ")}`
+        );
+      }
+
+      const supplyRows = await tx.supplyItem.findMany({
+        where: {
+          key: { in: supplyDeductions.map((d) => d.key) },
+          branchId: effectiveBranchId,
+        },
+      });
+      const shortSupplies: { name: string; need: number; have: number }[] = [];
+      for (const d of supplyDeductions) {
+        const row = supplyRows.find((r) => r.key === d.key);
+        const have = row?.stock ?? 0;
+        if (d.amount > have + 0.001) {
+          const def = SUPPLIES.find((s) => s.key === d.key);
+          shortSupplies.push({
+            name: def?.name ?? d.key,
+            need: d.amount,
+            have: Math.round(have),
+          });
+        }
+      }
+      if (shortSupplies.length > 0) {
+        throw new StockShortError(
+          `Not enough supplies: ${shortSupplies
+            .map((s) => `${s.name} (need ${s.need}, have ${s.have})`)
+            .join("; ")}`
+        );
+      }
+
       const created = await tx.order.create({
         data: {
           customerName: data.customerName || null,
@@ -480,29 +482,30 @@ export async function POST(req: NextRequest) {
         };
       }
 
-      // deduct add-on supply stock (e.g. 1 medical hose per order)
+      // deduct add-on supply stock (e.g. 1 medical hose per order).
+      // r69 — conditional decrement: silently skip when the add-on row is
+      // missing (pre-r69 semantics) and never drive stock negative.
       for (const k of validAddons) {
-        const existing = await tx.supplyItem.findFirst({
-          where: { key: k, branchId: effectiveBranchId },
+        await tx.supplyItem.updateMany({
+          where: { key: k, branchId: effectiveBranchId, stock: { gte: 1 } },
+          data: { stock: { decrement: 1 } },
         });
-        if (existing) {
-          await tx.supplyItem.update({
-            where: { id: existing.id },
-            data: { stock: { decrement: 1 } },
-          });
-        }
       }
 
-      // deduct molasses brand totals
+      // deduct molasses brand totals — r69 atomic conditional decrement:
+      // if a concurrent order drained the jar between our read and this
+      // write, updateMany matches zero rows and the whole order aborts.
       for (const [brandId, grams] of molassesDeductions) {
-        const row = await tx.inventoryItem.findFirst({
-          where: { brandId, branchId: effectiveBranchId },
+        const row = inventoryRows.find((r) => r.brandId === brandId);
+        if (!row) continue; // untracked brand — no jar to deduct
+        const res = await tx.inventoryItem.updateMany({
+          where: { id: row.id, stockGrams: { gte: grams } },
+          data: { stockGrams: { decrement: grams } },
         });
-        if (row) {
-          await tx.inventoryItem.update({
-            where: { id: row.id },
-            data: { stockGrams: { decrement: grams } },
-          });
+        if (res.count === 0) {
+          throw new StockShortError(
+            `Not enough molasses: ${shortLine(row.brandName, grams, 0)}`
+          );
         }
       }
 
@@ -515,10 +518,20 @@ export async function POST(req: NextRequest) {
           (r) => r.brandIdRaw === brandIdRaw && r.flavorName === flavorName
         );
         if (existingFlavor) {
-          await tx.flavorStock.update({
-            where: { id: existingFlavor.id },
+          // r69 — atomic conditional decrement (race-loss abort)
+          const res = await tx.flavorStock.updateMany({
+            where: { id: existingFlavor.id, stockGrams: { gte: grams } },
             data: { stockGrams: { decrement: grams } },
           });
+          if (res.count === 0) {
+            throw new StockShortError(
+              `Not enough molasses: ${shortLine(
+                `${brand?.name ?? brandIdRaw} · ${flavorName}`,
+                grams,
+                0
+              )}`
+            );
+          }
         } else if (invRow && brand) {
           // create the flavor subtype row then decrement
           await tx.flavorStock.create({
@@ -536,14 +549,19 @@ export async function POST(req: NextRequest) {
 
       // deduct supplies (upsert so missing rows are created then decremented)
       for (const d of supplyDeductions) {
-        const existing = await tx.supplyItem.findFirst({
-          where: { key: d.key, branchId: effectiveBranchId },
-        });
-        if (existing) {
-          await tx.supplyItem.update({
-            where: { id: existing.id },
+        const row = supplyRows.find((r) => r.key === d.key);
+        if (row) {
+          // r69 — atomic conditional decrement (race-loss abort)
+          const res = await tx.supplyItem.updateMany({
+            where: { id: row.id, stock: { gte: d.amount } },
             data: { stock: { decrement: d.amount } },
           });
+          if (res.count === 0) {
+            const def = SUPPLIES.find((s) => s.key === d.key);
+            throw new StockShortError(
+              `Not enough supplies: ${def?.name ?? d.key} (need ${d.amount}, have 0)`
+            );
+          }
         } else {
           const def = SUPPLIES.find((s) => s.key === d.key);
           if (def) {
@@ -565,7 +583,16 @@ export async function POST(req: NextRequest) {
       }
 
       return created;
-    });
+      });
+    } catch (err) {
+      if (err instanceof StockShortError) {
+        return NextResponse.json(
+          { ok: false, error: err.message },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     // Sync to Wedjat RSM restaurant POS (non-blocking; best-effort):
     // the items land on the table's CHECK via the delivery webhook, and

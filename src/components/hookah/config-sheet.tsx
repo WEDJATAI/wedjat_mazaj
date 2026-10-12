@@ -8,8 +8,10 @@ import {
   FLAVOR_LABELS,
   FlavorType,
   getBrand,
+  type HookahType,
   MIXABLE_BRANDS,
   MOLASSES_GRAMS,
+  AMY_SESSION_PRICE,
 } from "@/lib/catalog";
 import {
   Sheet,
@@ -24,6 +26,7 @@ import {
   Minus,
   Plus,
   Check,
+  Crown,
   X,
   Shuffle,
   Leaf,
@@ -74,6 +77,13 @@ interface ConfigSheetProps {
   /** r66 — per-flavor stock for this branch (guest flow). null/undefined
    *  = show every catalog flavor (staff / fail-open). */
   stockMap?: StockMap | null;
+  /** r69 (audit ④) — the pipe this bowl is being packed for. Bowls packed
+   *  from the "Amy shisha" category price 180 EGP flat (AMY_SESSION_PRICE)
+   *  and carry hookahType so the server recompute agrees. The classic
+   *  (staff / amend) surface used to price these at brand rates — a
+   *  silent rule break the r68 audit surfaced via the "from 125 EGP"
+   *  copy on the Amy category cards. */
+  hookahType?: HookahType | null;
 }
 
 export function ConfigSheet({
@@ -82,6 +92,7 @@ export function ConfigSheet({
   onOpenChange,
   onPacked,
   stockMap = null,
+  hookahType = null,
 }: ConfigSheetProps) {
   const t = useI18n((s) => s.t);
   const reduced = useReducedMotion();
@@ -114,11 +125,15 @@ export function ConfigSheet({
   if (!brand) return null;
 
   const isFlat = brand.flavorTypes.length === 1 && brand.flavorTypes[0] === "flat";
+  const isAmySession = hookahType === "amy";
 
   // Compute grams split for mix display
   const mixGrams = splitGrams(Math.max(1, mixComponents.length));
 
-  const unitPrice = isFlat
+  // r69 — an Amy-pipe session prices flat regardless of brand or type
+  const unitPrice = isAmySession
+    ? AMY_SESSION_PRICE
+    : isFlat
     ? brand.pricing.flat ?? 0
     : flavor === "fruits"
     ? brand.pricing.fruits ?? 0
@@ -170,6 +185,8 @@ export function ConfigSheet({
       molassesGrams: MOLASSES_GRAMS,
       unitPrice,
       qty,
+      // r69 — stamp the pipe so totals + server recompute agree
+      hookahType: isAmySession ? "amy" : "regular",
     });
 
     haptic("light");
@@ -214,6 +231,12 @@ export function ConfigSheet({
               <SheetDescription className="mt-0.5 text-xs">
                 {t("grams20Note")}
               </SheetDescription>
+              {isAmySession && (
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  <Crown className="size-3" />
+                  {AMY_SESSION_PRICE} {t("wizPriceFlatNote")}
+                </span>
+              )}
             </div>
           </div>
           <span className="ember-hairline w-full" aria-hidden />
@@ -231,6 +254,8 @@ export function ConfigSheet({
                     f === "fruits"
                       ? brand.pricing.fruits ?? 0
                       : brand.pricing.fruitsMix ?? 0;
+                  // r69 — Amy sessions price flat: never show per-type rates
+                  const shownPrice = isAmySession ? AMY_SESSION_PRICE : price;
                   return (
                     <motion.button
                       key={f}
@@ -256,7 +281,7 @@ export function ConfigSheet({
                           {FLAVOR_LABELS[f]}
                         </span>
                         <span className="font-display block text-sm font-bold tabular-nums text-gold">
-                          {egp(price)}
+                          {egp(shownPrice)}
                         </span>
                       </span>
                       {active && <Check className="size-4 shrink-0 text-primary" />}
@@ -279,7 +304,7 @@ export function ConfigSheet({
                   <p className="text-xs text-muted-foreground">
                     {t("flatNote")}{" "}
                     <span className="font-display font-bold tabular-nums text-gold">
-                      {egp(brand.pricing.flat ?? 0)}
+                      {egp(isAmySession ? AMY_SESSION_PRICE : brand.pricing.flat ?? 0)}
                     </span>{" "}
                     · 20g
                   </p>

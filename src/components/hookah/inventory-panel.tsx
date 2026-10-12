@@ -74,7 +74,10 @@ interface FlavorRow {
   flavorName: string;
   stockGrams: number;
   lowStockThreshold: number;
-  updatedAt: string;
+  /** r69 — null when no DB jar exists for this flavor (untracked) */
+  updatedAt: string | null;
+  /** r69 — false = no jar row (the shelf was never stocked for it) */
+  tracked?: boolean;
 }
 
 function hookahsFromGrams(g: number): number {

@@ -123,6 +123,16 @@ export interface Translations {
   wizContinue: string;
   wizAddAnother: string;
   wizAddAnotherDesc: string;
+  /** r69 (audit ③) — empty-state copy: sold out vs not stocked, plus the
+   * two escapes (own molasses / call staff). */
+  wizSoldOutTitle: string;
+  wizSoldOutDesc: string;
+  wizNotStockedTitle: string;
+  wizNotStockedDesc: string;
+  wizCallStaff: string;
+  wizStaffCallNote: string;
+  wizBrandSoldOut: string;
+  wizBackToBrands: string;
   wizSendTable: string;
   wizAddedToast: string;
   wizOwnMolassesTag: string;
@@ -517,6 +527,124 @@ export interface Translations {
   noRequestsYet: string;
   noRequestsDesc: string;
   autoRefresh: string;
+  /** r69 (audit ②) — staff surfaces i18n: requests-panel, orders-panel
+   * (queue), bowl-builder, loyalty-panel, purchases-panel were built
+   * English-locked. Keys below complete their dictionary. */
+  refresh: string;
+  updateFailed: string;
+  preparingLabel: string;
+  markedPreparingToast: string;
+  markedDoneToast: string;
+  waitingLabel: string;
+  lateLabel: string;
+  hookahSingle: string;
+  hookahPlural: string;
+  loadOrdersFail: string;
+  orderConfirmedToast: string;
+  nowPreparingFor: string;
+  couldNotClaim: string;
+  legacyItemsNoEdit: string;
+  guestScanLabel: string;
+  guestCallLabel: string;
+  employeeLabel: string;
+  autoRefresh10: string;
+  queueValueLabel: string;
+  statusWord: string;
+  commentAddedToast: string;
+  couldNotComment: string;
+  commentPlaceholder: string;
+  noCommentsHint: string;
+  reqNewCount: string;
+  acknowledgeLabel: string;
+  stepRequested: string;
+  coalRequestTitle: string;
+  reqLoadFail: string;
+  reqAckToast: string;
+  reqDoneToast: string;
+  requestsCount: string;
+  chooseShishaType: string;
+  changeWord: string;
+  bowlsWord: string;
+  profitLiveNote: string;
+  flatSessionPrice: string;
+  /** r69 — bowl-builder (staff New tab) */
+  bbTitle: string;
+  bbSubtitle: string;
+  customerOptional: string;
+  customerAria: string;
+  tableNumberStar: string;
+  tableRequiredAria: string;
+  pickFromTables: string;
+  pickFromWedjatTables: string;
+  loyaltyPhoneOptional: string;
+  newMemberNote: string;
+  tableRequiredToast: string;
+  tableRequiredToastDesc: string;
+  orderSavedOffline: string;
+  orderSentKitchen: string;
+  syncedToRsm: string;
+  ptsForMember: string;
+  couldNotSend: string;
+  bowlSingle: string;
+  amyFlatChip: string;
+  noFlavors: string;
+  removeBowlAria: string;
+  sendOrderCta: string;
+  addFlavorsFill: string;
+  flavorSingle: string;
+  flavorPlural: string;
+  addAFlavor: string;
+  decreaseQty: string;
+  increaseQty: string;
+  addToOrderCta: string;
+  closeFlavorPicker: string;
+  savedOfflineBadge: string;
+  standardWord: string;
+  tableWord: string;
+  /** r69 — loyalty-panel */
+  loyaltyTitleFull: string;
+  rewardsMembersSub: string;
+  membersLabel: string;
+  searchMembersPh: string;
+  searchMembersAria: string;
+  noMembersYet: string;
+  noMembersMatch: string;
+  membersAutoJoin: string;
+  enrollWord: string;
+  enrollReq: string;
+  couldNotEnroll: string;
+  enrollMember: string;
+  nameExample: string;
+  ptsWord: string;
+  ptsToWord: string;
+  /** r69 — purchases-panel */
+  purchasesLoadFail: string;
+  noPurchasesYet: string;
+  noPurchasesDesc: string;
+  purchaseRecorded: string;
+  couldNotRecord: string;
+  procurementWord: string;
+  quantityPacks: string;
+  totalCost: string;
+  decreaseWord: string;
+  increaseWord: string;
+  /** r69 — loyalty-panel supplemental */
+  pointsOutstanding: string;
+  redeemableBalance: string;
+  pointsEarnedWord: string;
+  allTimeWord: string;
+  pointsRedeemedWord: string;
+  givenBack: string;
+  howMazajWorks: string;
+  lifetimePtsEarn: string;
+  loyaltyRules: string;
+  enrollDesc: string;
+  fullName: string;
+  phoneLoyaltyId: string;
+  enrollingWord: string;
+  buyWord: string;
+  purchasesSub: string;
+  historyWord: string;
 
   // Employees
   employees: string;
@@ -950,6 +1078,16 @@ export const translations: Record<Lang, Partial<Translations>> = {
     wizContinue: "Continue",
     wizAddAnother: "Add another shisha",
     wizAddAnotherDesc: "For someone else at the table",
+    wizSoldOutTitle: "Everything's sold out right now",
+    wizSoldOutDesc:
+      "The jars at this branch just ran dry. Bring your own molasses and we'll pack it for you (2-for-1), or call the staff for help.",
+    wizNotStockedTitle: "This branch isn't stocked yet",
+    wizNotStockedDesc:
+      "The molasses shelf here is still being set up. Bring your own molasses and enjoy it 2-for-1, or call the staff for help.",
+    wizCallStaff: "Call staff",
+    wizStaffCallNote: "Guest needs help — no molasses available",
+    wizBrandSoldOut: "This brand just sold out — pick another",
+    wizBackToBrands: "Back to brands",
     wizSendTable: "Send table order",
     wizAddedToast: "Shisha added to your table order",
     wizOwnMolassesTag: "own molasses",
@@ -1351,6 +1489,119 @@ export const translations: Record<Lang, Partial<Translations>> = {
     noRequestsYet: "No requests yet",
     noRequestsDesc: "When a guest calls the shisha man, it shows here.",
     autoRefresh: "Auto-refreshes every 15 seconds",
+    refresh: "Refresh",
+    updateFailed: "Update failed",
+    preparingLabel: "Preparing",
+    markedPreparingToast: "Marked preparing",
+    markedDoneToast: "Marked done",
+    waitingLabel: "Waiting",
+    lateLabel: "Late",
+    hookahSingle: "hookah",
+    hookahPlural: "hookahs",
+    loadOrdersFail: "Could not load orders",
+    orderConfirmedToast: "Order confirmed",
+    nowPreparingFor: "Now preparing for {name}",
+    couldNotClaim: "Could not claim order",
+    legacyItemsNoEdit: "This order can't be edited (legacy items)",
+    guestScanLabel: "Guest scan",
+    guestCallLabel: "Guest call",
+    employeeLabel: "Employee",
+    autoRefresh10: "Auto-refreshes every 10 seconds",
+    queueValueLabel: "Queue value",
+    statusWord: "Status",
+    commentAddedToast: "Comment added",
+    couldNotComment: "Could not add comment",
+    commentPlaceholder: "Add a comment — e.g. needs extra coal, customer wants less heat…",
+    noCommentsHint: "No comments yet. Add the first one below.",
+    reqNewCount: "{n} new",
+    acknowledgeLabel: "Acknowledge",
+    stepRequested: "Requested",
+    coalRequestTitle: "Coal request",
+    reqLoadFail: "Could not load requests",
+    reqAckToast: "Request acknowledged",
+    reqDoneToast: "Request marked done",
+    requestsCount: "{n} requests",
+    chooseShishaType: "Choose shisha type",
+    changeWord: "Change",
+    bowlsWord: "bowls",
+    profitLiveNote: "20g per bowl · Profit shown live as you build",
+    flatSessionPrice: "{p} EGP flat",
+    bbTitle: "Bowl builder",
+    bbSubtitle: "build & send",
+    customerOptional: "Customer (optional)",
+    customerAria: "Customer name",
+    tableNumberStar: "Table number *",
+    tableRequiredAria: "Table number (required)",
+    pickFromTables: "📋 Pick",
+    pickFromWedjatTables: "Pick from Wedjat tables",
+    loyaltyPhoneOptional: "📱 Loyalty phone (optional — earn points for the customer)",
+    newMemberNote: "New member — joins Mazaj+ automatically (50 bonus pts)",
+    tableRequiredToast: "Table number is required",
+    tableRequiredToastDesc: "Enter the table number before sending the order.",
+    orderSavedOffline: "Order saved offline",
+    orderSentKitchen: "Order sent to kitchen!",
+    syncedToRsm: "synced to Wedjat RSM",
+    ptsForMember: "+{n} pts for {name}",
+    couldNotSend: "Could not send order",
+    bowlSingle: "bowl",
+    amyFlatChip: "Amy pipe · 180 flat",
+    noFlavors: "No flavors",
+    removeBowlAria: "Remove bowl",
+    sendOrderCta: "Send order",
+    addFlavorsFill: "Add flavors to fill the bowl",
+    flavorSingle: "flavor",
+    flavorPlural: "flavors",
+    addAFlavor: "Add a flavor",
+    decreaseQty: "Decrease quantity",
+    increaseQty: "Increase quantity",
+    addToOrderCta: "Add to order",
+    closeFlavorPicker: "Close flavor picker",
+    savedOfflineBadge: "Saved offline — syncs to the kitchen when you reconnect",
+    standardWord: "Standard",
+    tableWord: "Table",
+    loyaltyTitleFull: "Mazaj+ Loyalty",
+    rewardsMembersSub: "Rewards members, points & tiers",
+    membersLabel: "Members",
+    searchMembersPh: "Search name / phone…",
+    searchMembersAria: "Search members",
+    noMembersYet: "No members yet",
+    noMembersMatch: "No members match your search.",
+    membersAutoJoin:
+      "Guests join automatically when ordering with a phone number, or enroll them manually.",
+    enrollWord: "Enroll",
+    enrollReq: "Name and a phone number (5+ digits) are required",
+    couldNotEnroll: "Could not enroll",
+    enrollMember: "Enroll member",
+    nameExample: "e.g. Ahmed Hassan",
+    ptsWord: "pts",
+    ptsToWord: "pts to",
+    purchasesLoadFail: "Could not load purchases",
+    noPurchasesYet: "No purchases yet",
+    noPurchasesDesc: "Tap “Buy” to purchase molasses packs or supplies.",
+    purchaseRecorded: "Purchase recorded",
+    couldNotRecord: "Could not record purchase",
+    procurementWord: "Procurement",
+    quantityPacks: "Quantity (packs)",
+    totalCost: "Total cost",
+    decreaseWord: "Decrease",
+    increaseWord: "Increase",
+    pointsOutstanding: "Points outstanding",
+    redeemableBalance: "redeemable balance",
+    pointsEarnedWord: "Points earned",
+    allTimeWord: "all-time",
+    pointsRedeemedWord: "Points redeemed",
+    givenBack: "≈ {v} given back",
+    howMazajWorks: "How Mazaj+ works",
+    lifetimePtsEarn: "{min}+ lifetime pts · ×{m} earn",
+    loyaltyRules:
+      "1 pt per 1 EGP · 100 pts = {v} off · new members get a 50-pt welcome bonus. Guests join automatically when they order with a phone number.",
+    enrollDesc: "They start with a 50-point welcome bonus (100 pts = {v} off).",
+    fullName: "Full name",
+    phoneLoyaltyId: "Phone number (their loyalty ID)",
+    enrollingWord: "Enrolling…",
+    buyWord: "Buy",
+    purchasesSub: "Buy molasses packs & supplies",
+    historyWord: "History",
 
     // Employees
     employees: "Employees",
@@ -1798,6 +2049,16 @@ export const translations: Record<Lang, Partial<Translations>> = {
     wizContinue: "متابعة",
     wizAddAnother: "أضف شيشة أخرى",
     wizAddAnotherDesc: "لشخص آخر على الطاولة",
+    wizSoldOutTitle: "كل المعسلات خلصت حاليًا",
+    wizSoldOutDesc:
+      "جرارا هذا الفرع خلصت للتو. أحضر معسلك الخاص وسنجهزه لك (٢ بسعر ١)، أو نادِ الموظف للمساعدة.",
+    wizNotStockedTitle: "هذا الفرع لم يُجهّز بعد",
+    wizNotStockedDesc:
+      "رف المعسل هنا لسه بيتجهز. أحضر معسلك الخاص واستمتع بعرض ٢ بسعر ١، أو نادِ الموظف للمساعدة.",
+    wizCallStaff: "نادِ الموظف",
+    wizStaffCallNote: "الضيف يحتاج مساعدة — لا يوجد معسل متاح",
+    wizBrandSoldOut: "هذه الماركة خلصت للتو — اختر غيرها",
+    wizBackToBrands: "رجوع للماركات",
     wizSendTable: "أرسل طلب الطاولة",
     wizAddedToast: "تمت إضافة الشيشة لطلب طاولتك",
     wizOwnMolassesTag: "معسل خاص",
@@ -2186,6 +2447,118 @@ export const translations: Record<Lang, Partial<Translations>> = {
     noRequestsYet: "لا توجد طلبات بعد",
     noRequestsDesc: "عند استدعاء الضيف لرجل الشيشة، يظهر هنا.",
     autoRefresh: "يتحدث تلقائياً كل 15 ثانية",
+    refresh: "تحديث",
+    updateFailed: "فشل التحديث",
+    preparingLabel: "قيد التحضير",
+    markedPreparingToast: "أصبحت قيد التحضير",
+    markedDoneToast: "تم إنهاء الطلب",
+    waitingLabel: "منتظرة",
+    lateLabel: "متأخرة",
+    hookahSingle: "شيشة",
+    hookahPlural: "شيشة",
+    loadOrdersFail: "تعذر تحميل الطلبات",
+    orderConfirmedToast: "تم تأكيد الطلب",
+    nowPreparingFor: "يُحضَّر الآن لـ {name}",
+    couldNotClaim: "تعذر استلام الطلب",
+    legacyItemsNoEdit: "لا يمكن تعديل هذا الطلب (عناصر قديمة)",
+    guestScanLabel: "مسح من الضيف",
+    guestCallLabel: "نداء الضيف",
+    employeeLabel: "موظف",
+    autoRefresh10: "يتحدث تلقائياً كل 10 ثوانٍ",
+    queueValueLabel: "قيمة الطابور",
+    statusWord: "الحالة",
+    commentAddedToast: "تمت إضافة التعليق",
+    couldNotComment: "تعذر إضافة التعليق",
+    commentPlaceholder: "أضف تعليقًا — مثلًا: يحتاج فحمًا إضافيًا، العميل يريد حرارة أقل…",
+    noCommentsHint: "لا توجد تعليقات بعد. أضف أول تعليق بالأسفل.",
+    reqNewCount: "{n} جديد",
+    acknowledgeLabel: "استلام",
+    stepRequested: "تم الطلب",
+    coalRequestTitle: "طلب فحم",
+    reqLoadFail: "تعذر تحميل طلبات الخدمة",
+    reqAckToast: "تم استلام الطلب",
+    reqDoneToast: "تم تنفيذ الطلب",
+    requestsCount: "{n} طلبات",
+    chooseShishaType: "اختر نوع الشيشة",
+    changeWord: "تغيير",
+    bowlsWord: "أطباق",
+    profitLiveNote: "٢٠ جرام للطبق · الربح يظهر مباشرة أثناء التجهيز",
+    flatSessionPrice: "{p} جنيه ثابت",
+    bbTitle: "بناء الطبق",
+    bbSubtitle: "ابنِ وأرسل",
+    customerOptional: "العميل (اختياري)",
+    customerAria: "اسم العميل",
+    tableNumberStar: "رقم الطاولة *",
+    tableRequiredAria: "رقم الطاولة (مطلوب)",
+    pickFromTables: "📋 اختر",
+    pickFromWedjatTables: "اختر من طاولات Wedjat",
+    loyaltyPhoneOptional: "📱 هاتف الولاء (اختياري — اجمع نقاط العميل)",
+    newMemberNote: "عضو جديد — ينضم لمزاج+ تلقائيًا (٥٠ نقطة مكافأة)",
+    tableRequiredToast: "رقم الطاولة مطلوب",
+    tableRequiredToastDesc: "أدخل رقم الطاولة قبل إرسال الطلب.",
+    orderSavedOffline: "تم حفظ الطلب أوفلاين",
+    orderSentKitchen: "تم إرسال الطلب للمطبخ!",
+    syncedToRsm: "تمت مزامنته مع Wedjat RSM",
+    ptsForMember: "+{n} نقطة لـ {name}",
+    couldNotSend: "تعذر إرسال الطلب",
+    bowlSingle: "طبق",
+    amyFlatChip: "أنبوب أمي · ١٨٠ ثابت",
+    noFlavors: "لا نكهات",
+    removeBowlAria: "إزالة الطبق",
+    sendOrderCta: "إرسال الطلب",
+    addFlavorsFill: "أضف نكهات لتعبئة الطبق",
+    flavorSingle: "نكهة",
+    flavorPlural: "نكهات",
+    addAFlavor: "أضف نكهة",
+    decreaseQty: "تقليل الكمية",
+    increaseQty: "زيادة الكمية",
+    addToOrderCta: "أضف للطلب",
+    closeFlavorPicker: "إغلاق منتقي النكهات",
+    savedOfflineBadge: "محفوظ أوفلاين — سيتزامن مع المطبخ عند إعادة الاتصال",
+    standardWord: "قياسي",
+    tableWord: "طاولة",
+    loyaltyTitleFull: "ولاء مزاج+",
+    rewardsMembersSub: "أعضاء المكافآت والنقاط والمستويات",
+    membersLabel: "الأعضاء",
+    searchMembersPh: "ابحث بالاسم / الهاتف…",
+    searchMembersAria: "البحث في الأعضاء",
+    noMembersYet: "لا يوجد أعضاء بعد",
+    noMembersMatch: "لا يوجد أعضاء مطابقون للبحث.",
+    membersAutoJoin: "ينضم الضيوف تلقائيًا عند الطلب برقم هاتف، أو سجّلهم يدويًا.",
+    enrollWord: "تسجيل",
+    enrollReq: "الاسم ورقم هاتف (٥+ أرقام) مطلوبان",
+    couldNotEnroll: "تعذر التسجيل",
+    enrollMember: "تسجيل عضو",
+    nameExample: "مثلًا: أحمد حسن",
+    ptsWord: "نقطة",
+    ptsToWord: "نقطة للوصول إلى",
+    purchasesLoadFail: "تعذر تحميل المشتريات",
+    noPurchasesYet: "لا توجد مشتريات بعد",
+    noPurchasesDesc: "اضغط على «شراء» لشراء عبوات المعسل أو المستلزمات.",
+    purchaseRecorded: "تم تسجيل الشراء",
+    couldNotRecord: "تعذر تسجيل الشراء",
+    procurementWord: "المشتريات",
+    quantityPacks: "الكمية (عبوات)",
+    totalCost: "إجمالي التكلفة",
+    decreaseWord: "تقليل",
+    increaseWord: "زيادة",
+    pointsOutstanding: "نقاط قائمة",
+    redeemableBalance: "الرصيد القابل للاستبدال",
+    pointsEarnedWord: "نقاط مكتسبة",
+    allTimeWord: "إجمالي كل الفترات",
+    pointsRedeemedWord: "نقاط مستبدلة",
+    givenBack: "≈ {v} مُستردة",
+    howMazajWorks: "كيف يعمل مزاج+",
+    lifetimePtsEarn: "{min}+ نقطة إجمالية · ×{m} كسب",
+    loyaltyRules:
+      "نقطة لكل 1 جنيه · ١٠٠ نقطة = خصم {v} · الأعضاء الجدد يحصلون على ٥٠ نقطة ترحيبية. ينضم الضيوف تلقائيًا عند الطلب برقم هاتف.",
+    enrollDesc: "يبدأون بمكافأة ترحيبية ٥٠ نقطة (١٠٠ نقطة = خصم {v}).",
+    fullName: "الاسم الكامل",
+    phoneLoyaltyId: "رقم الهاتف (معرّف الولاء)",
+    enrollingWord: "جارٍ التسجيل…",
+    buyWord: "شراء",
+    purchasesSub: "شراء عبوات المعسل والمستلزمات",
+    historyWord: "السجل",
 
     employees: "الموظفون",
     manageStaff: "إدارة الموظفين والصلاحيات",

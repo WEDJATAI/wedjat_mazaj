@@ -1069,3 +1069,33 @@ Known limitations & risks (owner should read):
 5. Amend sessions now survive reload (better than losing them) — a guest who abandons an amend will see the "EDITING ORDER" banner on return until they cancel/delete it from the corner card.
 6. Mix on the Amy pipe prices 180 (not 145+premium-brand-max) — consistent with "Amy = flat session", and revenue-positive vs the old 145 regular mixes, but the owner should confirm.
 7. No analytics on wizard step drop-off yet — worth adding if the owner wants funnel data.
+
+---
+Task ID: r68
+Agent: main (Z.ai Code)
+Task: Full multi-angle E2E consensus audit of the r66+r67 build (HEAD 160b94a) — code inspection + live browser E2E (agent-browser, iPhone 14) + API tamper tests + VLM vision audits + production health checks. (Note: original r68 worklog entry + commit 85ab8bc were lost to a sandbox workspace reset; this is a faithful reconstruction re-appended during r69 before implementing the backlog.)
+
+Work Log:
+- Verified all features live on local + production (wmazaj.vercel.app @ 160b94a, 43/43 jars live): landing, wizard ritual (who → setup → pipe → molasses → flavors → review), Amy = pipe type never a flavor (4 premium brands only, 180 EGP flat), Regular pipe full menu incl. Salom (45 flat budget) & Kass, own-molasses BYO skips flavor steps, per-shisha 2-for-1 on BYO, availability filter (≥20g) proven both directions, multi-shisha table ordering (per-person wizard, TableOrderSheet per-shisha Edit/Remove with total recompute), cart persistence across reload, staff queue lifecycle (Confirm & take → Preparing/Assigned; requests Pending → Acknowledged → Done), RTL Arabic, new coal request via API carries branchId.
+- Tamper test: POSTed order with client total:1 for an Amy item → server recomputed and charged 180 (server-authoritative pricing proven).
+- Order placement verified in DB: {fruits, mazaya Double Apple, qty 2, hookahType: amy, forName: Sara} @ 360 EGP with forName/hookahType riding in itemsJson.
+- 4 VLM vision audits (review card, table sheet, amy molasses list, RTL) — all clean.
+
+Audit findings (7 + carry-overs):
+1. HIGH (UX): fixed z-40 TABLE ORDER corner card floats over the inline wizard — overlaps the wizard's bottom content ("Add another shisha" / step footer) when the cart is non-empty. Fix: dynamic bottom inset on the wizard (or corner card clearance) when table cart active. Files: order-wizard.tsx, order-screen.tsx.
+2. MED: staff requests-panel is English-locked (hardcoded STEP_LABELS Requested/Acknowledged/Done, title, toasts — only 4 t() calls); bowl-builder has 0 t() calls; loyalty-panel and purchases-panel also English-locked.
+3. MED: /api/flavor-stock FABRICATES the 43-jar list from catalog when DB rows are missing (stockGrams: 0, updatedAt: new Date() — a fake "just updated" stamp). This masked a fully wiped local DB during the audit (sandbox re-provision) — the API must not fake freshness.
+4. MED: forName (who each shisha is for) rides in itemsJson but is NOT displayed in staff queue cards — staff can't see per-person labels.
+5. LOW (copy): staff Amy tile says "every molasses except Salom & Kass" but the rule also excludes the Amy brand itself; Amy-category brand cards say "from 125 EGP" though the editor prices 180 flat.
+6. LOW: decorative SVG overlays can intercept synthetic clicks in agent-browser (real taps fine per VLM) — tooling note only.
+7. LOW: orphan platform-console.tsx (900-line dead code since r57) + 4 duplicate brand images — since wiped by sandbox re-provision (untracked files); confirmed gone in r69, no action needed.
+
+Carry-over structural risks (owner-acknowledged):
+- No automated tests at all → Playwright golden-path suite (HIGH).
+- PIN auth has no rate-limiting / lockout (MED-HIGH).
+- Stock reads in /api/orders happen OUTSIDE the write transaction → oversell race window (MED).
+- No Neon backup automation, no error tracking (MED/LOW).
+
+Stage Summary:
+- Verdict: r66+r67 is production-grade — every business rule verified on client AND server, pricing tamper-proof, multi-shisha tables solid. Remaining gaps are polish-level (hours each); structural risks (tests, auth hardening, stock race, backups) are the long-term exposure.
+- User ordered: "implement all needed and recommended" → r69 implements the full backlog in order: ① corner-card clearance ② forName in staff queue ③ empty-state BYO + flavor-stock truthfulness ④ copy fixes ⑤ stock race ⑥ PIN rate-limiting ⑦ staff i18n ⑧ Playwright suite ⑨ Neon backups + error tracking.

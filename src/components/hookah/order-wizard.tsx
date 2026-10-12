@@ -55,11 +55,13 @@ import { Input } from "@/components/ui/input";
 import {
   ArrowRight,
   Backpack,
+  BellRing,
   Check,
   ChevronLeft,
   Crown,
   Flame,
   Leaf,
+  Loader2,
   Minus,
   Plus,
   Send,
@@ -72,6 +74,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/store/i18n";
+import { useSession } from "@/store/session";
+import { sendServiceRequest } from "@/lib/request-queue";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
 import { BrandMark, BrandStack } from "./brand-mark";
@@ -96,6 +100,9 @@ export interface WizardSession {
 interface OrderWizardProps {
   session: WizardSession;
   stockMap: StockMap | null;
+  /** r69 (audit ③) — false when the branch has no tracked flavor jars
+   * at all ("not stocked yet" empty state instead of "sold out"). */
+  branchStocked?: boolean;
   onSend: () => void;
   onRestart: () => void;
   onCancelEdit: () => void;
@@ -124,12 +131,14 @@ const OWN_MOLASSES_ID = "own-molasses";
 export function OrderWizard({
   session,
   stockMap,
+  branchStocked = true,
   onSend,
   onRestart,
   onCancelEdit,
 }: OrderWizardProps) {
   const t = useI18n((s) => s.t);
   const reduced = useReducedMotion();
+  const guest = useSession((s) => s.guest);
   const items = useCart((s) => s.items);
   const addItem = useCart((s) => s.addItem);
   const updateItem = useCart((s) => s.updateItem);
@@ -288,6 +297,39 @@ export function OrderWizard({
     setSingleFlavor("");
     setMixComponents([]);
     setStep(s === "own_hookah" ? "molasses" : "pipe");
+  };
+
+  // r69 (audit ③) — "Call staff" from the wizard's empty states: rides
+  // the resilient request queue (offline-safe) exactly like the guest
+  // tracking surface's call-shisha-man button.
+  const [staffCalling, setStaffCalling] = React.useState(false);
+  const callStaff = async () => {
+    if (staffCalling) return;
+    setStaffCalling(true);
+    haptic("light");
+    try {
+      const result = await sendServiceRequest({
+        type: "call_shisha_man",
+        guestName: guest?.name,
+        table: guest?.table,
+        note: t("wizStaffCallNote"),
+        branchId: guest?.branchId ?? null,
+      });
+      if (result === "queued") {
+        toast.warning(t("requestQueued"), {
+          description: t("requestQueuedDesc"),
+          duration: 5000,
+        });
+      } else {
+        toast.success(t("shishaManToast"), {
+          description: t("shishaManToastDesc"),
+        });
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("wizCallStaff"));
+    } finally {
+      setStaffCalling(false);
+    }
   };
 
   const choosePipe = (p: HookahType) => {
@@ -725,9 +767,12 @@ export function OrderWizard({
                   ))}
                 </div>
               ) : (
-                <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center text-sm text-muted-foreground">
-                  {t("noStockCategory")}
-                </div>
+                <EmptyMolasses
+                  branchStocked={branchStocked}
+                  calling={staffCalling}
+                  onOwnMolasses={() => chooseSetup("own_molasses")}
+                  onCallStaff={callStaff}
+                />
               )}
             </motion.div>
           )}
@@ -830,8 +875,18 @@ export function OrderWizard({
                           />
                         ))}
                         {flavorList.length === 0 && (
-                          <div className="w-full rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center text-sm text-muted-foreground">
-                            {t("noStockCategory")}
+                          <div className="w-full rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              {t("wizBrandSoldOut")}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={goBack}
+                              className="glass mt-3 inline-flex h-11 items-center gap-1 rounded-2xl px-4 text-sm font-semibold text-muted-foreground transition-all duration-300 hover:text-foreground active:scale-[0.98]"
+                            >
+                              <ChevronLeft className="size-4 rtl:rotate-180" />
+                              {t("wizBackToBrands")}
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1062,6 +1117,65 @@ export function OrderWizard({
 }
 
 // ─── sub-components ───────────────────────────────────────────────────────
+
+/**
+ * r69 (audit ③) — the molasses step's empty state. Distinguishes:
+ *   - branchStocked → "sold out right now" (jars tracked but empty)
+ *   - !branchStocked → "this branch isn't stocked yet" (no jars at all)
+ * Both offer the two real escapes: pack the guest's own molasses
+ * (2-for-1) or call the staff (offline-safe request queue).
+ */
+function EmptyMolasses({
+  branchStocked,
+  calling,
+  onOwnMolasses,
+  onCallStaff,
+}: {
+  branchStocked: boolean;
+  calling: boolean;
+  onOwnMolasses: () => void;
+  onCallStaff: () => void;
+}) {
+  const t = useI18n((s) => s.t);
+  return (
+    <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+      <span className="relative mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/25">
+        <span
+          className="pointer-events-none absolute inset-0 rounded-full bg-primary/15 blur-xl"
+          aria-hidden
+        />
+        <Leaf className="relative size-5" />
+      </span>
+      <p className="mt-3 font-display text-lg font-bold tracking-tight text-gold-soft">
+        {branchStocked ? t("wizSoldOutTitle") : t("wizNotStockedTitle")}
+      </p>
+      <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
+        {branchStocked ? t("wizSoldOutDesc") : t("wizNotStockedDesc")}
+      </p>
+      <div className="mx-auto mt-4 grid max-w-sm gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onOwnMolasses}
+          className="glass flex min-h-12 items-center justify-center gap-2 rounded-2xl text-sm font-semibold text-foreground transition-all duration-300 hover:border-primary/40 hover:text-primary active:scale-[0.98]"
+        >
+          <Backpack className="size-4" />
+          {t("wizOwnMolasses")}
+          <span className="rounded-full bg-emerald-400/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-emerald-300 ring-1 ring-emerald-400/25">
+            {t("wizByoBadge")}
+          </span>
+        </button>
+        <GoldButton className="min-h-12 justify-center" disabled={calling} onClick={onCallStaff}>
+          {calling ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <BellRing className="size-4" />
+          )}
+          {t("wizCallStaff")}
+        </GoldButton>
+      </div>
+    </div>
+  );
+}
 
 /** A big glass option card (the setup answers / quick picks). */
 function SetupCard({

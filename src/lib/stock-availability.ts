@@ -66,6 +66,11 @@ interface StockState {
   /** null = unknown yet (loading or offline) → everything shown */
   map: StockMap | null;
   loading: boolean;
+  /** r69 (audit ③) — does this branch have ANY tracked flavor jar?
+   * false = the shelf isn't stocked at all (guests see "not stocked
+   * yet" instead of a misleading "sold out"). Unknown / offline →
+   * true, matching the fail-open philosophy of the map above. */
+  branchStocked: boolean;
 }
 
 /**
@@ -80,11 +85,12 @@ export function useFlavorStock(
   const [state, setState] = React.useState<StockState>({
     map: null,
     loading: enabled,
+    branchStocked: true,
   });
 
   // reset when the branch changes or the surface toggles
   React.useEffect(() => {
-    setState({ map: null, loading: enabled });
+    setState({ map: null, loading: enabled, branchStocked: true });
   }, [branchId, enabled]);
 
   React.useEffect(() => {
@@ -93,15 +99,26 @@ export function useFlavorStock(
     const qs = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
     fetch(`/api/flavor-stock${qs}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("bad status"))))
-      .then((data: { ok: boolean; items?: { id: string; stockGrams: number }[] }) => {
-        if (cancelled || !data.ok || !Array.isArray(data.items)) return;
-        const map: StockMap = {};
-        for (const it of data.items) map[it.id] = it.stockGrams;
-        setState({ map, loading: false });
-      })
+      .then(
+        (data: {
+          ok: boolean;
+          branchStocked?: boolean;
+          items?: { id: string; stockGrams: number }[];
+        }) => {
+          if (cancelled || !data.ok || !Array.isArray(data.items)) return;
+          const map: StockMap = {};
+          for (const it of data.items) map[it.id] = it.stockGrams;
+          setState({
+            map,
+            loading: false,
+            branchStocked: data.branchStocked !== false,
+          });
+        }
+      )
       .catch(() => {
         // offline / error → fail open, keep everything visible
-        if (!cancelled) setState({ map: null, loading: false });
+        if (!cancelled)
+          setState({ map: null, loading: false, branchStocked: true });
       });
     return () => {
       cancelled = true;

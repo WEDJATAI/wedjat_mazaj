@@ -33,11 +33,26 @@ export async function GET(req: NextRequest) {
           flavorName: f,
           stockGrams: branchId ? (matches[0]?.stockGrams ?? 0) : total,
           lowStockThreshold: matches[0]?.lowStockThreshold ?? 60,
-          updatedAt: matches[0]?.updatedAt ?? new Date().toISOString(),
+          // r69 (audit ③) — truthfulness: a flavor with no DB row is
+          // "untracked" — it no longer fabricates a fake just-updated
+          // timestamp (which masked a fully wiped DB during the r68
+          // audit). Clients get tracked:false + updatedAt:null and can
+          // tell "not stocked yet" from "stocked but sold out" via the
+          // branchStocked flag below.
+          tracked: matches.length > 0,
+          updatedAt: matches[0]?.updatedAt ?? null,
         };
       })
     );
-    return NextResponse.json({ ok: true, branchId, items: merged });
+    return NextResponse.json({
+      ok: true,
+      branchId,
+      items: merged,
+      // r69 — does this scope have ANY tracked jar? false = the shelf
+      // hasn't been stocked at all (guests get the "not stocked yet"
+      // empty state instead of a misleading "sold out").
+      branchStocked: rows.length > 0,
+    });
   } catch (err) {
     console.error("flavor-stock list error", err);
     return NextResponse.json(

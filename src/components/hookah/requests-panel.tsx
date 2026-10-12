@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { timeAgo } from "@/lib/time-ago";
 import { useBranchScope } from "@/hooks/use-branch-scope";
 import { useI18n } from "@/store/i18n";
 import {
@@ -42,15 +43,8 @@ interface ServiceRequest {
   branchNameAr?: string | null;
 }
 
-function timeAgo(iso: string): string {
-  const d = new Date(iso).getTime();
-  const diff = Math.max(0, Date.now() - d);
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  return new Date(iso).toLocaleDateString();
+function timeAgoLocal(iso: string, t: ReturnType<typeof useI18n.getState>["t"]): string {
+  return timeAgo(iso, t);
 }
 
 /* ── Midnight Ember shared bits (panel-local) ─────────────────────────── */
@@ -79,13 +73,13 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
       );
       const data = await res.json();
       if (data.ok) setRequests(data.requests);
-      else toast.error("Could not load requests");
+      else toast.error(t("reqLoadFail"));
     } catch {
-      toast.error("Could not load requests");
+      toast.error(t("reqLoadFail"));
     } finally {
       setLoading(false);
     }
-  }, [branchParam]);
+  }, [branchParam, t]);
 
   React.useEffect(() => {
     load();
@@ -102,13 +96,13 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
         body: JSON.stringify({ status }),
       });
       const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "Update failed");
+      if (!res.ok || !data.ok) throw new Error(data.error ?? t("updateFailed"));
       toast.success(
-        status === "acknowledged" ? "Request acknowledged" : "Marked done"
+        status === "acknowledged" ? t("reqAckToast") : t("reqDoneToast")
       );
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Update failed");
+      toast.error(err instanceof Error ? err.message : t("updateFailed"));
     }
   };
 
@@ -122,20 +116,21 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
       <div className="relative flex min-h-screen flex-col">
         <AppHeader
           icon={<BellRing className="size-5" />}
-          title="Requests"
-          subtitle={`Guest calls for the shisha man · ${scopeLabel}`}
+          title={t("requestsTitle")}
+          subtitle={`${t("guestCalls")} · ${scopeLabel}`}
           actions={
             <>
               {pending.length > 0 && (
                 <span className="hidden items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary ring-1 ring-primary/40 sm:inline-flex">
-                  <BellRing className="size-3.5" /> {pending.length} new
+                  <BellRing className="size-3.5" />{" "}
+                  {t("reqNewCount", { n: pending.length })}
                 </span>
               )}
               <button
                 type="button"
                 onClick={load}
-                aria-label="Refresh"
-                title="Refresh"
+                aria-label={t("refresh")}
+                title={t("refresh")}
                 className={glassIconBtn}
               >
                 <RefreshCw className="size-4" />
@@ -143,8 +138,8 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
               <button
                 type="button"
                 onClick={onSignOut}
-                aria-label="Sign out"
-                title="Sign out"
+                aria-label={t("signOut")}
+                title={t("signOut")}
                 className={glassIconBtn}
               >
                 <LogOut className="size-4" />
@@ -164,8 +159,8 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
             <EmptyState
               className="mt-6"
               icon={<HandHelping className="size-6" />}
-              title="No requests yet"
-              description="When a guest calls the shisha man, it shows up here."
+              title={t("noRequestsYet")}
+              description={t("noRequestsDesc")}
             />
           ) : (
             <div className="space-y-8">
@@ -174,22 +169,22 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
                 <StatTile
                   icon={<BellRing className="size-4" />}
                   text={String(pending.length)}
-                  label="Pending"
+                  label={t("pending")}
                 />
                 <StatTile
                   icon={<HandHelping className="size-4" />}
                   text={String(active.length)}
-                  label="In progress"
+                  label={t("inProgress")}
                 />
                 <StatTile
                   icon={<CheckCheck className="size-4" />}
                   text={String(done.length)}
-                  label="Done"
+                  label={t("done")}
                 />
               </div>
 
               {pending.length > 0 && (
-                <Section title="Pending" count={pending.length}>
+                <Section title={t("pending")} count={pending.length}>
                   {pending.map((r) => (
                     <StaggerItem key={r.id}>
                       <RequestCard
@@ -202,21 +197,21 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
                 </Section>
               )}
               {active.length > 0 && (
-                <Section title="In progress" count={active.length}>
+                <Section title={t("inProgress")} count={active.length}>
                   {active.map((r) => (
                     <StaggerItem key={r.id}>
                       <RequestCard
                         req={r}
                         showBranch={scopeAll}
                         onAck={() => acknowledge(r, "done")}
-                        ackLabel="Mark done"
+                        ackLabel={t("markDone")}
                       />
                     </StaggerItem>
                   ))}
                 </Section>
               )}
               {done.length > 0 && (
-                <Section title="Done" count={done.length} muted>
+                <Section title={t("done")} count={done.length} muted>
                   {done.map((r) => (
                     <StaggerItem key={r.id}>
                       <RequestCard req={r} showBranch={scopeAll} />
@@ -231,7 +226,7 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
         <footer className="relative mt-auto border-t border-white/[0.06] bg-[oklch(0.135_0.014_60/0.6)] py-6">
           <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-2 px-4 text-center text-xs text-muted-foreground">
             <Flame className="size-3.5 text-primary" aria-hidden />
-            <span>Auto-refreshes every 15 seconds</span>
+            <span>{t("autoRefresh")}</span>
           </div>
         </footer>
       </div>
@@ -250,6 +245,7 @@ function Section({
   muted?: boolean;
   children: React.ReactNode;
 }) {
+  const t = useI18n((s) => s.t);
   return (
     <section>
       <div className="mb-3 flex items-center gap-2.5">
@@ -261,7 +257,7 @@ function Section({
               ? "bg-white/[0.04] text-muted-foreground ring-white/10"
               : "bg-primary/15 text-primary ring-primary/35"
           )}
-          aria-label={`${count} requests`}
+          aria-label={t("requestsCount", { n: count })}
         >
           {count}
         </span>
@@ -271,17 +267,17 @@ function Section({
   );
 }
 
-/* ── Gold status stepper — Requested → Acknowledged → Done ────────────── */
-
-const STEP_LABELS = ["Requested", "Acknowledged", "Done"] as const;
+/* ── Gold status stepper — Requested → Acknowledged → Done ───────────── */
 
 function GoldStepper({ status }: { status: string }) {
+  const t = useI18n((s) => s.t);
+  const stepLabels = [t("stepRequested"), t("acknowledged"), t("done")];
   const current =
     status === "done" ? 2 : status === "acknowledged" ? 1 : 0;
   return (
-    <div className="mt-3.5" aria-label={`Status: ${status}`}>
+    <div className="mt-3.5" aria-label={`${t("statusWord")}: ${status}`}>
       <div className="flex items-center">
-        {STEP_LABELS.map((label, i) => (
+        {stepLabels.map((label, i) => (
           <React.Fragment key={label}>
             {i > 0 && (
               <span
@@ -313,13 +309,13 @@ function GoldStepper({ status }: { status: string }) {
         ))}
       </div>
       <div className="mt-1.5 flex items-center justify-between">
-        {STEP_LABELS.map((label, i) => (
+        {stepLabels.map((label, i) => (
           <span
             key={label}
             className={cn(
               "text-[10px] font-medium tracking-wide",
               i === 0 && "text-start",
-              i === STEP_LABELS.length - 1 && "text-end",
+              i === stepLabels.length - 1 && "text-end",
               i <= current ? "text-gold-soft" : "text-muted-foreground/70"
             )}
           >
@@ -334,24 +330,31 @@ function GoldStepper({ status }: { status: string }) {
 function RequestCard({
   req,
   onAck,
-  ackLabel = "Acknowledge",
+  ackLabel,
   showBranch,
 }: {
   req: ServiceRequest;
   onAck?: () => void;
+  /** r69 — always provided by the caller (localized "Acknowledge" /
+   * "Mark done") so the default English label is never rendered. */
   ackLabel?: string;
   /** r57 — all-branches scope: render the branch chip when present */
   showBranch?: boolean;
 }) {
   const lang = useI18n((s) => s.lang);
+  const t = useI18n((s) => s.t);
   const isCoal = req.type === "coal_request";
   const title = isCoal
-    ? "Coal request"
+    ? t("coalRequestTitle")
     : req.type === "call_shisha_man"
-    ? "Call the shisha man"
+    ? t("callShishaMan")
     : req.type;
   const statusLabel =
-    req.status.charAt(0).toUpperCase() + req.status.slice(1);
+    req.status === "pending"
+      ? t("pending")
+      : req.status === "acknowledged"
+      ? t("acknowledged")
+      : t("done");
 
   const pillCls =
     req.status === "pending"
@@ -413,7 +416,7 @@ function RequestCard({
               </span>
             )}
             <span className="flex items-center gap-1 tabular-nums">
-              <Clock className="size-3" /> {timeAgo(req.createdAt)}
+              <Clock className="size-3" /> {timeAgoLocal(req.createdAt, t)}
             </span>
           </div>
           {req.note && (
@@ -430,11 +433,12 @@ function RequestCard({
         <div className="mt-3.5">
           {req.status === "pending" ? (
             <GoldButton className="h-11 w-full text-sm" onClick={onAck}>
-              <CheckCheck className="size-4" /> {ackLabel}
+              <CheckCheck className="size-4" />{" "}
+              {ackLabel ?? t("acknowledgeLabel")}
             </GoldButton>
           ) : (
             <button type="button" className={donePillBtn} onClick={onAck}>
-              <CheckCheck className="size-4" /> {ackLabel}
+              <CheckCheck className="size-4" /> {ackLabel ?? t("markDone")}
             </button>
           )}
         </div>

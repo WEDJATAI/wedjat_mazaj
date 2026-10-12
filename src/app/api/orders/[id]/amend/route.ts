@@ -16,6 +16,7 @@ import {
 } from "@/lib/catalog";
 import { pointsEarnedOn, tierForLifetime } from "@/lib/loyalty";
 import { applyCatalogOverrides } from "@/lib/platform-settings";
+import { StockShortError } from "@/lib/stock-guard";
 
 /**
  * ─────────────────────────────────────────────────────────────────
@@ -290,91 +291,8 @@ export async function POST(
       );
     }
 
-    // ── validate NET INCREASES against stock ─────────────────────────
+    // r69 — the branch scope for every stock read/delta below
     const branchId = order.branchId;
-    const brandRows = await db.inventoryItem.findMany({
-      where: {
-        brandId: {
-          in: [...brandDelta.keys()].filter((b) => (brandDelta.get(b) ?? 0) > 0),
-        },
-        branchId,
-      },
-    });
-    const shortBrands: string[] = [];
-    for (const row of brandRows) {
-      const need = brandDelta.get(row.brandId) ?? 0;
-      if (need > row.stockGrams + 0.001) {
-        shortBrands.push(
-          `${row.brandName} (need ${Math.round(need)}g more, have ${Math.round(row.stockGrams)}g)`
-        );
-      }
-    }
-
-    const flavorKeys = [...flavorDelta.keys()].filter(
-      (k) => (flavorDelta.get(k) ?? 0) > 0
-    );
-    // r67 — guard: own-molasses-only amendments touch no flavor jars
-    const flavorRows =
-      flavorKeys.length > 0
-        ? await db.flavorStock.findMany({
-            where: {
-              OR: flavorKeys.map((k) => {
-                const [brandIdRaw, flavorName] = k.split("|");
-                return { brandIdRaw, flavorName };
-              }),
-              brand: { branchId },
-            },
-          })
-        : [];
-    const shortFlavors: string[] = [];
-    for (const k of flavorKeys) {
-      const [brandIdRaw, flavorName] = k.split("|");
-      const need = flavorDelta.get(k) ?? 0;
-      const row = flavorRows.find(
-        (r) => r.brandIdRaw === brandIdRaw && r.flavorName === flavorName
-      );
-      const have = row?.stockGrams ?? 0;
-      if (need > have + 0.001) {
-        shortFlavors.push(
-          `${getBrand(brandIdRaw)?.name ?? brandIdRaw} · ${flavorName} (need ${Math.round(need)}g more, have ${Math.round(have)}g)`
-        );
-      }
-    }
-
-    const supplyRows = await db.supplyItem.findMany({
-      where: {
-        key: {
-          in: [...supplyDelta.keys(), ...addonDelta.keys()].filter(
-            (k) => (supplyDelta.get(k) ?? 0) + (addonDelta.get(k) ?? 0) > 0
-          ),
-        },
-        branchId,
-      },
-    });
-    const shortSupplies: string[] = [];
-    for (const k of new Set([...supplyDelta.keys(), ...addonDelta.keys()])) {
-      const net = (supplyDelta.get(k) ?? 0) + (addonDelta.get(k) ?? 0);
-      if (net <= 0) continue;
-      const row = supplyRows.find((r) => r.key === k);
-      const have = row?.stock ?? 0;
-      if (net > have + 0.001) {
-        const def = SUPPLIES.find((s) => s.key === k);
-        shortSupplies.push(
-          `${def?.name ?? k} (need ${net}, have ${Math.round(have)})`
-        );
-      }
-    }
-
-    const allShort = [...shortBrands, ...shortFlavors, ...shortSupplies];
-    if (allShort.length > 0) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: `Not enough stock to add: ${allShort.join("; ")}`,
-        },
-        { status: 409 }
-      );
-    }
 
     // ── profitability (server-side) ──────────────────────────────────
     const cogs = computeOrderCogs(sanitized);
@@ -387,36 +305,143 @@ export async function POST(
 
     // ── commit: reconcile stock + adjust loyalty + update order ─────
     const updated = await db.$transaction(async (tx) => {
+      // ── r69 (audit ⑤): net-increase validation — INSIDE the transaction
+      // (the reads used to happen before it, leaving an oversell race
+      // between validation and the delta writes). Consumption deltas are
+      // applied with conditional decrements, so even a race lost
+      // mid-transaction aborts the whole amendment atomically.
+      const brandRows = await tx.inventoryItem.findMany({
+        where: {
+          brandId: {
+            in: [...brandDelta.keys()].filter((b) => (brandDelta.get(b) ?? 0) > 0),
+          },
+          branchId,
+        },
+      });
+      const shortBrands: string[] = [];
+      for (const row of brandRows) {
+        const need = brandDelta.get(row.brandId) ?? 0;
+        if (need > row.stockGrams + 0.001) {
+          shortBrands.push(
+            `${row.brandName} (need ${Math.round(need)}g more, have ${Math.round(row.stockGrams)}g)`
+          );
+        }
+      }
+
+      const flavorKeys = [...flavorDelta.keys()].filter(
+        (k) => (flavorDelta.get(k) ?? 0) > 0
+      );
+      // r67 — guard: own-molasses-only amendments touch no flavor jars
+      const flavorRows =
+        flavorKeys.length > 0
+          ? await tx.flavorStock.findMany({
+              where: {
+                OR: flavorKeys.map((k) => {
+                  const [brandIdRaw, flavorName] = k.split("|");
+                  return { brandIdRaw, flavorName };
+                }),
+                brand: { branchId },
+              },
+            })
+          : [];
+      const shortFlavors: string[] = [];
+      for (const k of flavorKeys) {
+        const [brandIdRaw, flavorName] = k.split("|");
+        const need = flavorDelta.get(k) ?? 0;
+        const row = flavorRows.find(
+          (r) => r.brandIdRaw === brandIdRaw && r.flavorName === flavorName
+        );
+        const have = row?.stockGrams ?? 0;
+        if (need > have + 0.001) {
+          shortFlavors.push(
+            `${getBrand(brandIdRaw)?.name ?? brandIdRaw} · ${flavorName} (need ${Math.round(need)}g more, have ${Math.round(have)}g)`
+          );
+        }
+      }
+
+      const supplyRows = await tx.supplyItem.findMany({
+        where: {
+          key: {
+            in: [...supplyDelta.keys(), ...addonDelta.keys()].filter(
+              (k) => (supplyDelta.get(k) ?? 0) + (addonDelta.get(k) ?? 0) > 0
+            ),
+          },
+          branchId,
+        },
+      });
+      const shortSupplies: string[] = [];
+      for (const k of new Set([...supplyDelta.keys(), ...addonDelta.keys()])) {
+        const net = (supplyDelta.get(k) ?? 0) + (addonDelta.get(k) ?? 0);
+        if (net <= 0) continue;
+        const row = supplyRows.find((r) => r.key === k);
+        const have = row?.stock ?? 0;
+        if (net > have + 0.001) {
+          const def = SUPPLIES.find((s) => s.key === k);
+          shortSupplies.push(
+            `${def?.name ?? k} (need ${net}, have ${Math.round(have)})`
+          );
+        }
+      }
+
+      const allShort = [...shortBrands, ...shortFlavors, ...shortSupplies];
+      if (allShort.length > 0) {
+        throw new StockShortError(
+          `Not enough stock to add: ${allShort.join("; ")}`
+        );
+      }
+
       // molasses: brand totals (increment returns, decrement consumption)
       for (const [brandId, delta] of brandDelta) {
         if (Math.abs(delta) < 0.001) continue;
-        const row = await tx.inventoryItem.findFirst({
-          where: { brandId, branchId },
-        });
-        if (!row) continue;
-        await tx.inventoryItem.update({
-          where: { id: row.id },
-          data: {
-            stockGrams:
-              delta > 0 ? { decrement: delta } : { increment: -delta },
-          },
-        });
+        const row = brandRows.find((r) => r.brandId === brandId);
+        if (delta > 0) {
+          // r69 — atomic conditional decrement: a race lost mid-transaction
+          // matches zero rows and aborts the whole amendment
+          const existing =
+            row ??
+            (await tx.inventoryItem.findFirst({
+              where: { brandId, branchId },
+            }));
+          if (!existing) continue;
+          const res = await tx.inventoryItem.updateMany({
+            where: { id: existing.id, stockGrams: { gte: delta } },
+            data: { stockGrams: { decrement: delta } },
+          });
+          if (res.count === 0) {
+            throw new StockShortError(
+              `Not enough stock to add: ${existing.brandName} (need ${Math.round(delta)}g more, have 0g)`
+            );
+          }
+        } else if (row) {
+          await tx.inventoryItem.update({
+            where: { id: row.id },
+            data: { stockGrams: { increment: -delta } },
+          });
+        }
       }
 
       // molasses: per-flavor subtypes
       for (const [key, delta] of flavorDelta) {
         if (Math.abs(delta) < 0.001) continue;
         const [brandIdRaw, flavorName] = key.split("|");
-        const row = await tx.flavorStock.findFirst({
-          where: { brandIdRaw, flavorName, brand: { branchId } },
-        });
-        if (row) {
+        const row = flavorRows.find(
+          (r) => r.brandIdRaw === brandIdRaw && r.flavorName === flavorName
+        );
+        if (delta > 0 && row) {
+          // r69 — atomic conditional decrement (race-loss abort)
+          const res = await tx.flavorStock.updateMany({
+            where: { id: row.id, stockGrams: { gte: delta } },
+            data: { stockGrams: { decrement: delta } },
+          });
+          if (res.count === 0) {
+            throw new StockShortError(
+              `Not enough stock to add: ${getBrand(brandIdRaw)?.name ?? brandIdRaw} · ${flavorName} (need ${Math.round(delta)}g more, have 0g)`
+            );
+          }
+        } else if (row) {
           await tx.flavorStock.update({
             where: { id: row.id },
-            data: {
-              stockGrams:
-                delta > 0 ? { decrement: delta } : { increment: -delta },
-            },
+            data: { stockGrams: { increment: -delta } },
           });
         }
       }
@@ -425,16 +450,25 @@ export async function POST(
       for (const key of new Set([...supplyDelta.keys(), ...addonDelta.keys()])) {
         const delta = (supplyDelta.get(key) ?? 0) + (addonDelta.get(key) ?? 0);
         if (Math.abs(delta) < 0.001) continue;
-        const row = await tx.supplyItem.findFirst({
-          where: { key, branchId },
-        });
-        if (!row) continue;
-        await tx.supplyItem.update({
-          where: { id: row.id },
-          data: {
-            stock: delta > 0 ? { decrement: delta } : { increment: -delta },
-          },
-        });
+        const row = supplyRows.find((r) => r.key === key);
+        if (delta > 0 && row) {
+          // r69 — atomic conditional decrement (race-loss abort)
+          const res = await tx.supplyItem.updateMany({
+            where: { id: row.id, stock: { gte: delta } },
+            data: { stock: { decrement: delta } },
+          });
+          if (res.count === 0) {
+            const def = SUPPLIES.find((s) => s.key === key);
+            throw new StockShortError(
+              `Not enough stock to add: ${def?.name ?? key} (need ${delta}, have 0)`
+            );
+          }
+        } else if (row) {
+          await tx.supplyItem.update({
+            where: { id: row.id },
+            data: { stock: { increment: -delta } },
+          });
+        }
       }
 
       // loyalty earn adjustment (audit-logged, clamped to the balance)
@@ -523,6 +557,14 @@ export async function POST(
 
     return NextResponse.json({ ok: true, order: updated, revision });
   } catch (err) {
+    if (err instanceof StockShortError) {
+      // r69 — validation lost the race mid-transaction: nothing was
+      // written (rolled back); surface the same 409 as pre-r69.
+      return NextResponse.json(
+        { ok: false, error: err.message },
+        { status: 409 }
+      );
+    }
     console.error("amend order error", err);
     return NextResponse.json(
       { ok: false, error: "Could not update the order" },

@@ -321,3 +321,36 @@ model PlatformSetting {
   updatedBy String? // employee name of the last editor (audit trail)
   updatedAt DateTime @updatedAt
 }
+
+// r69 (audit ⑥) — PIN brute-force guard: failed employee sign-in attempts,
+// counted per source IP and per PIN over sliding windows (see
+// src/lib/rate-limit.ts). A 4-digit PIN space is only 10,000 codes —
+// without this, a scripted client could walk the whole space in minutes.
+model PinAttempt {
+  id        String   @id @default(cuid())
+  pin       String
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+  @@index([pin, createdAt])
+}
+
+// r69 (audit ⑧) — lightweight error tracking. The client reports uncaught
+// errors / unhandled rejections (see src/lib/error-reporter.ts); the
+// platform owner reviews them via GET /api/errors?pin=<platform pin>.
+// Same-message reports within 5 minutes increment `count` instead of
+// stacking duplicate rows.
+model ErrorLog {
+  id        String   @id @default(cuid())
+  message   String
+  stack     String?
+  source    String   @default("client") // client | server
+  url       String?
+  userAgent String?
+  count     Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([message])
+}
