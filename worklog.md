@@ -1110,3 +1110,18 @@ Work Log:
 Stage Summary:
 - 10/10 audit recommendations implemented and locally E2E-verified (every one with concrete evidence: geometry, VLM, DB rows, forged-IP curls, live Arabic screens). Not implementable from this sandbox, stated honestly: (a) Playwright CI test suite — blocked by the environment's no-test-code rule; recommend a dedicated round; (b) automated Neon backups + Sentry — need external accounts/credentials the sandbox doesn't hold; (c) session-cookie auth migration — scoped at 13 API routes + 11 client files, deliberately deferred to its own round (r70) rather than risk a big-bang refactor; the new rate limiter closes the urgent brute-force hole meanwhile.
 - Production serves r67 (stable) while the r69 build is pending on Vercel; GitHub main = 70332fa is the source of truth.
+
+---
+Task ID: r69b
+Agent: main (Z.ai Code)
+Task: Production smoke test of r69 exposed that the in-memory PIN rate limiter resets across Vercel serverless instances — harden it with a DB-backed counter.
+
+Work Log:
+- Production smoke of r69 (commit 70332fa→e628144 live): stocked flag OK (43/43 live jars), auto-expire OK, but the rate limit showed the counter RESTARTING across attempts ("4 tries left" repeatedly) — each Vercel Lambda instance keeps its own memory, so the in-memory Map is per-instance only.
+- HARDENING: /api/auth/employee now persists the fail counter in the PlatformSetting KV table (key pin-fails:{ip}, JSON {fails, lockedUntil}) — the DB row is the cross-instance source of truth; in-memory map kept as the local-dev fast path; read/write/clear helpers with fail-open fallbacks. Local E2E: 401 countdown → 429 lock → correct-PIN blocked → row persisted in sqlite (verified directly).
+- Committed 8a56715, pushed, deployed (poll #2). PRODUCTION VERIFICATION: repeated wrong-PIN calls locked the client out with consistent "try again in N minutes" (the earlier oscillation was old warm Lambdas on the pre-r69b build + a key discovery: Vercel normalizes x-forwarded-for, so forged-IP tests actually share the sandbox's real egress IP — meaning attackers CANNOT spoof IPs to multiply attempts; the lock is on the real client IP).
+- Production smoke: /api/health commit 8a56715 db up; sommelier stock-aware answering with in-stock picks on production (Mazaya Mint); landing 200, dark theme, zero page errors, VLM-verified rendering.
+- Note: the DB lock lives ~15 min on the sandbox egress IP from testing; it expires naturally.
+
+Stage Summary:
+- All 10 r69 recommendations are now LIVE IN PRODUCTION and production-verified, including the hardened cross-instance rate limiter (8a56715). Remaining honest gaps unchanged: Playwright CI suite (blocked by env rule), Neon automated backups + Sentry (need external accounts), session-cookie auth migration (r70 candidate — 13 routes + 11 client files).
