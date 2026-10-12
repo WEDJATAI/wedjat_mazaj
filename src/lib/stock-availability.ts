@@ -66,6 +66,9 @@ interface StockState {
   /** null = unknown yet (loading or offline) → everything shown */
   map: StockMap | null;
   loading: boolean;
+  /** r68-audit — false when the branch has NO jars at all, so the UI can
+   *  say "not stocked yet" instead of "sold out" (defaults true). */
+  stocked: boolean;
 }
 
 /**
@@ -80,11 +83,12 @@ export function useFlavorStock(
   const [state, setState] = React.useState<StockState>({
     map: null,
     loading: enabled,
+    stocked: true,
   });
 
   // reset when the branch changes or the surface toggles
   React.useEffect(() => {
-    setState({ map: null, loading: enabled });
+    setState({ map: null, loading: enabled, stocked: true });
   }, [branchId, enabled]);
 
   React.useEffect(() => {
@@ -93,15 +97,32 @@ export function useFlavorStock(
     const qs = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
     fetch(`/api/flavor-stock${qs}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("bad status"))))
-      .then((data: { ok: boolean; items?: { id: string; stockGrams: number }[] }) => {
-        if (cancelled || !data.ok || !Array.isArray(data.items)) return;
-        const map: StockMap = {};
-        for (const it of data.items) map[it.id] = it.stockGrams;
-        setState({ map, loading: false });
-      })
+      .then(
+        (
+          data: {
+            ok: boolean;
+            stocked?: boolean;
+            items?: { id: string; stockGrams: number }[];
+          }
+        ) => {
+          if (cancelled || !data.ok) return;
+          // r68-audit — unstocked branch: an empty map (nothing pourable)
+          // + the flag so empty states can explain WHY.
+          if (data.stocked === false) {
+            if (!cancelled)
+              setState({ map: {}, loading: false, stocked: false });
+            return;
+          }
+          if (!Array.isArray(data.items)) return;
+          const map: StockMap = {};
+          for (const it of data.items) map[it.id] = it.stockGrams;
+          setState({ map, loading: false, stocked: true });
+        }
+      )
       .catch(() => {
         // offline / error → fail open, keep everything visible
-        if (!cancelled) setState({ map: null, loading: false });
+        if (!cancelled)
+          setState({ map: null, loading: false, stocked: true });
       });
     return () => {
       cancelled = true;

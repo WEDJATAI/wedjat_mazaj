@@ -393,22 +393,52 @@ export function presetToPick(id: string, lang: SommLang): SommPick {
   };
 }
 
-/** Compact catalog summary for the LLM system prompt. */
-export function catalogSummary(): string {
+/** Compact catalog summary for the LLM system prompt.
+ * r68-audit — pass an availability set ("brandId:flavorName" keys with a
+ * full bowl in the jar) and the sommelier only ever sees/mentions what
+ * the branch can actually pour right now. */
+export function catalogSummary(available?: Set<string>): string {
   // r67 — hidden brands (Amy: a pipe type) never reach the LLM prompt
-  const lines = visibleBrands().map((b) => {
-    const price =
-      b.category === "special"
-        ? `${b.pricing.flat} EGP flat`
-        : `${b.pricing.fruits} EGP fruits / ${b.pricing.fruitsMix} EGP mix`;
-    const notes = BRAND_NOTES[b.id] ?? "";
-    return `- ${b.name} (${price}): ${b.flavors.join(", ")}. ${notes}`;
-  });
-  const presets = BOWL_PRESETS.map(
+  const lines = visibleBrands()
+    .map((b) => {
+      const flavors = available
+        ? b.flavors.filter((f) => available.has(`${b.id}:${f}`))
+        : b.flavors;
+      if (flavors.length === 0) return null; // the whole brand is dry
+      const price =
+        b.category === "special"
+          ? `${b.pricing.flat} EGP flat`
+          : `${b.pricing.fruits} EGP fruits / ${b.pricing.fruitsMix} EGP mix`;
+      const notes = BRAND_NOTES[b.id] ?? "";
+      return `- ${b.name} (${price}): ${flavors.join(", ")}. ${notes}`;
+    })
+    .filter((l): l is string => l !== null);
+  const presets = BOWL_PRESETS.filter((p) =>
+    available
+      ? p.components.every((c) => available.has(`${c.brandId}:${c.flavorName}`))
+      : true
+  ).map(
     (p) =>
       `- ${p.name} (${presetPrice(p.id)} EGP): ${p.components
         .map((c) => `${c.flavorName} (${getBrand(c.brandId)?.name})`)
         .join(" + ")}`
   );
-  return `BRANDS:\n${lines.join("\n")}\n\nHOUSE PRESETS:\n${presets.join("\n")}\n\nRULES: every hookah is 20g. A mix bowl splits 20g across chosen flavors and costs the highest mix price of the involved brands (145 EGP). Salom/Kass are flat 45 EGP. The Amy PIPE is premium hardware: any session on it prices 180 EGP flat (fruits or mix) — mention it when a guest asks for premium.`;
+  const availabilityRule = available
+    ? "\n\nAVAILABILITY: the menu above is LIVE stock — every flavor listed is pourable right now. NEVER recommend a flavor that is not on this list; if asked for something missing, say it just ran out and offer the closest available option."
+    : "";
+  return `BRANDS:\n${lines.join("\n")}\n\nHOUSE PRESETS:\n${presets.join(
+    "\n"
+  )}${availabilityRule}\n\nRULES: every hookah is 20g. A mix bowl splits 20g across chosen flavors and costs the highest mix price of the involved brands (145 EGP). Salom/Kass are flat 45 EGP. The Amy PIPE is premium hardware: any session on it prices 180 EGP flat (fruits or mix) — mention it when a guest asks for premium.`;
+}
+
+/** r68-audit — drop quick-add picks whose flavors aren't pourable right
+ * now (the deterministic engine doesn't know stock; the route filters). */
+export function filterPicksByStock(
+  picks: SommPick[],
+  available?: Set<string>
+): SommPick[] {
+  if (!available) return picks;
+  return picks.filter((p) =>
+    p.brandIds.every((b, i) => available.has(`${b}:${p.flavorNames[i]}`))
+  );
 }

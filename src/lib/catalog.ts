@@ -37,7 +37,12 @@ export const OWN_MOLASSES_REGULAR_PRICE = 125;
 export interface ShishaCategoryDef {
   key: ShishaCategory;
   label: string;
+  /** Arabic label (category tile title) */
+  labelAr: string;
+  /** English description (category tile subtitle) */
   desc: string;
+  /** Arabic description — rendered when lang === "ar" */
+  descAr: string;
   emoji: string;
   logo: string;
   brandIds: string[];
@@ -47,7 +52,9 @@ export const SHISHA_CATEGORIES: ShishaCategoryDef[] = [
   {
     key: "regular",
     label: "Regular shisha",
+    labelAr: "شيشة عادية",
     desc: "Mazaya · Al Fakher · Dandash · Nakhla · Salom · Kass",
+    descAr: "مزايا · الفاخر · دندش · نخلة · سالوم · كاس",
     emoji: "🌿",
     logo: "/images/brands/regular.jpg",
     brandIds: [
@@ -62,7 +69,12 @@ export const SHISHA_CATEGORIES: ShishaCategoryDef[] = [
   {
     key: "amy",
     label: "Amy shisha",
-    desc: "Premium pipe · every molasses except Salom & Kass",
+    labelAr: "شيشة أمي",
+    // r68-audit copy fix: name the four houses explicitly (the old "every
+    // molasses except Salom & Kass" wrongly implied Amy molasses, and the
+    // Amy brand is a pipe type that never appears as molasses).
+    desc: "Premium pipe · Mazaya, Al Fakher, Dandash & Nakhla · 180 EGP flat",
+    descAr: "أنبوب فاخر · مزايا، الفاخر، دندش ونخلة · ١٨٠ جنيه ثابتة",
     emoji: "👑",
     logo: "/images/brands/amy.jpg",
     // r66 — pressing "Amy" shows ALL brands except Salloum & Kass.

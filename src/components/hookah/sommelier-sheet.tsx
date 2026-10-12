@@ -129,6 +129,9 @@ export function SommelierSheet({
             .slice(-10),
           lang,
           guestName: guestName || undefined,
+          // r68-audit — the sommelier only recommends what this branch
+          // can pour right now
+          branchId: branchId || undefined,
         }),
       });
       const data = await res.json();

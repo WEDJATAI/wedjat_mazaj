@@ -5,6 +5,10 @@ import { resolveBranchScope } from "@/lib/branch-scope";
 
 /**
  * r57 — branch-scoped per-flavor stock.
+ * r68-audit — `stocked: false` when the branch has NO flavor jars at all
+ * (a brand-new / pending branch): the client can then say "not stocked
+ * yet" instead of "sold out", and we stop fabricating fresh `updatedAt`
+ * stamps for jars that don't exist.
  * ?branchId=<id> | all | (default branch). The "all" scope sums each
  * flavor across branches (venue-admin matrix).
  */
@@ -19,6 +23,17 @@ export async function GET(req: NextRequest) {
         : undefined,
       orderBy: [{ brandName: "asc" }, { flavorName: "asc" }],
     });
+
+    // r68-audit: no jars at this branch → the menu is NOT stocked (don't
+    // invent a full 0g catalog with fresh timestamps — say it plainly).
+    if (rows.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        branchId,
+        stocked: false,
+        items: [],
+      });
+    }
 
     const merged = BRANDS.flatMap((b) =>
       b.flavors.map((f) => {
@@ -37,7 +52,7 @@ export async function GET(req: NextRequest) {
         };
       })
     );
-    return NextResponse.json({ ok: true, branchId, items: merged });
+    return NextResponse.json({ ok: true, branchId, stocked: true, items: merged });
   } catch (err) {
     console.error("flavor-stock list error", err);
     return NextResponse.json(

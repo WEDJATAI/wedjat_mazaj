@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import { queueOrder } from "@/lib/offline-queue";
 import { tierDef } from "@/lib/loyalty";
 import { AppHeader, EmptyState, GoldButton, ScreenShell } from "./kit/kit";
+import { useI18n } from "@/store/i18n";
 import { BrandMark, BrandStack } from "./brand-mark";
 
 // --- types ---
@@ -136,6 +137,9 @@ interface BowlBuilderProps {
 export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilderProps) {
   // r57: orders created here belong to the employee's working branch
   const { branchId: workingBranchId } = useBranchScope();
+  // r68-audit: staff-surface i18n (Arabic-first staff)
+  const t = useI18n((s) => s.t);
+  const lang = useI18n((s) => s.lang);
   const [bowls, setBowls] = React.useState<Bowl[]>([]);
   const [editing, setEditing] = React.useState<Bowl | null>(null);
   const [customerName, setCustomerName] = React.useState("");
@@ -246,8 +250,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
     if (bowls.length === 0 || sending) return;
     // Table number is mandatory for employees
     if (!table.trim()) {
-      toast.error("Table number is required", {
-        description: "Enter the table number before sending the order.",
+      toast.error(t("bbTableRequired"), {
+        description: t("bbTableRequiredDesc"),
       });
       return;
     }
@@ -380,8 +384,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
       {/* App bar — cinematic glass header */}
       <AppHeader
         icon={<Flame className="size-5" />}
-        title="Bowl builder"
-        subtitle={`${orderedByName} · build & send`}
+        title={t("bbTitle")}
+        subtitle={`${orderedByName} ${t("bbSubtitleSuffix")}`}
         actions={
           <button
             type="button"
@@ -420,8 +424,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                     setTable(e.target.value);
                     setTableId(null); // manual typing → name-only reference
                   }}
-                  placeholder="Table number *"
-                  aria-label="Table number (required)"
+                  placeholder={t("bbTablePlaceholder")}
+                  aria-label={t("bbTablePlaceholder")}
                   className={cn(
                     "h-11 rounded-xl border-white/[0.08] bg-white/[0.04]",
                     !table.trim() && "border-amber-500/50"
@@ -540,9 +544,9 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             <section className="mb-4">
               <div className="mb-2 flex items-center justify-between">
                 <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
-                  This order{" "}
+                  {t("bbThisOrder")}{" "}
                   <span className="font-sans text-xs font-normal text-muted-foreground">
-                    ({bowls.length} bowl{bowls.length !== 1 ? "s" : ""})
+                    ({bowls.length} {t("bbBowls")})
                   </span>
                 </p>
                 {bowls.length > 0 && (
@@ -551,7 +555,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                     onClick={() => setBowls([])}
                     className="text-xs text-muted-foreground hover:text-destructive"
                   >
-                    Clear all
+                    {t("bbClearAll")}
                   </button>
                 )}
               </div>
@@ -566,8 +570,8 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                   >
                     <EmptyState
                       icon={<span className="text-2xl">🌬️</span>}
-                      title="No bowls yet"
-                      description="Tap a brand below or a preset above to start."
+                      title={t("bbNoBowls")}
+                      description={t("bbNoBowlsDesc")}
                     />
                   </motion.div>
                 ) : (
@@ -635,7 +639,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
               {!shishaCat ? (
                 <div>
                   <p className="font-display mb-2 text-lg font-bold tracking-tight text-gold-soft">
-                    Choose shisha type
+                    {t("bbChooseType")}
                   </p>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {SHISHA_CATEGORIES.map((cat) => (
@@ -659,9 +663,11 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                         </span>
                         <div className="relative min-w-0 flex-1">
                           <p className="font-display text-base font-bold text-gold-soft">
-                            {cat.label}
+                            {lang === "ar" ? cat.labelAr : cat.label}
                           </p>
-                          <p className="text-[11px] text-muted-foreground">{cat.desc}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {lang === "ar" ? cat.descAr : cat.desc}
+                          </p>
                         </div>
                       </button>
                     ))}
@@ -671,14 +677,17 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
-                      {SHISHA_CATEGORIES.find((c) => c.key === shishaCat)?.label}
+                      {(() => {
+                        const c = SHISHA_CATEGORIES.find((x) => x.key === shishaCat);
+                        return c ? (lang === "ar" ? c.labelAr : c.label) : "";
+                      })()}
                     </p>
                     <button
                       type="button"
                       onClick={() => setShishaCat(null)}
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                      ← Change
+                      ← {t("bbChange")}
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -707,7 +716,11 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                         </span>
                         <p className="relative text-sm font-semibold">{brand.name}</p>
                         <p className="font-display relative text-[10px] font-bold tabular-nums text-gold">
-                          from {egp(brand.pricing.flat ?? brand.pricing.fruits ?? 0)}
+                          from {egp(
+                            shishaCat === "amy"
+                              ? AMY_SESSION_PRICE
+                              : brand.pricing.flat ?? brand.pricing.fruits ?? 0
+                          )}
                         </p>
                         {brand.badge && (
                           <Badge
@@ -782,7 +795,7 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <>
-                  <Send className="size-4" /> Send order
+                  <Send className="size-4" /> {t("bbSend")}
                 </>
               )}
             </GoldButton>
@@ -873,6 +886,8 @@ function BowlEditor({
   onCancel: () => void;
 }) {
   const reduced = useReducedMotion();
+  // r68-audit: staff i18n
+  const t = useI18n((s) => s.t);
   const [draft, setDraft] = React.useState<Bowl>(bowl);
   const [pickerOpen, setPickerOpen] = React.useState(false);
 
@@ -942,7 +957,7 @@ function BowlEditor({
               onClick={onCancel}
               className="flex min-h-11 items-center gap-1 rounded-full px-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ChevronLeft className="size-4 rtl:rotate-180" /> Cancel
+              <ChevronLeft className="size-4 rtl:rotate-180" /> {t("bbCancel")}
             </button>
             <p className="font-display text-xl font-bold tracking-tight text-gold-soft">
               Build bowl
@@ -1048,7 +1063,9 @@ function BowlEditor({
               className="mb-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-medium text-foreground transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
             >
               <Plus className="size-4" />
-              {draft.components.length === 0 ? "Add a flavor" : "Add another flavor"}
+              {draft.components.length === 0
+                ? t("bbAddFlavor")
+                : t("bbAddAnotherFlavor")}
             </button>
           )}
 
@@ -1122,7 +1139,7 @@ function BowlEditor({
             disabled={!canSave}
             onClick={() => onSave(draft)}
           >
-            <Check className="size-4" /> Add to order · {egp(unit * draft.qty)}
+            <Check className="size-4" /> {t("bbAddToOrder")} · {egp(unit * draft.qty)}
           </GoldButton>
         </div>
 

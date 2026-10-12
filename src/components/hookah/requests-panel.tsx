@@ -42,14 +42,19 @@ interface ServiceRequest {
   branchNameAr?: string | null;
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(
+  iso: string,
+  justNow: string,
+  minSuffix: string,
+  hourSuffix: string
+): string {
   const d = new Date(iso).getTime();
   const diff = Math.max(0, Date.now() - d);
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
+  if (min < 1) return justNow;
+  if (min < 60) return `${min}${minSuffix}`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return `${hr}${hourSuffix}`;
   return new Date(iso).toLocaleDateString();
 }
 
@@ -79,13 +84,13 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
       );
       const data = await res.json();
       if (data.ok) setRequests(data.requests);
-      else toast.error("Could not load requests");
+      else toast.error(t("reqLoadFail"));
     } catch {
-      toast.error("Could not load requests");
+      toast.error(t("reqLoadFail"));
     } finally {
       setLoading(false);
     }
-  }, [branchParam]);
+  }, [branchParam, t]);
 
   React.useEffect(() => {
     load();
@@ -104,11 +109,15 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Update failed");
       toast.success(
-        status === "acknowledged" ? "Request acknowledged" : "Marked done"
+        status === "acknowledged" ? t("reqAckToast") : t("reqDoneToast")
       );
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Update failed");
+      toast.error(
+        err instanceof Error && err.message !== "Update failed"
+          ? err.message
+          : t("reqUpdateFail")
+      );
     }
   };
 
@@ -122,13 +131,13 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
       <div className="relative flex min-h-screen flex-col">
         <AppHeader
           icon={<BellRing className="size-5" />}
-          title="Requests"
-          subtitle={`Guest calls for the shisha man · ${scopeLabel}`}
+          title={t("reqTitle")}
+          subtitle={`${t("reqSubtitle")} · ${scopeLabel}`}
           actions={
             <>
               {pending.length > 0 && (
                 <span className="hidden items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary ring-1 ring-primary/40 sm:inline-flex">
-                  <BellRing className="size-3.5" /> {pending.length} new
+                  <BellRing className="size-3.5" /> {pending.length} {t("reqNewBadge")}
                 </span>
               )}
               <button
@@ -164,8 +173,8 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
             <EmptyState
               className="mt-6"
               icon={<HandHelping className="size-6" />}
-              title="No requests yet"
-              description="When a guest calls the shisha man, it shows up here."
+              title={t("reqEmptyTitle")}
+              description={t("reqEmptyDesc")}
             />
           ) : (
             <div className="space-y-8">
@@ -174,22 +183,22 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
                 <StatTile
                   icon={<BellRing className="size-4" />}
                   text={String(pending.length)}
-                  label="Pending"
+                  label={t("reqPending")}
                 />
                 <StatTile
                   icon={<HandHelping className="size-4" />}
                   text={String(active.length)}
-                  label="In progress"
+                  label={t("reqInProgress")}
                 />
                 <StatTile
                   icon={<CheckCheck className="size-4" />}
                   text={String(done.length)}
-                  label="Done"
+                  label={t("reqDone")}
                 />
               </div>
 
               {pending.length > 0 && (
-                <Section title="Pending" count={pending.length}>
+                <Section title={t("reqPending")} count={pending.length}>
                   {pending.map((r) => (
                     <StaggerItem key={r.id}>
                       <RequestCard
@@ -202,21 +211,21 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
                 </Section>
               )}
               {active.length > 0 && (
-                <Section title="In progress" count={active.length}>
+                <Section title={t("reqInProgress")} count={active.length}>
                   {active.map((r) => (
                     <StaggerItem key={r.id}>
                       <RequestCard
                         req={r}
                         showBranch={scopeAll}
                         onAck={() => acknowledge(r, "done")}
-                        ackLabel="Mark done"
+                        ackLabel={t("reqMarkDone")}
                       />
                     </StaggerItem>
                   ))}
                 </Section>
               )}
               {done.length > 0 && (
-                <Section title="Done" count={done.length} muted>
+                <Section title={t("reqDone")} count={done.length} muted>
                   {done.map((r) => (
                     <StaggerItem key={r.id}>
                       <RequestCard req={r} showBranch={scopeAll} />
@@ -231,7 +240,7 @@ export function RequestsPanel({ onSignOut }: { onSignOut: () => void }) {
         <footer className="relative mt-auto border-t border-white/[0.06] bg-[oklch(0.135_0.014_60/0.6)] py-6">
           <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-2 px-4 text-center text-xs text-muted-foreground">
             <Flame className="size-3.5 text-primary" aria-hidden />
-            <span>Auto-refreshes every 15 seconds</span>
+            <span>{t("reqAutoRefresh")}</span>
           </div>
         </footer>
       </div>
@@ -273,9 +282,14 @@ function Section({
 
 /* ── Gold status stepper — Requested → Acknowledged → Done ────────────── */
 
-const STEP_LABELS = ["Requested", "Acknowledged", "Done"] as const;
-
 function GoldStepper({ status }: { status: string }) {
+  const t = useI18n((s) => s.t);
+  // r68-audit: translated step labels (staff i18n)
+  const STEP_LABELS = [
+    t("reqStepRequested"),
+    t("reqStepAcknowledged"),
+    t("reqStepDone"),
+  ];
   const current =
     status === "done" ? 2 : status === "acknowledged" ? 1 : 0;
   return (
@@ -334,24 +348,32 @@ function GoldStepper({ status }: { status: string }) {
 function RequestCard({
   req,
   onAck,
-  ackLabel = "Acknowledge",
+  ackLabel,
   showBranch,
 }: {
   req: ServiceRequest;
   onAck?: () => void;
+  /** r68-audit: translated by the caller; defaults to AR-aware labels */
   ackLabel?: string;
   /** r57 — all-branches scope: render the branch chip when present */
   showBranch?: boolean;
 }) {
+  const t = useI18n((s) => s.t);
   const lang = useI18n((s) => s.lang);
-  const isCoal = req.type === "coal_request";
+  const isCoal = req.type === "coal_request" || req.type === "coal";
   const title = isCoal
-    ? "Coal request"
+    ? t("reqCoal")
     : req.type === "call_shisha_man"
-    ? "Call the shisha man"
+    ? t("reqCall")
     : req.type;
   const statusLabel =
-    req.status.charAt(0).toUpperCase() + req.status.slice(1);
+    req.status === "pending"
+      ? t("reqPending")
+      : req.status === "acknowledged"
+      ? t("reqStepAcknowledged")
+      : req.status === "done"
+      ? t("reqDone")
+      : req.status;
 
   const pillCls =
     req.status === "pending"
@@ -413,7 +435,13 @@ function RequestCard({
               </span>
             )}
             <span className="flex items-center gap-1 tabular-nums">
-              <Clock className="size-3" /> {timeAgo(req.createdAt)}
+              <Clock className="size-3" />{" "}
+              {timeAgo(
+                req.createdAt,
+                t("timeJustNow"),
+                t("timeMinAgoSuffix"),
+                t("timeHourAgoSuffix")
+              )}
             </span>
           </div>
           {req.note && (
@@ -430,11 +458,11 @@ function RequestCard({
         <div className="mt-3.5">
           {req.status === "pending" ? (
             <GoldButton className="h-11 w-full text-sm" onClick={onAck}>
-              <CheckCheck className="size-4" /> {ackLabel}
+              <CheckCheck className="size-4" /> {ackLabel ?? t("reqAck")}
             </GoldButton>
           ) : (
             <button type="button" className={donePillBtn} onClick={onAck}>
-              <CheckCheck className="size-4" /> {ackLabel}
+              <CheckCheck className="size-4" /> {ackLabel ?? t("reqMarkDone")}
             </button>
           )}
         </div>

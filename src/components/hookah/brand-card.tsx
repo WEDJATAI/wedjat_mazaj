@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { EASE } from "./kit/kit";
+import { useI18n } from "@/store/i18n";
 
 interface BrandCardProps {
   brand: Brand;
@@ -15,6 +16,10 @@ interface BrandCardProps {
   /** r66: number of flavors currently in stock at this branch — when
    *  provided, a live "N flavors" chip glows on the card (guest flow). */
   liveFlavors?: number;
+  /** r68-audit: when set (e.g. 180 on the Amy pipe), every price on the
+   *  card shows this FLAT number instead of the brand's own pricing —
+   *  an Amy-pipe session prices flat no matter the molasses. */
+  flatPrice?: number;
 }
 
 export function BrandCard({
@@ -23,7 +28,9 @@ export function BrandCard({
   onSelect,
   index = 0,
   liveFlavors,
+  flatPrice,
 }: BrandCardProps) {
+  const t = useI18n((s) => s.t);
   const fromPrice =
     brand.pricing.flat ??
     brand.pricing.fruits ??
@@ -100,10 +107,10 @@ export function BrandCard({
       <div className="relative mt-3 flex items-end justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/75">
-            From
+            {flatPrice ? "Flat" : "From"}
           </p>
           <p className="font-display text-2xl font-bold" style={{ color }}>
-            {egp(fromPrice)}
+            {egp(flatPrice ?? fromPrice)}
           </p>
         </div>
         {inCart > 0 ? (
@@ -123,17 +130,17 @@ export function BrandCard({
       <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
         {brand.flavorTypes.includes("fruits") && (
           <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
-            Fruits · {egp(brand.pricing.fruits ?? 0)}
+            Fruits · {egp(flatPrice ?? brand.pricing.fruits ?? 0)}
           </span>
         )}
         {brand.flavorTypes.includes("fruits-mix") && (
           <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
-            Mix · {egp(brand.pricing.fruitsMix ?? 0)}
+            Mix · {egp(flatPrice ?? brand.pricing.fruitsMix ?? 0)}
           </span>
         )}
         {brand.flavorTypes.includes("flat") && (
           <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
-            20g · flat
+            20g · {t("bbFlatWord")}
           </span>
         )}
         {/* r66 — live availability chip (guest flow): a fresh green pulse

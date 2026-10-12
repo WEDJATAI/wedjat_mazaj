@@ -11,6 +11,7 @@ import {
   SHISHA_CATEGORIES,
   brandsForCategory,
   normalizeSearchQuery,
+  AMY_SESSION_PRICE,
 } from "@/lib/catalog";
 import { useCart, computeTotals, splitGrams, type CartItem } from "@/store/cart";
 import {
@@ -139,7 +140,10 @@ export function OrderScreen({
   // r66 — guests order from what this branch can pour RIGHT NOW (staff see
   // the full menu; the server re-validates stock at placement anyway)
   const isGuest = source !== "employee";
-  const { map: stockMap } = useFlavorStock(branchId, isGuest);
+  const { map: stockMap, stocked: branchStocked } = useFlavorStock(
+    branchId,
+    isGuest
+  );
   const brandLive = React.useCallback(
     (b: Brand) => !isGuest || isBrandAvailable(stockMap, b),
     [isGuest, stockMap]
@@ -438,10 +442,19 @@ export function OrderScreen({
            * scattered browse UI (hero, promos, legend, categories, search).
            * Every guest order starts with “Who's this shisha for?” then
            * “Did you bring your own?” and flows step by step to review. */
-          <div className="space-y-4">
+          /* r68-audit fix: when the corner TABLE ORDER card is docked
+           * (cartCount > 0), reserve clearance under the wizard so the
+           * fixed card never paints over the stock note / step content. */
+          <div
+            className={cn(
+              "space-y-4",
+              cartCount > 0 && "pb-44"
+            )}
+          >
             <OrderWizard
               session={wizSession}
               stockMap={isGuest ? stockMap : null}
+              stocked={branchStocked}
               onSend={handleConfirmOrder}
               onRestart={restartWizard}
               onCancelEdit={() =>
@@ -827,6 +840,9 @@ export function OrderScreen({
                             inCart={mounted ? inCartFor(brand.id) : 0}
                             onSelect={() => handleSelectBrand(brand)}
                             index={i}
+                            // r68-audit: Amy-pipe cards must show 180 flat,
+                            // not the brand's own 125/145 pricing
+                            flatPrice={shishaCat === "amy" ? AMY_SESSION_PRICE : undefined}
                             liveFlavors={
                               isGuest
                                 ? availableFlavorCount(stockMap, brand)

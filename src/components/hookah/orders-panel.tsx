@@ -19,6 +19,7 @@ import {
   Loader2,
   Hand,
   UserCheck,
+  UserRound,
   AlarmClock,
   Banknote,
   PenLine,
@@ -82,6 +83,11 @@ interface ItemSummary {
   components?: { brandId: string }[];
   flavorLabel: string;
   qty: number;
+  /** r68-audit: the per-person label at a shared table */
+  forName?: string | null;
+  /** r68-audit: per-shisha BYO answer + pipe type chips */
+  ownType?: "hookah" | "molasses" | null;
+  hookahType?: "regular" | "amy" | null;
 }
 
 function parseItems(json: string): ItemSummary[] {
@@ -111,28 +117,28 @@ function parseFullItems(json: string): CartItem[] {
   }
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, justNow: string, minSuf: string, hourSuf: string): string {
   const d = new Date(iso).getTime();
   const diff = Math.max(0, Date.now() - d);
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
+  if (min < 1) return justNow;
+  if (min < 60) return `${min}${minSuf}`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return `${hr}${hourSuf}`;
   return new Date(iso).toLocaleDateString();
 }
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   pending: {
-    label: "Pending",
+    label: "",
     cls: "rounded-full border-transparent bg-primary/15 text-primary ring-1 ring-primary/45",
   },
   preparing: {
-    label: "Preparing",
+    label: "",
     cls: "rounded-full border-transparent bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/40",
   },
   done: {
-    label: "Done",
+    label: "",
     cls: "rounded-full border-transparent bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/40",
   },
 };
@@ -267,7 +273,7 @@ export function OrdersPanel({ onSignOut, onAmendStart }: { onSignOut: () => void
   const startAmend = (order: OrderRow) => {
     const items = parseFullItems(order.itemsJson);
     if (items.length === 0) {
-      toast.error("This order can't be edited (legacy items)");
+      toast.error(t("legacyItems"));
       return;
     }
     let addons: string[] = [];
@@ -376,27 +382,27 @@ export function OrdersPanel({ onSignOut, onAmendStart }: { onSignOut: () => void
                 <StatTile
                   icon={<Flame className="size-4" />}
                   text={String(incoming.length)}
-                  label="Incoming"
+                  label={t("incoming")}
                 />
                 <StatTile
                   icon={<ChefHat className="size-4" />}
                   text={String(activeCount)}
-                  label="In progress"
+                  label={t("inProgress")}
                 />
                 <StatTile
                   icon={<CheckCheck className="size-4" />}
                   text={String(done.length)}
-                  label="Done"
+                  label={t("doneOrders")}
                 />
                 <StatTile
                   icon={<Banknote className="size-4" />}
                   text={egp(queueValue)}
-                  label="Queue value"
+                  label={t("queueValue")}
                 />
               </div>
 
               {incoming.length > 0 && (
-                <Section title="Incoming — tap to confirm" count={incoming.length}>
+                <Section title={`${t("incoming")} — ${t("tapToConfirm")}`} count={incoming.length}>
                   {incoming.map((o) => (
                     <StaggerItem key={o.id}>
                       <OrderCard
@@ -412,7 +418,7 @@ export function OrdersPanel({ onSignOut, onAmendStart }: { onSignOut: () => void
                 </Section>
               )}
               {mine.length > 0 && (
-                <Section title="My orders" count={mine.length}>
+                <Section title={t("myOrders")} count={mine.length}>
                   {mine.map((o) => (
                     <StaggerItem key={o.id}>
                       <OrderCard
@@ -529,11 +535,18 @@ function OrderCard({
   const t = useI18n((s) => s.t);
   const items = parseItems(order.itemsJson);
   const meta = STATUS_META[order.status] ?? STATUS_META.pending;
+  // r68-audit: translated status pill (staff i18n)
+  const metaLabel =
+    order.status === "preparing"
+      ? t("stepPreparing")
+      : order.status === "done"
+      ? t("doneOrders")
+      : t("incoming");
   const isUnassigned = order.assignment === "unassigned";
   const sourceLabel = isUnassigned
-    ? "Guest self-order"
+    ? t("guestSelfOrder")
     : order.assignedToName
-    ? `Assigned: ${order.assignedToName}`
+    ? `${t("assigned")}: ${order.assignedToName}`
     : order.source === "guest_scan"
     ? "Guest scan"
     : order.source === "guest_call"
@@ -562,18 +575,18 @@ function OrderCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-display text-lg font-bold tracking-tight text-gold-soft">
-              {order.customerName || "Walk-in"}
+              {order.customerName || t("walkIn")}
             </p>
             {isUnassigned ? (
               <Badge
                 variant="secondary"
                 className="rounded-full border-transparent bg-primary/15 text-primary ring-1 ring-primary/45"
               >
-                Incoming
+                {t("incoming")}
               </Badge>
             ) : (
               <Badge variant="secondary" className={meta.cls}>
-                {meta.label}
+                {metaLabel}
               </Badge>
             )}
             {order.revision != null && order.revision > 0 && (
@@ -596,7 +609,7 @@ function OrderCard({
                 )}
               >
                 <AlarmClock className="size-3" />
-                {sla.level === "warn" ? "Waiting" : "Late"} {sla.minutes}m
+                {sla.level === "warn" ? t("opWaiting") : t("opLate")} {sla.minutes}{t("timeMinAgoSuffix")}
               </Badge>
             )}
           </div>
@@ -612,7 +625,7 @@ function OrderCard({
               </span>
             )}
             <span className="flex items-center gap-1 tabular-nums">
-              <Clock className="size-3" /> {timeAgo(order.createdAt)}
+              <Clock className="size-3" /> {timeAgo(order.createdAt, t("timeJustNow"), t("timeMinAgoSuffix"), t("timeHourAgoSuffix"))}
             </span>
             <span className="flex items-center gap-1">
               {isUnassigned && <Hand className="size-3 text-primary" />}
@@ -622,7 +635,7 @@ function OrderCard({
         </div>
         <div className="shrink-0 text-end">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/75">
-            {order.itemCount} hookah{order.itemCount > 1 ? "s" : ""}
+            {order.itemCount} {t("opHookahs")}
           </p>
           <p className="font-display text-xl font-bold tabular-nums text-gold">
             {egp(order.total)}
@@ -648,8 +661,21 @@ function OrderCard({
                   <BrandStack brandIds={brandIds} size="xs" max={3} />
                 ) : brandIds.length === 1 ? (
                   <BrandMark brandId={brandIds[0]} size="xs" noRing />
-                ) : null}
+                ) : (
+                  /* r68-audit: own-molasses shishas carry no components —
+                   * the 🎒 marks the BYO bowl instead of a brand logo */
+                  <span className="grid size-5 place-items-center text-[11px]">🎒</span>
+                )}
                 {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
+                {it.hookahType === "amy" && (
+                  <span title="Amy pipe" className="text-[10px]">👑</span>
+                )}
+                {it.forName ? (
+                  <span className="ms-0.5 flex items-center gap-0.5 text-primary">
+                    <UserRound className="size-3" />
+                    {it.forName}
+                  </span>
+                ) : null}
               </span>
             );
           })}
@@ -665,7 +691,7 @@ function OrderCard({
             className="h-11 normal-case tracking-wide"
             onClick={onClaim}
           >
-            <UserCheck className="size-4" /> Confirm & take
+            <UserCheck className="size-4" /> {t("confirmTake")}
           </GoldButton>
         )}
         {onStatus && order.status === "pending" && (
@@ -683,7 +709,7 @@ function OrderCard({
             className={glassPillBtn}
             onClick={() => onStatus("pending")}
           >
-            <Pause className="size-4" /> Back to pending
+            <Pause className="size-4" /> {t("backToPending")}
           </button>
         )}
         {onStatus && order.status !== "done" && (
@@ -692,7 +718,7 @@ function OrderCard({
             className={donePillBtn}
             onClick={() => onStatus("done")}
           >
-            <CheckCheck className="size-4" /> Mark done
+            <CheckCheck className="size-4" /> {t("markDone")}
           </button>
         )}
         {onAmend && order.status !== "done" && (
@@ -701,7 +727,7 @@ function OrderCard({
           </button>
         )}
         <button type="button" className={glassPillBtn} onClick={onComments}>
-          <MessageCircle className="size-4" /> Comments
+          <MessageCircle className="size-4" /> {t("comments")}
         </button>
       </div>
     </div>
@@ -717,6 +743,7 @@ function CommentsSheet({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
+  const t = useI18n((s) => s.t);
   const [comments, setComments] = React.useState<Comment[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [body, setBody] = React.useState("");
@@ -788,7 +815,7 @@ function CommentsSheet({
           </SheetTitle>
           <SheetDescription className="tabular-nums">
             Order #{order.id.slice(-6).toUpperCase()} ·{" "}
-            {order.customerName || "Walk-in"}
+            {order.customerName || t("walkIn")}
             {order.table ? ` · ${order.table}` : ""}
           </SheetDescription>
         </SheetHeader>
@@ -812,7 +839,7 @@ function CommentsSheet({
                     <span className="font-semibold text-gold-soft">
                       {c.author}
                     </span>
-                    <span className="tabular-nums">{timeAgo(c.createdAt)}</span>
+                    <span className="tabular-nums">{timeAgo(c.createdAt, t("timeJustNow"), t("timeMinAgoSuffix"), t("timeHourAgoSuffix"))}</span>
                   </div>
                   <p className="mt-1.5 text-sm text-foreground/90">{c.body}</p>
                 </li>

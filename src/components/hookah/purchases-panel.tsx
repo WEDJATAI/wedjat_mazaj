@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BRANDS, SUPPLIES, egp, type PackOption } from "@/lib/catalog";
 import { BrandMark } from "./brand-mark";
+import { useI18n } from "@/store/i18n";
 import {
   EmptyState,
   GoldButton,
@@ -61,6 +62,8 @@ function timeAgo(iso: string): string {
 }
 
 export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
+  // r68-audit: staff i18n
+  const t = useI18n((s) => s.t);
   const [purchases, setPurchases] = React.useState<PurchaseRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [buyOpen, setBuyOpen] = React.useState(false);
@@ -101,10 +104,10 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
             </span>
             <div className="min-w-0 leading-tight">
               <h1 className="font-display truncate text-xl font-bold tracking-tight text-gold-soft">
-                Purchases
+                {t("purTitle")}
               </h1>
               <p className="-mt-0.5 truncate text-[11px] text-muted-foreground">
-                Buy molasses packs &amp; supplies
+                {t("purSubtitle")}
               </p>
             </div>
             <div className="ms-auto flex shrink-0 items-center gap-2">
@@ -167,8 +170,8 @@ export function PurchasesPanel({ onSignOut }: { onSignOut: () => void }) {
           ) : purchases.length === 0 ? (
             <EmptyState
               icon={<ShoppingCart className="size-6" />}
-              title="No purchases yet"
-              description="Tap “Buy” to purchase molasses packs or supplies."
+              title={t("purEmptyTitle")}
+              description={t("purEmptyDesc")}
             />
           ) : (
             <Stagger className="space-y-2">

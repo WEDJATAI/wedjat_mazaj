@@ -481,28 +481,39 @@ export async function POST(req: NextRequest) {
       }
 
       // deduct add-on supply stock (e.g. 1 medical hose per order)
+      // r68-audit race fix: conditional decrement — only succeeds when the
+      // row still has stock; a concurrent order that already took the last
+      // one makes count 0 → throw → the WHOLE transaction rolls back.
       for (const k of validAddons) {
         const existing = await tx.supplyItem.findFirst({
           where: { key: k, branchId: effectiveBranchId },
         });
         if (existing) {
-          await tx.supplyItem.update({
-            where: { id: existing.id },
+          const res = await tx.supplyItem.updateMany({
+            where: { id: existing.id, stock: { gte: 1 } },
             data: { stock: { decrement: 1 } },
           });
+          if (res.count !== 1) {
+            throw new Error(`CONCURRENT_STOCK: ${existing.name} just ran out`);
+          }
         }
       }
 
-      // deduct molasses brand totals
+      // deduct molasses brand totals (r68-audit: conditional decrement)
       for (const [brandId, grams] of molassesDeductions) {
         const row = await tx.inventoryItem.findFirst({
           where: { brandId, branchId: effectiveBranchId },
         });
         if (row) {
-          await tx.inventoryItem.update({
-            where: { id: row.id },
+          const res = await tx.inventoryItem.updateMany({
+            where: { id: row.id, stockGrams: { gte: grams - 0.001 } },
             data: { stockGrams: { decrement: grams } },
           });
+          if (res.count !== 1) {
+            throw new Error(
+              `CONCURRENT_STOCK: ${row.brandName} just ran out at the same moment as another order — please retry`
+            );
+          }
         }
       }
 
@@ -515,10 +526,21 @@ export async function POST(req: NextRequest) {
           (r) => r.brandIdRaw === brandIdRaw && r.flavorName === flavorName
         );
         if (existingFlavor) {
-          await tx.flavorStock.update({
-            where: { id: existingFlavor.id },
+          // r68-audit race fix: conditional decrement — 0 rows updated
+          // means a concurrent order emptied this jar between our
+          // validation read and this write → rollback everything.
+          const res = await tx.flavorStock.updateMany({
+            where: {
+              id: existingFlavor.id,
+              stockGrams: { gte: grams - 0.001 },
+            },
             data: { stockGrams: { decrement: grams } },
           });
+          if (res.count !== 1) {
+            throw new Error(
+              `CONCURRENT_STOCK: ${brand?.name ?? brandIdRaw} ${flavorName} just ran out — please retry`
+            );
+          }
         } else if (invRow && brand) {
           // create the flavor subtype row then decrement
           await tx.flavorStock.create({
@@ -535,15 +557,19 @@ export async function POST(req: NextRequest) {
       }
 
       // deduct supplies (upsert so missing rows are created then decremented)
+      // r68-audit: existing rows decrement conditionally (race-safe).
       for (const d of supplyDeductions) {
         const existing = await tx.supplyItem.findFirst({
           where: { key: d.key, branchId: effectiveBranchId },
         });
         if (existing) {
-          await tx.supplyItem.update({
-            where: { id: existing.id },
+          const res = await tx.supplyItem.updateMany({
+            where: { id: existing.id, stock: { gte: d.amount } },
             data: { stock: { decrement: d.amount } },
           });
+          if (res.count !== 1) {
+            throw new Error(`CONCURRENT_STOCK: ${existing.name} just ran out`);
+          }
         } else {
           const def = SUPPLIES.find((s) => s.key === d.key);
           if (def) {
@@ -594,6 +620,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, order, loyalty });
   } catch (err) {
     console.error("create order error", err);
+    // r68-audit: a concurrent order won the last jar — tell the guest
+    // plainly instead of a generic 500 (the transaction rolled back).
+    if (err instanceof Error && err.message.startsWith("CONCURRENT_STOCK:")) {
+      return NextResponse.json(
+        { ok: false, error: err.message.replace("CONCURRENT_STOCK: ", "") },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { ok: false, error: "Could not place order" },
       { status: 500 }

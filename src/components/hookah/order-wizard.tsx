@@ -96,6 +96,9 @@ export interface WizardSession {
 interface OrderWizardProps {
   session: WizardSession;
   stockMap: StockMap | null;
+  /** r68-audit — false when the branch has no jars at all: the empty
+   *  molasses state says “not stocked yet” instead of “sold out”. */
+  stocked?: boolean;
   onSend: () => void;
   onRestart: () => void;
   onCancelEdit: () => void;
@@ -124,6 +127,7 @@ const OWN_MOLASSES_ID = "own-molasses";
 export function OrderWizard({
   session,
   stockMap,
+  stocked = true,
   onSend,
   onRestart,
   onCancelEdit,
@@ -725,8 +729,36 @@ export function OrderWizard({
                   ))}
                 </div>
               ) : (
-                <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center text-sm text-muted-foreground">
-                  {t("noStockCategory")}
+                /* r68-audit — the menu is empty for this pipe: explain WHY
+                 * (sold out vs not stocked yet) and offer the BYO escape
+                 * hatch — the lounge can still serve pipe + service, and a
+                 * guest with their own molasses is never stuck. */
+                <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+                  <p className="text-base font-semibold text-foreground">
+                    {stocked
+                      ? t("wizSoldOutTitle")
+                      : t("wizNoStockTitle")}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {stocked
+                      ? t("wizSoldOutDesc")
+                      : t("wizNoStockDesc")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => chooseSetup("own_molasses")}
+                    className="glass mt-4 flex w-full flex-col items-center gap-0.5 rounded-2xl border-primary/30 p-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/50"
+                  >
+                    <span className="flex items-center gap-2 text-sm font-bold text-primary">
+                      🎒 {t("wizNoStockByo")}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {t("wizNoStockByoDesc")}
+                    </span>
+                  </button>
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    {t("wizNoStockCall")}
+                  </p>
                 </div>
               )}
             </motion.div>

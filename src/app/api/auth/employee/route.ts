@@ -11,8 +11,53 @@ const Schema = z.object({
     .regex(/^\d{4}$/, "PIN must be 4 digits"),
 });
 
+/* ── r68-audit: PIN brute-force guard ─────────────────────────────────
+ * 5 failed attempts per IP → 15-minute lockout (in-memory; the app is a
+ * single deployment so this holds in production). Successful sign-ins
+ * reset the counter. 4-digit PINs only have 10,000 combinations — without
+ * this, a script walks the whole space in seconds. */
+const MAX_FAILS = 5;
+const LOCK_MS = 15 * 60 * 1000;
+const failMap = new Map<string, { fails: number; lockedUntil: number }>();
+
+// periodic sweep so the map never grows unbounded
+if (typeof globalThis !== "undefined") {
+  const g = globalThis as { __pinSweep?: ReturnType<typeof setInterval> };
+  if (!g.__pinSweep) {
+    g.__pinSweep = setInterval(() => {
+      const now = Date.now();
+      for (const [ip, e] of failMap) {
+        if (e.lockedUntil < now && e.fails === 0) failMap.delete(ip);
+      }
+    }, 120_000);
+  }
+}
+
+function clientIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "local"
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
+    const ip = clientIp(req);
+    const entry = failMap.get(ip);
+    if (entry && entry.lockedUntil > Date.now()) {
+      const waitMin = Math.ceil((entry.lockedUntil - Date.now()) / 60000);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Too many wrong PINs — try again in ${waitMin} minute${
+            waitMin === 1 ? "" : "s"
+          }`,
+        },
+        { status: 429, headers: { "Retry-After": String(waitMin * 60) } }
+      );
+    }
+
     const body = await req.json();
     const parsed = Schema.safeParse(body);
     if (!parsed.success) {
@@ -24,9 +69,20 @@ export async function POST(req: NextRequest) {
     const { pin } = parsed.data;
     const emp = await db.employee.findUnique({ where: { pin } });
     if (!emp || !emp.active) {
+      const fails = (entry?.fails ?? 0) + 1;
+      const lockedUntil = fails >= MAX_FAILS ? Date.now() + LOCK_MS : 0;
+      failMap.set(ip, { fails, lockedUntil });
       return NextResponse.json(
-        { ok: false, error: "Invalid or inactive PIN" },
-        { status: 401 }
+        {
+          ok: false,
+          error:
+            lockedUntil > 0
+              ? `Too many wrong PINs — locked for 15 minutes`
+              : `Invalid or inactive PIN (${MAX_FAILS - fails} ${
+                  MAX_FAILS - fails === 1 ? "try" : "tries"
+                } left)`,
+        },
+        { status: lockedUntil > 0 ? 429 : 401 }
       );
     }
     // r57: a suspended venue is disconnected from the platform — its staff
@@ -69,6 +125,9 @@ export async function POST(req: NextRequest) {
       });
       branches = row ? [toBranchInfo(row)] : [];
     }
+
+    // success → clear this IP's failure streak (r68-audit rate limit)
+    if (failMap.has(ip)) failMap.delete(ip);
 
     return NextResponse.json({
       ok: true,

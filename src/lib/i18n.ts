@@ -79,6 +79,74 @@ export interface Translations {
   orderCardDeleted: string;
   stockNote: string;
   noStockCategory: string;
+  /* r68-audit — honest empty states + the BYO escape hatch */
+  wizSoldOutTitle: string;
+  wizSoldOutDesc: string;
+  wizNoStockTitle: string;
+  wizNoStockDesc: string;
+  wizNoStockByo: string;
+  wizNoStockByoDesc: string;
+  wizNoStockCall: string;
+
+  /* ── r68-audit: staff-surface i18n (requests / builder / loyalty /
+   * purchases were English-locked; Arabic-first staff need AR too) ── */
+  reqTitle: string;
+  reqSubtitle: string;
+  reqNewBadge: string;
+  reqLoadFail: string;
+  reqEmptyTitle: string;
+  reqEmptyDesc: string;
+  reqPending: string;
+  reqInProgress: string;
+  reqDone: string;
+  reqAck: string;
+  reqMarkDone: string;
+  reqAckToast: string;
+  reqDoneToast: string;
+  reqUpdateFail: string;
+  reqStepRequested: string;
+  reqStepAcknowledged: string;
+  reqStepDone: string;
+  reqCoal: string;
+  reqCall: string;
+  reqAutoRefresh: string;
+  timeJustNow: string;
+  timeMinAgoSuffix: string;
+  timeHourAgoSuffix: string;
+  queueValue: string;
+  legacyItems: string;
+  opHookahs: string;
+  opWaiting: string;
+  opLate: string;
+  bbChooseType: string;
+  bbTitle: string;
+  bbSubtitleSuffix: string;
+  bbThisOrder: string;
+  bbBowls: string;
+  bbClearAll: string;
+  bbNoBowls: string;
+  bbNoBowlsDesc: string;
+  bbAddFlavor: string;
+  bbAddAnotherFlavor: string;
+  bbAddToOrder: string;
+  bbCancel: string;
+  bbChange: string;
+  bbSend: string;
+  bbTablePlaceholder: string;
+  bbTableRequired: string;
+  bbTableRequiredDesc: string;
+  bbQtyLess: string;
+  bbQtyMore: string;
+  bbFlatWord: string;
+  loyTitle: string;
+  loySubtitle: string;
+  loyEmptyTitle: string;
+  loyEmptyDesc: string;
+  loyNoMatch: string;
+  purTitle: string;
+  purSubtitle: string;
+  purEmptyTitle: string;
+  purEmptyDesc: string;
 
   // ── r67: the guided order wizard (guest ritual flow) ──────────────
   wizTitle: string;
@@ -906,6 +974,76 @@ export const translations: Record<Lang, Partial<Translations>> = {
     orderCardDeleted: "Bowl removed",
     stockNote: "Showing only what's available at this branch",
     noStockCategory: "Nothing available here right now — try the other category",
+    /* r68-audit — honest empty states + the BYO escape hatch */
+    wizSoldOutTitle: "Everything just sold out",
+    wizSoldOutDesc:
+      "The jars for this pipe are empty right now — but you can still smoke.",
+    wizNoStockTitle: "Menu molasses isn't stocked here yet",
+    wizNoStockDesc:
+      "This branch can't pour menu molasses right now — but you can still smoke.",
+    wizNoStockByo: "I brought my own molasses",
+    wizNoStockByoDesc: "2-for-1 · we prepare the pipe & service",
+    wizNoStockCall: "Or tap “Call the shisha man” up top — we'll help you out.",
+
+    /* ── r68-audit: staff-surface i18n (EN) ─────────────────────────── */
+    reqTitle: "Requests",
+    reqSubtitle: "Guest calls for the shisha man",
+    reqNewBadge: "new",
+    reqLoadFail: "Could not load requests",
+    reqEmptyTitle: "No requests yet",
+    reqEmptyDesc: "When a guest calls the shisha man, it shows up here.",
+    reqPending: "Pending",
+    reqInProgress: "In progress",
+    reqDone: "Done",
+    reqAck: "Acknowledge",
+    reqMarkDone: "Mark done",
+    reqAckToast: "Request acknowledged",
+    reqDoneToast: "Marked done",
+    reqUpdateFail: "Update failed",
+    reqStepRequested: "Requested",
+    reqStepAcknowledged: "Acknowledged",
+    reqStepDone: "Done",
+    reqCoal: "Coal request",
+    reqCall: "Call the shisha man",
+    reqAutoRefresh: "Auto-refreshes every 15 seconds",
+    timeJustNow: "just now",
+    timeMinAgoSuffix: "m ago",
+    timeHourAgoSuffix: "h ago",
+    queueValue: "Queue value",
+    legacyItems: "This order can't be edited (legacy items)",
+    opHookahs: "hookahs",
+    opWaiting: "Waiting",
+    opLate: "Late",
+    bbTitle: "Bowl builder",
+    bbSubtitleSuffix: "· build & send",
+    bbChooseType: "Choose shisha type",
+    bbThisOrder: "This order",
+    bbBowls: "bowls",
+    bbClearAll: "Clear all",
+    bbNoBowls: "No bowls yet",
+    bbNoBowlsDesc: "Tap a brand below or a preset above to start.",
+    bbAddFlavor: "Add a flavor",
+    bbAddAnotherFlavor: "Add another flavor",
+    bbAddToOrder: "Add to order",
+    bbCancel: "Cancel",
+    bbChange: "Change",
+    bbSend: "Send order",
+    bbTablePlaceholder: "Table number *",
+    bbTableRequired: "Table number is required",
+    bbTableRequiredDesc: "Enter the table number before sending the order.",
+    bbQtyLess: "Decrease quantity",
+    bbQtyMore: "Increase quantity",
+    bbFlatWord: "flat",
+    loyTitle: "Mazaj+ Loyalty",
+    loySubtitle: "Rewards members, points & tiers",
+    loyEmptyTitle: "No members yet",
+    loyEmptyDesc:
+      "Guests join automatically when ordering with a phone number, or enroll them manually.",
+    loyNoMatch: "No members match your search.",
+    purTitle: "Purchases",
+    purSubtitle: "Molasses packs & supplies",
+    purEmptyTitle: "No purchases yet",
+    purEmptyDesc: "Tap “Buy” to purchase molasses packs or supplies.",
 
     // ── r67: the guided order wizard ─────────────────────────────────
     wizTitle: "Order a shisha",
@@ -1754,6 +1892,74 @@ export const translations: Record<Lang, Partial<Translations>> = {
     orderCardDeleted: "تم حذف الجبلة",
     stockNote: "نعرض فقط المتوفر في هذا الفرع",
     noStockCategory: "لا يوجد متوفر الآن — جرّب الفئة الأخرى",
+    /* r68-audit — honest empty states + the BYO escape hatch */
+    wizSoldOutTitle: "كل المعسل خلص حالًا",
+    wizSoldOutDesc: "البرطمانات فاضية دلوقتي — لكن تقدر تدخّن برضه.",
+    wizNoStockTitle: "المعسل مش متوفر في الفرع ده لسه",
+    wizNoStockDesc: "الفرع ده مش بيصبّ معسل المنُيو دلوقتي — لكن تقدر تدخّن برضه.",
+    wizNoStockByo: "معايا معسلي الخاص",
+    wizNoStockByoDesc: "٢ جبلة بواحدة · هنجهز الأنبوب والخدمة",
+    wizNoStockCall: "أو دوس «نادّي الرجل الشيشة» فوق — هنظبطك.",
+
+    /* ── r68-audit: staff-surface i18n (AR) ─────────────────────────── */
+    reqTitle: "الطلبات",
+    reqSubtitle: "نداءات الضيوف لرجل الشيشة",
+    reqNewBadge: "جديد",
+    reqLoadFail: "تعذر تحميل الطلبات",
+    reqEmptyTitle: "لا توجد طلبات بعد",
+    reqEmptyDesc: "لما الضيف ينادّي رجل الشيشة، هيظهر الطلب هنا.",
+    reqPending: "قيد الانتظار",
+    reqInProgress: "جاري التنفيذ",
+    reqDone: "تم",
+    reqAck: "تم الاستلام",
+    reqMarkDone: "إنهاء الطلب",
+    reqAckToast: "تم استلام الطلب",
+    reqDoneToast: "تم إنهاء الطلب",
+    reqUpdateFail: "فشل التحديث",
+    reqStepRequested: "مطلوب",
+    reqStepAcknowledged: "مستلم",
+    reqStepDone: "تم",
+    reqCoal: "طلب فحم",
+    reqCall: "نادّي رجل الشيشة",
+    reqAutoRefresh: "يتحدث تلقائيًا كل ١٥ ثانية",
+    timeJustNow: "الآن",
+    timeMinAgoSuffix: " د",
+    timeHourAgoSuffix: " س",
+    queueValue: "قيمة الطابور",
+    legacyItems: "الأوردر ده ماينفعش يتعمل عليه تعديل (بيانات قديمة)",
+    opHookahs: "شيشة",
+    opWaiting: "استنى",
+    opLate: "متأخر",
+    bbTitle: "تجهيز الجبلة",
+    bbSubtitleSuffix: "· جهّز وابعث",
+    bbChooseType: "اختار نوع الشيشة",
+    bbThisOrder: "الأوردر ده",
+    bbBowls: "جبلة",
+    bbClearAll: "مسح الكل",
+    bbNoBowls: "مفيش جبلات لسه",
+    bbNoBowlsDesc: "دوس على ماركة تحت أو تركيبة جاهزة فوق عشان تبدأ.",
+    bbAddFlavor: "ضيف نكهة",
+    bbAddAnotherFlavor: "ضيف نكهة تانية",
+    bbAddToOrder: "ضيف للأوردر",
+    bbCancel: "إلغاء",
+    bbChange: "تغيير",
+    bbSend: "ابعث الأوردر",
+    bbTablePlaceholder: "رقم الطاولة *",
+    bbTableRequired: "رقم الطاولة مطلوب",
+    bbTableRequiredDesc: "اكتب رقم الطاولة قبل إرسال الأوردر.",
+    bbQtyLess: "قلل الكمية",
+    bbQtyMore: "زد الكمية",
+    bbFlatWord: "ثابت",
+    loyTitle: "مزاج بلس",
+    loySubtitle: "أعضاء المكافآت والنقط والمستويات",
+    loyEmptyTitle: "مفيش أعضاء لسه",
+    loyEmptyDesc:
+      "الضيوف بينضموا تلقائيًا لما يطلبوا برقم موبايل، أو سجّلهم بنفسك.",
+    loyNoMatch: "مفيش أعضاء مطابقين للبحث.",
+    purTitle: "المشتريات",
+    purSubtitle: "عبوات المعسل والمستلزمات",
+    purEmptyTitle: "مفيش مشتريات لسه",
+    purEmptyDesc: "دوس «اشتري» عشان تشتري عبوات معسل أو مستلزمات.",
 
     // ── r67: the guided order wizard ─────────────────────────────────
     wizTitle: "اطلب شيشة",

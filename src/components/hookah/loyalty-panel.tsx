@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { egp } from "@/lib/catalog";
 import { TIERS, tierDef, nextTierProgress } from "@/lib/loyalty";
 import { toast } from "sonner";
+import { useI18n } from "@/store/i18n";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,8 @@ interface Stats {
 }
 
 export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
+  // r68-audit: staff i18n
+  const t = useI18n((s) => s.t);
   const [members, setMembers] = React.useState<MemberRow[]>([]);
   const [stats, setStats] = React.useState<Stats | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -93,8 +96,8 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
     <ScreenShell className="min-h-screen">
       <AppHeader
         icon={<Crown className="size-5" />}
-        title="Mazaj+ Loyalty"
-        subtitle="Rewards members, points & tiers"
+        title={t("loyTitle")}
+        subtitle={t("loySubtitle")}
         actions={
           <>
             <GoldButton size="sm" onClick={() => setEnrollOpen(true)}>
@@ -229,12 +232,12 @@ export function LoyaltyPanel({ onSignOut }: { onSignOut: () => void }) {
                   icon={<UserPlus className="size-6" />}
                   title={
                     members.length === 0
-                      ? "No members yet"
-                      : "No members match your search."
+                      ? t("loyEmptyTitle")
+                      : t("loyNoMatch")
                   }
                   description={
                     members.length === 0
-                      ? "Guests join automatically when ordering with a phone number, or enroll them manually."
+                      ? t("loyEmptyDesc")
                       : undefined
                   }
                   action={
