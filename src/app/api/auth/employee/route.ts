@@ -12,13 +12,80 @@ const Schema = z.object({
 });
 
 /* ── r68-audit: PIN brute-force guard ─────────────────────────────────
- * 5 failed attempts per IP → 15-minute lockout (in-memory; the app is a
- * single deployment so this holds in production). Successful sign-ins
+ * 5 failed attempts per IP → 15-minute lockout. Successful sign-ins
  * reset the counter. 4-digit PINs only have 10,000 combinations — without
- * this, a script walks the whole space in seconds. */
+ * this, a script walks the whole space in seconds.
+ *
+ * r69 fix: the counter is ALSO persisted in PlatformSetting (KV table) —
+ * Vercel serverless spins multiple instances, so a purely in-memory map
+ * resets per Lambda. The DB row is the cross-instance source of truth;
+ * the in-memory map stays as a fast local-dev layer. */
 const MAX_FAILS = 5;
 const LOCK_MS = 15 * 60 * 1000;
 const failMap = new Map<string, { fails: number; lockedUntil: number }>();
+
+interface FailRow {
+  fails: number;
+  lockedUntil: number; // epoch ms
+}
+
+const settingKey = (ip: string) => `pin-fails:${ip}`;
+
+async function readFails(ip: string): Promise<FailRow> {
+  // memory first (local dev / warm instance), then the DB (serverless truth)
+  try {
+    const row = await db.platformSetting.findUnique({
+      where: { key: settingKey(ip) },
+    });
+    if (row) {
+      const parsed = JSON.parse(row.value) as FailRow;
+      if (
+        typeof parsed?.fails === "number" &&
+        typeof parsed?.lockedUntil === "number"
+      ) {
+        return parsed;
+      }
+    }
+  } catch {
+    // DB hiccup → fall back to the in-memory view
+  }
+  return failMap.get(ip) ?? { fails: 0, lockedUntil: 0 };
+}
+
+async function writeFails(ip: string, row: FailRow): Promise<void> {
+  failMap.set(ip, row);
+  try {
+    await db.platformSetting.upsert({
+      where: { key: settingKey(ip) },
+      create: { key: settingKey(ip), value: JSON.stringify(row) },
+      update: { value: JSON.stringify(row) },
+    });
+  } catch {
+    // best-effort persist
+  }
+}
+
+async function clearFails(ip: string): Promise<void> {
+  failMap.delete(ip);
+  try {
+    await db.platformSetting.deleteMany({ where: { key: settingKey(ip) } });
+  } catch {
+    // ignore
+  }
+}
+
+function lockedResponse(lockedUntil: number) {
+  const waitMin = Math.max(1, Math.ceil((lockedUntil - Date.now()) / 60000));
+  return NextResponse.json(
+    {
+      ok: false,
+      error: `Too many wrong PINs — try again in ${waitMin} minute${
+        waitMin === 1 ? "" : "s"
+      }`,
+    },
+    { status: 429, headers: { "Retry-After": String(waitMin * 60) } }
+  );
+}
 
 // periodic sweep so the map never grows unbounded
 if (typeof globalThis !== "undefined") {
@@ -44,18 +111,10 @@ function clientIp(req: NextRequest): string {
 export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req);
-    const entry = failMap.get(ip);
-    if (entry && entry.lockedUntil > Date.now()) {
-      const waitMin = Math.ceil((entry.lockedUntil - Date.now()) / 60000);
-      return NextResponse.json(
-        {
-          ok: false,
-          error: `Too many wrong PINs — try again in ${waitMin} minute${
-            waitMin === 1 ? "" : "s"
-          }`,
-        },
-        { status: 429, headers: { "Retry-After": String(waitMin * 60) } }
-      );
+    // r69: DB-backed check — survives serverless instance churn
+    const current = await readFails(ip);
+    if (current.lockedUntil > Date.now()) {
+      return lockedResponse(current.lockedUntil);
     }
 
     const body = await req.json();
@@ -69,9 +128,9 @@ export async function POST(req: NextRequest) {
     const { pin } = parsed.data;
     const emp = await db.employee.findUnique({ where: { pin } });
     if (!emp || !emp.active) {
-      const fails = (entry?.fails ?? 0) + 1;
+      const fails = (current.fails ?? 0) + 1;
       const lockedUntil = fails >= MAX_FAILS ? Date.now() + LOCK_MS : 0;
-      failMap.set(ip, { fails, lockedUntil });
+      await writeFails(ip, { fails, lockedUntil });
       return NextResponse.json(
         {
           ok: false,
@@ -127,7 +186,7 @@ export async function POST(req: NextRequest) {
     }
 
     // success → clear this IP's failure streak (r68-audit rate limit)
-    if (failMap.has(ip)) failMap.delete(ip);
+    if (current.fails > 0) await clearFails(ip);
 
     return NextResponse.json({
       ok: true,
