@@ -72,6 +72,13 @@ export interface Translations {
   regularShisha: string;
   amyShisha: string;
   changeCategory: string;
+  /** r66 — corner order card + guest stock availability */
+  orderCardModify: string;
+  orderCardDelete: string;
+  orderCardConfirm: string;
+  orderCardDeleted: string;
+  stockNote: string;
+  noStockCategory: string;
   change: string;
   brands: string;
   popularBowls: string;
@@ -830,6 +837,12 @@ export const translations: Record<Lang, Partial<Translations>> = {
     regularShisha: "Regular shisha",
     amyShisha: "Amy shisha",
     changeCategory: "Change category",
+    orderCardModify: "Modify",
+    orderCardDelete: "Delete",
+    orderCardConfirm: "Confirm",
+    orderCardDeleted: "Bowl removed",
+    stockNote: "Showing only what's available at this branch",
+    noStockCategory: "Nothing available here right now — try the other category",
     change: "Change",
     brands: "brands",
     popularBowls: "Popular bowls",
@@ -1609,6 +1622,12 @@ export const translations: Record<Lang, Partial<Translations>> = {
     regularShisha: "شيشة عادية",
     amyShisha: "شيشة أمي",
     changeCategory: "تغيير الفئة",
+    orderCardModify: "تعديل",
+    orderCardDelete: "حذف",
+    orderCardConfirm: "تأكيد",
+    orderCardDeleted: "تم حذف الجبلة",
+    stockNote: "نعرض فقط المتوفر في هذا الفرع",
+    noStockCategory: "لا يوجد متوفر الآن — جرّب الفئة الأخرى",
     change: "تغيير",
     brands: "علامة تجارية",
     popularBowls: "جبلات شائعة",

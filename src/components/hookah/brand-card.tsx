@@ -12,9 +12,18 @@ interface BrandCardProps {
   onSelect: () => void;
   /** position in the grid — drives the staggered entrance */
   index?: number;
+  /** r66: number of flavors currently in stock at this branch — when
+   *  provided, a live "N flavors" chip glows on the card (guest flow). */
+  liveFlavors?: number;
 }
 
-export function BrandCard({ brand, inCart, onSelect, index = 0 }: BrandCardProps) {
+export function BrandCard({
+  brand,
+  inCart,
+  onSelect,
+  index = 0,
+  liveFlavors,
+}: BrandCardProps) {
   const fromPrice =
     brand.pricing.flat ??
     brand.pricing.fruits ??
@@ -31,8 +40,8 @@ export function BrandCard({ brand, inCart, onSelect, index = 0 }: BrandCardProps
       transition={{ duration: 0.55, delay: Math.min(index * 0.06, 0.42), ease: EASE }}
       whileTap={{ scale: 0.975 }}
       className={cn(
-        "group glass relative flex w-full flex-col overflow-hidden rounded-2xl p-4 text-start",
-        "transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_20px_48px_-20px_rgba(0,0,0,0.85)]",
+        "group glass-card relative flex w-full flex-col overflow-hidden rounded-3xl p-4 text-start",
+        "transition-all duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_28px_60px_-24px_rgba(0,0,0,0.95)]",
         "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
       )}
     >
@@ -111,7 +120,7 @@ export function BrandCard({ brand, inCart, onSelect, index = 0 }: BrandCardProps
       </div>
 
       {/* flavor type chips */}
-      <div className="relative mt-3 flex flex-wrap gap-1.5">
+      <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
         {brand.flavorTypes.includes("fruits") && (
           <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
             Fruits · {egp(brand.pricing.fruits ?? 0)}
@@ -125,6 +134,20 @@ export function BrandCard({ brand, inCart, onSelect, index = 0 }: BrandCardProps
         {brand.flavorTypes.includes("flat") && (
           <span className="rounded-full border border-white/[0.14] bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90">
             20g · flat
+          </span>
+        )}
+        {/* r66 — live availability chip (guest flow): a fresh green pulse
+            dot + how many flavors are pourable right now */}
+        {typeof liveFlavors === "number" && liveFlavors > 0 && (
+          <span className="ms-auto flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+            <span
+              className="relative flex size-1.5"
+              aria-hidden
+            >
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400/70" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+            </span>
+            {liveFlavors} live
           </span>
         )}
       </div>

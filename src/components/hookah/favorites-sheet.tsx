@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
+import { isFlavorAvailable, useFlavorStock } from "@/lib/stock-availability";
 import {
   EmptyState,
   GoldButton,
@@ -49,12 +50,16 @@ interface FavoritesSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   guestName: string;
+  /** r66 — the guest's branch, so reorders only pour in-stock flavors */
+  branchId?: string | null;
 }
 
-export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheetProps) {
+export function FavoritesSheet({ open, onOpenChange, guestName, branchId }: FavoritesSheetProps) {
   const t = useI18n((s) => s.t);
   const addItem = useCart((s) => s.addItem);
   const items = useCart((s) => s.items);
+  // r66 — live per-flavor stock while the sheet is open (fail-open)
+  const { map: stockMap } = useFlavorStock(branchId, open);
   const [favorites, setFavorites] = React.useState<FavoriteMix[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [savingLabel, setSavingLabel] = React.useState(false);
@@ -112,6 +117,16 @@ export function FavoritesSheet({ open, onOpenChange, guestName }: FavoritesSheet
     const comps = parsedComponents(fav.componentsJson);
     if (comps.length === 0) {
       toast.error("This favorite has no flavors");
+      return;
+    }
+    // r66 — a favorite only reorders when every component pours right now
+    const short = comps.find(
+      (c) => !isFlavorAvailable(stockMap, c.brandId, c.flavorName)
+    );
+    if (short) {
+      toast.error(t("noStockCategory"), {
+        description: `${short.brandName ?? ""} ${short.flavorName ?? ""}`.trim(),
+      });
       return;
     }
     const unit = mixPrice(comps.map((c) => c.brandId));

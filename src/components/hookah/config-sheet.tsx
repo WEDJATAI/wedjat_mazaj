@@ -39,6 +39,12 @@ import {
 import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
+import {
+  availableFlavorsOf,
+  isBrandAvailable,
+  isFlavorAvailable,
+  type StockMap,
+} from "@/lib/stock-availability";
 import { FadeSwap, GoldButton, Kicker, Stagger, StaggerItem } from "./kit/kit";
 
 /** Flavors marked as popular (⭐) to guide first-time guests. */
@@ -65,9 +71,18 @@ interface ConfigSheetProps {
    *  bowl and immediately hands it to the parent (which pops the confirm
    *  card) instead of leaving it in a cart. */
   onPacked?: () => void;
+  /** r66 — per-flavor stock for this branch (guest flow). null/undefined
+   *  = show every catalog flavor (staff / fail-open). */
+  stockMap?: StockMap | null;
 }
 
-export function ConfigSheet({ brand, open, onOpenChange, onPacked }: ConfigSheetProps) {
+export function ConfigSheet({
+  brand,
+  open,
+  onOpenChange,
+  onPacked,
+  stockMap = null,
+}: ConfigSheetProps) {
   const t = useI18n((s) => s.t);
   const reduced = useReducedMotion();
   const addItem = useCart((s) => s.addItem);
@@ -76,15 +91,25 @@ export function ConfigSheet({ brand, open, onOpenChange, onPacked }: ConfigSheet
   const [singleFlavor, setSingleFlavor] = React.useState<string>("");
   const [mixComponents, setMixComponents] = React.useState<FlavorComponent[]>([]);
 
+  // r66 — only flavors this branch can actually pour (fail-open when the
+  // stock map is unknown: staff surface / offline PWA)
+  const flavorList = React.useMemo(
+    () => (brand ? availableFlavorsOf(stockMap, brand) : []),
+    [brand, stockMap]
+  );
+
   // Reset state whenever the selected brand changes.
   React.useEffect(() => {
     if (brand) {
       setFlavor(brand.flavorTypes[0] ?? "fruits");
       setQty(1);
-      setSingleFlavor(brand.flavors[0] ?? "");
+      setSingleFlavor(
+        availableFlavorsOf(stockMap, brand)[0] ?? brand.flavors[0] ?? ""
+      );
       setMixComponents([]);
     }
-  }, [brand]);
+     
+  }, [brand, stockMap]);
 
   if (!brand) return null;
 
@@ -271,7 +296,7 @@ export function ConfigSheet({ brand, open, onOpenChange, onPacked }: ConfigSheet
                   <div className="space-y-2.5">
                     <Kicker>{t("pickFlavor")}</Kicker>
                     <div className="flex flex-wrap gap-2">
-                      {brand.flavors.map((f) => {
+                      {flavorList.map((f) => {
                         const active = singleFlavor === f;
                         const popular = POPULAR_FLAVORS.has(f);
                         return (
@@ -304,12 +329,13 @@ export function ConfigSheet({ brand, open, onOpenChange, onPacked }: ConfigSheet
                     components={mixComponents}
                     grams={mixGrams}
                     onChange={setMixComponents}
+                    stockMap={stockMap}
                   />
                 ) : (
                   <div className="space-y-2.5">
                     <Kicker>{t("pickFlavor")}</Kicker>
                     <div className="flex flex-wrap gap-2">
-                      {brand.flavors.map((f) => {
+                      {flavorList.map((f) => {
                         const active = singleFlavor === f;
                         return (
                           <motion.button
@@ -395,11 +421,13 @@ function MixPicker({
   components,
   grams,
   onChange,
+  stockMap,
 }: {
   baseBrand: Brand;
   components: FlavorComponent[];
   grams: number[];
   onChange: (c: FlavorComponent[]) => void;
+  stockMap: StockMap | null;
 }) {
   const t = useI18n((s) => s.t);
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -472,6 +500,7 @@ function MixPicker({
       {pickerOpen && (
         <FlavorPicker
           baseBrand={baseBrand}
+          stockMap={stockMap}
           onPick={(brandId, flavorName) => {
             const b = getBrand(brandId);
             if (!b) return;
@@ -506,20 +535,37 @@ function FlavorPicker({
   baseBrand,
   onPick,
   onClose,
+  stockMap,
 }: {
   baseBrand: Brand;
   onPick: (brandId: string, flavorName: string) => void;
   onClose: () => void;
+  stockMap: StockMap | null;
 }) {
   const t = useI18n((s) => s.t);
   const [activeBrand, setActiveBrand] = React.useState(baseBrand.id);
   const brand = getBrand(activeBrand) ?? baseBrand;
 
+  // r66 — the mix picker only offers brands (and flavors) that pour
+  const mixableBrands = React.useMemo(
+    () =>
+      MIXABLE_BRANDS.filter((b) => isBrandAvailable(stockMap, b)).map(
+        (b) => ({ ...b, flavors: availableFlavorsOf(stockMap, b) })
+      ),
+    [stockMap]
+  );
+  const brandFlavors = React.useMemo(
+    () =>
+      mixableBrands.find((b) => b.id === activeBrand)?.flavors ??
+      availableFlavorsOf(stockMap, brand),
+    [mixableBrands, activeBrand, brand, stockMap]
+  );
+
   return (
     <div className="glass rounded-2xl p-3">
       {/* brand tabs */}
       <div className="no-scrollbar mb-3 flex gap-1.5 overflow-x-auto pb-1">
-        {MIXABLE_BRANDS.map((b) => (
+        {mixableBrands.map((b) => (
           <button
             key={b.id}
             type="button"
@@ -541,7 +587,7 @@ function FlavorPicker({
         {brand.name} {t("flavorsOf")}
       </p>
       <div className="flex flex-wrap gap-2">
-        {brand.flavors.map((f) => {
+        {brandFlavors.map((f) => {
           const popular = POPULAR_FLAVORS.has(f);
           return (
             <button

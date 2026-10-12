@@ -24,6 +24,7 @@ import {
 import { useI18n } from "@/store/i18n";
 import { toast } from "sonner";
 import { haptic } from "@/lib/delight";
+import { isFlavorAvailable, useFlavorStock } from "@/lib/stock-availability";
 import { EASE, GoldButton, SheetGrip } from "./kit/kit";
 import { BrandStack } from "./brand-mark";
 
@@ -42,6 +43,7 @@ export function SommelierSheet({
   onOpenChange,
   guestName,
   mode = "guest",
+  branchId,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -50,10 +52,17 @@ export function SommelierSheet({
   /** guest: quick-add picks go to the cart · staff: advisory only (the
    *  employee builds the bowl in the Bowl Builder) */
   mode?: "guest" | "staff";
+  /** r66 — the guest's branch, so quick-adds only pour in-stock flavors */
+  branchId?: string | null;
 }) {
   const t = useI18n((s) => s.t);
   const lang = useI18n((s) => s.lang);
   const addItem = useCart((s) => s.addItem);
+  // r66 — live per-flavor stock while the sheet is open (fail-open)
+  const { map: stockMap } = useFlavorStock(
+    branchId,
+    open && mode === "guest"
+  );
 
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [input, setInput] = React.useState("");
@@ -160,6 +169,18 @@ export function SommelierSheet({
     let flavorLabel = "Fruits";
     let primaryBrandId = pick.brandIds[0];
     let primaryBrand: ReturnType<typeof getBrand> = getBrand(primaryBrandId);
+
+    // r66 — a pick only lands in the cart when every component pours
+    // right now (guest mode; the server still re-validates at placement)
+    if (mode === "guest") {
+      const short = pick.brandIds.some((bid, i) =>
+        isFlavorAvailable(stockMap, bid, pick.flavorNames[i]) === false
+      );
+      if (short) {
+        toast.error(t("noStockCategory"));
+        return;
+      }
+    }
 
     if (pick.kind === "preset") {
       const preset = BOWL_PRESETS.find((p) => p.id === pick.id);

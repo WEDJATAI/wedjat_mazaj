@@ -298,6 +298,7 @@ export function GuestOrder() {
         open={favOpen}
         onOpenChange={setFavOpen}
         guestName={guest.name}
+        branchId={guest.branchId ?? null}
       />
       <GuestTrackingSheet
         open={trackOpen}
@@ -309,6 +310,7 @@ export function GuestOrder() {
         open={sommOpen}
         onOpenChange={setSommOpen}
         guestName={guest.name}
+        branchId={guest.branchId ?? null}
       />
     </>
   );

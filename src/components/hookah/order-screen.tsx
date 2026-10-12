@@ -13,6 +13,12 @@ import {
   normalizeSearchQuery,
 } from "@/lib/catalog";
 import { useCart, computeTotals, splitGrams } from "@/store/cart";
+import {
+  useFlavorStock,
+  isBrandAvailable,
+  isFlavorAvailable,
+  availableFlavorCount,
+} from "@/lib/stock-availability";
 import { BrandCard } from "./brand-card";
 import { BrandMark, BrandStack } from "./brand-mark";
 import { ConfigSheet } from "./config-sheet";
@@ -30,6 +36,8 @@ import {
   Search,
   Plus,
   PenLine,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { BarcodeModal } from "./barcode-modal";
 import { SessionTimer } from "./session-timer";
@@ -118,10 +126,21 @@ export function OrderScreen({
   const items = useCart((s) => s.items);
   const ownType = useCart((s) => s.ownType);
   const addItem = useCart((s) => s.addItem);
+  const clearCart = useCart((s) => s.clear);
+  const endAmend = useCart((s) => s.endAmend);
   // r58 living orders — the whole screen becomes the order editor
   const amendOrderId = useCart((s) => s.amendOrderId);
   const amending = !!amendOrderId;
   const totals = computeTotals(items, ownType);
+
+  // r66 — guests order from what this branch can pour RIGHT NOW (staff see
+  // the full menu; the server re-validates stock at placement anyway)
+  const isGuest = source !== "employee";
+  const { map: stockMap } = useFlavorStock(branchId, isGuest);
+  const brandLive = React.useCallback(
+    (b: Brand) => !isGuest || isBrandAvailable(stockMap, b),
+    [isGuest, stockMap]
+  );
 
   const [selectedBrand, setSelectedBrand] = React.useState<Brand | null>(null);
   const [configOpen, setConfigOpen] = React.useState(false);
@@ -151,11 +170,29 @@ export function OrderScreen({
     setTimeout(() => setCheckoutOpen(true), 180);
   };
 
-  // r65 express — the bowl was packed: pop the confirm card immediately
-  // (the config sheet has already closed itself; a beat lets the sheet's
-  // exit animation land before the card springs in).
+  // r66 express — packing the bowl simply summons the corner order card
+  // (modify / delete / confirm live there until the guest confirms).
   const handleExpressPacked = () => {
-    setTimeout(() => setCheckoutOpen(true), 220);
+    haptic("light");
+  };
+
+  // r66 — corner card actions
+  const handleModifyOrder = () => setCartOpen(true);
+  const handleDeleteOrder = () => {
+    haptic("error");
+    if (amending) {
+      endAmend();
+    } else {
+      clearCart();
+    }
+    toast(t("orderCardDeleted"));
+  };
+  const handleConfirmOrder = () => {
+    if (amending) {
+      setCartOpen(true); // amend saves from the drawer
+      return;
+    }
+    handleCheckout();
   };
 
   const inCartFor = (brandId: string) =>
@@ -176,7 +213,14 @@ export function OrderScreen({
     if (!searchActive) return [];
     const out: { brand: Brand; flavor: string }[] = [];
     for (const brand of BRANDS) {
+      // r66 — guests only ever see flavors this branch can pour
+      if (!brandLive(brand)) continue;
       for (const flavor of brand.flavors) {
+        if (
+          isGuest &&
+          !isFlavorAvailable(stockMap, brand.id, flavor)
+        )
+          continue;
         if (
           matchTerms(terms, flavor.toLowerCase()) ||
           matchTerms(terms, brand.name.toLowerCase())
@@ -186,21 +230,32 @@ export function OrderScreen({
       }
     }
     return out.slice(0, 12);
-  }, [terms, searchActive]);
+     
+  }, [terms, searchActive, brandLive, isGuest, stockMap]);
 
   const brandMatches = React.useMemo(() => {
     if (!searchActive) return [];
-    return BRANDS.filter((b) => matchTerms(terms, b.name.toLowerCase()));
-  }, [terms, searchActive]);
+    return BRANDS.filter(
+      (b) => brandLive(b) && matchTerms(terms, b.name.toLowerCase())
+    );
+     
+  }, [terms, searchActive, brandLive]);
 
   const presetMatches = React.useMemo(() => {
     if (!searchActive) return [];
     return BOWL_PRESETS.filter(
       (p) =>
-        matchTerms(terms, p.name.toLowerCase()) ||
-        p.components.some((c) => matchTerms(terms, c.flavorName.toLowerCase()))
+        (matchTerms(terms, p.name.toLowerCase()) ||
+          p.components.some((c) => matchTerms(terms, c.flavorName.toLowerCase()))) &&
+        // r66 — a preset is only suggested when every component is in stock
+        p.components.every(
+          (c) =>
+            brandLive(getBrand(c.brandId)!) &&
+            (!isGuest || isFlavorAvailable(stockMap, c.brandId, c.flavorName))
+        )
     );
-  }, [terms, searchActive]);
+     
+  }, [terms, searchActive, brandLive, isGuest, stockMap]);
 
   const hasMatches =
     flavorMatches.length > 0 ||
@@ -236,6 +291,18 @@ export function OrderScreen({
   const addPreset = (presetId: string) => {
     const p = BOWL_PRESETS.find((x) => x.id === presetId);
     if (!p) return;
+    // r66 — never add a preset whose components are not pourable
+    if (
+      isGuest &&
+      !p.components.every(
+        (c) =>
+          isBrandAvailable(stockMap, getBrand(c.brandId)!) &&
+          isFlavorAvailable(stockMap, c.brandId, c.flavorName)
+      )
+    ) {
+      toast.error(t("noStockCategory"));
+      return;
+    }
     const brand = getBrand(p.components[0].brandId);
     if (!brand) return;
     const comps = p.components.map((c) => {
@@ -440,6 +507,9 @@ export function OrderScreen({
                       inCart={mounted ? inCartFor(brand.id) : 0}
                       onSelect={() => handleSelectBrand(brand)}
                       index={i}
+                      liveFlavors={
+                        isGuest ? availableFlavorCount(stockMap, brand) : undefined
+                      }
                     />
                   ))}
                 </div>
@@ -526,7 +596,16 @@ export function OrderScreen({
                 </div>
               </div>
               <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-                {BOWL_PRESETS.map((p, i) => {
+                {BOWL_PRESETS.filter(
+                  (p) =>
+                    // r66 — presets only appear when every component pours
+                    !isGuest ||
+                    p.components.every(
+                      (c) =>
+                        isBrandAvailable(stockMap, getBrand(c.brandId)!) &&
+                        isFlavorAvailable(stockMap, c.brandId, c.flavorName)
+                    )
+                ).map((p, i) => {
                   const unit =
                     p.components.length > 1
                       ? Math.max(
@@ -604,12 +683,18 @@ export function OrderScreen({
                     </p>
                   </div>
                   <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {SHISHA_CATEGORIES.map((cat) => (
+                    {SHISHA_CATEGORIES.map((cat) => {
+                      // r66 — the tile count reflects what's actually pourable
+                      const liveCount = cat.brandIds.filter((id) => {
+                        const b = getBrand(id);
+                        return b && brandLive(b);
+                      }).length;
+                      return (
                       <StaggerItem key={cat.key}>
                         <button
                           type="button"
                           onClick={() => setShishaCat(cat.key)}
-                          className="group glass relative flex w-full items-center gap-4 overflow-hidden rounded-2xl p-5 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.8)]"
+                          className="group glass-card relative flex w-full items-center gap-4 overflow-hidden rounded-3xl p-5 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.8)]"
                         >
                           <div
                             className="pointer-events-none absolute -end-10 -top-12 size-36 rounded-full bg-primary/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-80"
@@ -631,13 +716,14 @@ export function OrderScreen({
                               {cat.desc}
                             </p>
                             <p className="mt-1 text-[11px] font-medium text-primary">
-                              {cat.brandIds.length} {t("brands")} →
+                              {liveCount} {t("brands")} →
                             </p>
                           </div>
                           <ArrowRight className="relative size-5 shrink-0 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary rtl:rotate-180" />
                         </button>
                       </StaggerItem>
-                    ))}
+                      );
+                    })}
                   </Stagger>
                 </div>
               )}
@@ -645,7 +731,7 @@ export function OrderScreen({
               {/* Step 2: brands in chosen category */}
               {shishaCat && (
                 <div>
-                  <div className="mb-4 flex items-end justify-between">
+                  <div className="mb-4 flex items-end justify-between gap-3">
                     <div>
                       <button
                         type="button"
@@ -660,23 +746,58 @@ export function OrderScreen({
                       <p className="text-sm text-muted-foreground">
                         {t("tapBrandHint")}
                       </p>
+                      {/* r66 — trust cue: guests see the branch's live jars only */}
+                      {isGuest && (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-emerald-300/90">
+                          <span className="relative flex size-1.5" aria-hidden>
+                            <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400/70" />
+                            <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                          </span>
+                          {t("stockNote")}
+                        </p>
+                      )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {brandsForCategory(shishaCat).length} {t("brands")}
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {brandsForCategory(shishaCat).filter(brandLive).length}{" "}
+                      {t("brands")}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {brandsForCategory(shishaCat).map((brand, i) => (
-                      <BrandCard
-                        key={brand.id}
-                        brand={brand}
-                        inCart={mounted ? inCartFor(brand.id) : 0}
-                        onSelect={() => handleSelectBrand(brand)}
-                        index={i}
-                      />
-                    ))}
-                  </div>
+                  {brandsForCategory(shishaCat).filter(brandLive).length > 0 ? (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {brandsForCategory(shishaCat)
+                        .filter(brandLive)
+                        .map((brand, i) => (
+                          <BrandCard
+                            key={brand.id}
+                            brand={brand}
+                            inCart={mounted ? inCartFor(brand.id) : 0}
+                            onSelect={() => handleSelectBrand(brand)}
+                            index={i}
+                            liveFlavors={
+                              isGuest
+                                ? availableFlavorCount(stockMap, brand)
+                                : undefined
+                            }
+                          />
+                        ))}
+                    </div>
+                  ) : (
+                    /* r66 — the whole category is dry at this branch */
+                    <div className="glass-card rounded-3xl p-8 text-center">
+                      <p className="text-3xl" aria-hidden>🫧</p>
+                      <p className="mt-2 text-sm font-medium text-foreground/90">
+                        {t("noStockCategory")}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShishaCat(null)}
+                        className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-primary/35 bg-primary/[0.12] px-4 text-sm font-semibold text-primary transition-all hover:bg-primary/20"
+                      >
+                        ← {t("changeCategory")}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
@@ -693,30 +814,38 @@ export function OrderScreen({
         </div>
       </footer>
 
-      {/* Floating cart bar — always anchored to the bottom (bottomInset
-          lifts it above things like the staff tab bar). In AMEND mode it
-          becomes the living-order editor bar. */}
+      {/* r66 — corner order card: while a bowl is being ordered, a compact
+          glass card lives in the bottom-end corner with the three order
+          actions — Modify / Delete / Confirm. (In AMEND mode it becomes
+          the living-order editor card.) */}
       {mounted && (cartCount > 0 || amending) && (
         <motion.div
-          initial={{ y: 80, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 320, damping: 28 }}
-          className={cn(
-            "fixed inset-x-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]",
-            amending && "amend-bar"
-          )}
-          style={bottomInset ? { bottom: `${bottomInset}px` } : undefined}
+          initial={{ y: 70, opacity: 0, scale: 0.92 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 340, damping: 26 }}
+          className="fixed end-4 z-40 w-[min(20.5rem,calc(100vw-2rem))]"
+          style={{
+            bottom: `calc(${bottomInset}px + max(1rem, env(safe-area-inset-bottom)))`,
+          }}
+          role="complementary"
+          aria-label={amending ? t("amendBarTitle") : t("confirmOrderTitle")}
         >
           <div
             className={cn(
-              "glass mx-auto flex w-full max-w-5xl items-center gap-3 rounded-2xl p-3 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]",
+              "glass-card rounded-3xl p-3.5",
               amending && "ring-1 ring-primary/50"
             )}
           >
-            <div className="flex items-center gap-2.5">
+            {/* warm corner glow */}
+            <div
+              className="pointer-events-none absolute -end-8 -top-10 size-32 rounded-full bg-primary/15 opacity-60 blur-3xl"
+              aria-hidden
+            />
+            {/* summary row */}
+            <div className="relative flex items-center gap-2.5">
               <span
                 className={cn(
-                  "relative grid size-10 place-items-center rounded-xl ring-1",
+                  "relative grid size-10 shrink-0 place-items-center rounded-xl ring-1",
                   amending
                     ? "bg-primary/20 text-primary ring-primary/40"
                     : "bg-primary/15 text-primary ring-primary/25"
@@ -734,47 +863,95 @@ export function OrderScreen({
                   />
                 )}
               </span>
-              <div className="leading-tight">
+              <div className="min-w-0 leading-tight">
                 {amending ? (
                   <>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                      {t("amendBarTitle")}
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+                      {t("amendBarTitle")} #
+                      {amendOrderId?.slice(-6).toUpperCase()}
                     </p>
-                    <p className="font-display text-lg font-bold tabular-nums text-gold">
-                      #{amendOrderId?.slice(-6).toUpperCase()} · {cartCount}{" "}
-                      {cartCount > 1 ? t("bowls") : t("bowl")} · {egp(totals.total)}
+                    <p className="font-display text-base font-bold tabular-nums text-gold">
+                      {cartCount} {cartCount > 1 ? t("bowls") : t("bowl")} ·{" "}
+                      {egp(totals.total)}
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       {cartCount} {cartCount > 1 ? t("bowls") : t("bowl")}
                       {totals.bogo ? ` · ${t("bogoOn")}` : ""}
                     </p>
-                    <p className="font-display text-lg font-bold tabular-nums text-gold">
+                    <p className="font-display text-xl font-bold tabular-nums text-gold">
                       {egp(totals.total)}
                     </p>
                   </>
                 )}
               </div>
+              <span
+                className="glass ms-auto grid size-9 shrink-0 place-items-center rounded-xl text-primary ring-1 ring-primary/25"
+                aria-hidden
+              >
+                <BrandStack
+                  brandIds={items
+                    .flatMap((i) => i.components.map((c) => c.brandId))
+                    .slice(0, 2)}
+                  size="sm"
+                  max={2}
+                />
+              </span>
             </div>
-            {amending ? (
-              <GoldButton className="ms-auto" onClick={() => setCartOpen(true)}>
-                {t("amendBarCta")}
-                <ArrowRight className="size-4 rtl:rotate-180" />
-              </GoldButton>
-            ) : expressCheckout ? (
-              /* r65 — guests confirm their order from the card, not a cart */
-              <GoldButton className="ms-auto" onClick={handleCheckout}>
-                {t("confirmOrderCta")}
-                <ArrowRight className="size-4 rtl:rotate-180" />
-              </GoldButton>
-            ) : (
-              <GoldButton className="ms-auto" onClick={() => setCartOpen(true)}>
-                {t("viewCart")}
-                <ArrowRight className="size-4 rtl:rotate-180" />
-              </GoldButton>
-            )}
+
+            {/* actions row — Modify / Delete / Confirm */}
+            <div className="relative mt-3 flex items-center gap-2">
+              {amending ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDeleteOrder}
+                    className="glass flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-xs font-semibold text-muted-foreground transition-all duration-300 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive active:scale-[0.97]"
+                    aria-label={t("orderCardDelete")}
+                  >
+                    <Trash2 className="size-4" />
+                    {t("orderCardDelete")}
+                  </button>
+                  <GoldButton
+                    className="h-11 flex-1 justify-center"
+                    onClick={() => setCartOpen(true)}
+                  >
+                    {t("amendBarCta")}
+                    <ArrowRight className="size-4 rtl:rotate-180" />
+                  </GoldButton>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleModifyOrder}
+                    className="glass flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-xs font-semibold text-muted-foreground transition-all duration-300 hover:border-primary/40 hover:text-primary active:scale-[0.97]"
+                    aria-label={t("orderCardModify")}
+                  >
+                    <PenLine className="size-4" />
+                    {t("orderCardModify")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteOrder}
+                    className="glass flex h-11 items-center justify-center gap-1.5 rounded-2xl px-3 text-xs font-semibold text-muted-foreground transition-all duration-300 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive active:scale-[0.97]"
+                    aria-label={t("orderCardDelete")}
+                  >
+                    <Trash2 className="size-4" />
+                    {t("orderCardDelete")}
+                  </button>
+                  <GoldButton
+                    className="h-11 flex-[1.4] justify-center"
+                    onClick={handleConfirmOrder}
+                  >
+                    <Check className="size-4" />
+                    {t("orderCardConfirm")}
+                  </GoldButton>
+                </>
+              )}
+            </div>
           </div>
         </motion.div>
       )}
@@ -784,6 +961,7 @@ export function OrderScreen({
         open={configOpen}
         onOpenChange={setConfigOpen}
         onPacked={expressCheckout ? handleExpressPacked : undefined}
+        stockMap={isGuest ? stockMap : null}
       />
       <CartDrawer
         open={cartOpen}
@@ -826,7 +1004,7 @@ function PromoCard({
   body: string;
 }) {
   return (
-    <div className="glass flex items-start gap-3 rounded-2xl p-3">
+    <div className="glass-card flex items-start gap-3 rounded-2xl p-3">
       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary ring-1 ring-primary/25">
         {icon}
       </span>
@@ -850,7 +1028,7 @@ function LegendCard({
   badge?: string;
 }) {
   return (
-    <div className="glass relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30">
+    <div className="glass-card relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30">
       <div
         className="pointer-events-none absolute -top-8 -end-6 size-24 rounded-full bg-primary/10 blur-2xl"
         aria-hidden

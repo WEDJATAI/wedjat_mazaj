@@ -14,8 +14,10 @@ export type BrandCategory = "regular" | "premium" | "special";
 
 /**
  * Top-level shisha category for the two-step selection flow.
- *  - "regular": Mazaya, Al Fakher, Dandash, Nakhla, Salom, Kass
- *  - "amy":     Amy premium line only
+ *  - "regular": every brand incl. the everyday Salom/Kass line
+ *  - "amy":     the Amy premium pipe — every brand EXCEPT Salom & Kass
+ *               (r66: the owner's rule — the premium hookah carries the
+ *               premium-grade molasses only)
  */
 export type ShishaCategory = "regular" | "amy";
 
@@ -47,10 +49,11 @@ export const SHISHA_CATEGORIES: ShishaCategoryDef[] = [
   {
     key: "amy",
     label: "Amy shisha",
-    desc: "Premium line · fruits & mix 180 EGP",
+    desc: "Mazaya · Al Fakher · Dandash · Nakhla · Amy",
     emoji: "👑",
     logo: "/images/brands/amy.jpg",
-    brandIds: ["amy"],
+    // r66 — pressing "Amy" shows ALL brands except Salloum & Kass
+    brandIds: ["mazaya", "al-fakher", "dandash", "nakhla", "amy"],
   },
 ];
 
