@@ -59,9 +59,21 @@ export async function PATCH(
       },
     });
 
+    // r71 — disabling an account now also kills its sessions IMMEDIATELY.
+    // (r70 only rejected them at the next API call — the rows lingered and
+    // a long-lived cookie stayed valid on paper until then.)
+    let sessionsKilled = 0;
+    if (data.active === false) {
+      const killed = await db.employeeSession.deleteMany({
+        where: { employeeId: id },
+      });
+      sessionsKilled = killed.count;
+    }
+
     return NextResponse.json({
       ok: true,
       employee: { id: updated.id, name: updated.name, active: updated.active },
+      ...(sessionsKilled > 0 ? { sessionsKilled } : {}),
     });
   } catch (err) {
     console.error("platform employee patch error", err);

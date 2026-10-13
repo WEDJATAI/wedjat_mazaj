@@ -1,9 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { checkWedjatHealth } from "@/lib/wedjat";
+import { requireStaff } from "@/lib/auth";
 
 // GET /api/wedjat/health — connectivity check for the sync status dashboard.
-export async function GET() {
+// r71: staff session required (dashboard surface).
+export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req);
+      if ("resp" in guard) return guard.resp;
+    }
     const health = await checkWedjatHealth();
     return NextResponse.json({ ok: true, ...health });
   } catch (err) {

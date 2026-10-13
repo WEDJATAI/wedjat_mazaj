@@ -34,6 +34,17 @@ export async function GET(req: NextRequest) {
     });
     const venueById = new Map(venues.map((v) => [v.id, v]));
 
+    // r71 — live session counts per account (the People tab shows an
+    // "N online" badge and offers one-tap revocation)
+    const sessionCounts = await db.employeeSession.groupBy({
+      by: ["employeeId"],
+      where: { expiresAt: { gte: new Date() } },
+      _count: { _all: true },
+    });
+    const sessionsByEmployee = new Map(
+      sessionCounts.map((s) => [s.employeeId, s._count._all])
+    );
+
     return NextResponse.json({
       ok: true,
       employees: employees.map((e) => {
@@ -48,6 +59,7 @@ export async function GET(req: NextRequest) {
             ? { id: e.branch.id, name: e.branch.name, nameAr: e.branch.nameAr }
             : null,
           createdAt: e.createdAt.toISOString(),
+          activeSessions: e.active ? (sessionsByEmployee.get(e.id) ?? 0) : 0,
         };
       }),
     });

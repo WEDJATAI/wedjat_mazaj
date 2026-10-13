@@ -19,6 +19,12 @@ import { resolveBranchScope } from "@/lib/branch-scope";
 import { applyCatalogOverrides } from "@/lib/platform-settings";
 import { requireStaff, sessionEmployee } from "@/lib/auth";
 import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
+import {
   pointsEarnedOn,
   redeemDiscount,
   maxRedeemable,
@@ -113,6 +119,17 @@ export async function POST(req: NextRequest) {
         { ok: false, error: "Staff sign-in required to place an order" },
         { status: 401 }
       );
+    }
+    // r71 — cookie-free guest orders are rate-limited per IP (a staff
+    // session bypasses: the kitchen can fire as many orders as service
+    // needs)
+    if (isGuestOrder) {
+      const limit = await hitGuestRateLimit(
+        `order:${clientIp(req.headers)}`,
+        GUEST_LIMITS.order.max,
+        GUEST_LIMITS.order.windowMs
+      );
+      if (!limit.ok) return guestRateLimitResponse(limit);
     }
     const creatorEmployee = !isGuestOrder && caller ? caller : null;
 
@@ -692,16 +709,47 @@ async function syncToWedjat(opts: {
 
 export async function GET(req: NextRequest) {
   try {
+    // r71 — the guest tracking surfaces (?guest= name lookup + ?id= focused
+    // lookup) now return a SAFE PROJECTION only: no phone, no staff ids, no
+    // loyalty member id, no cogs/profit internals, no Wedjat sync fields.
+    // (They used to ship the full order row — a guessed name leaked every
+    // matching guest's phone number across ALL branches.)
+    const GUEST_SELECT = {
+      id: true,
+      customerName: true,
+      table: true,
+      status: true,
+      itemCount: true,
+      itemsJson: true,
+      total: true,
+      createdAt: true,
+      rating: true,
+      pointsEarned: true,
+      ownType: true,
+      addonsJson: true,
+      revision: true,
+    } as const;
+
     // Guest privacy filter: ?guest=<name> returns only that guest's orders
     // (server-side, case-insensitive) so the tracking sheet never receives
     // other guests' data — same-name collisions included. Filtering happens
     // in the handler (not via `mode:"insensitive"`) so it works identically
     // on PostgreSQL (production) and SQLite (local dev).
+    //
+    // r71: optional &branchId= scopes the match to ONE branch — the guest's
+    // QR context — so a common first name no longer pulls same-name guests
+    // from other branches. (Absent = legacy unscoped behavior.)
     const guest = req.nextUrl.searchParams.get("guest")?.trim();
     if (guest) {
+      const branchId = req.nextUrl.searchParams.get("branchId")?.trim();
       const recent = await db.order.findMany({
+        where: branchId ? { branchId } : undefined,
         orderBy: { createdAt: "desc" },
         take: 200,
+        select: {
+          ...GUEST_SELECT,
+          orderedByName: true, // needed for the name match, stripped below
+        },
       });
       const needle = guest.toLowerCase();
       const orders = recent
@@ -710,7 +758,8 @@ export async function GET(req: NextRequest) {
             o.customerName?.toLowerCase() === needle ||
             o.orderedByName?.toLowerCase() === needle
         )
-        .slice(0, 50);
+        .slice(0, 50)
+        .map(({ orderedByName: _drop, ...safe }) => safe);
       return NextResponse.json({ ok: true, orders });
     }
     // r70 — focused lookup by order id (?id=): the guest already holds the
@@ -719,7 +768,10 @@ export async function GET(req: NextRequest) {
     // change. Everything else (the full staff queue) requires a session.
     const focusId = req.nextUrl.searchParams.get("id")?.trim();
     if (focusId) {
-      const focused = await db.order.findUnique({ where: { id: focusId } });
+      const focused = await db.order.findUnique({
+        where: { id: focusId },
+        select: GUEST_SELECT,
+      });
       return NextResponse.json({
         ok: true,
         orders: focused ? [focused] : [],

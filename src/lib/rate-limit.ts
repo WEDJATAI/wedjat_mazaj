@@ -15,6 +15,7 @@
  *    who fat-fingers twice then gets it right starts fresh next shift.
  */
 
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 const IP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -79,4 +80,61 @@ export async function recordPinFailure(ip: string, pin: string): Promise<void> {
 
 export async function clearPinFailures(ip: string, pin: string): Promise<void> {
   await db.pinAttempt.deleteMany({ where: { ip, pin } });
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* r71 — generic limiter for the OPEN guest write endpoints            */
+/*                                                                     */
+/* Orders, amendments, ratings and coal/call requests are intentionally*/
+/* cookie-free (guests have no accounts), which also makes them spam-  */
+/* able. Each allowed call records one GuestAttempt row; a caller is   */
+/* blocked (429) once `max` rows exist for their key inside the window.*/
+/* DB-backed so the limit holds across serverless instances, pruned    */
+/* opportunistically so the table stays tiny.                          */
+/* ─────────────────────────────────────────────────────────────────── */
+
+const GUEST_PRUNE_MS = 30 * 60 * 1000; // prune rows older than 30 min
+let guestPrunedAt = 0;
+
+export async function hitGuestRateLimit(
+  key: string,
+  max: number,
+  windowMs: number
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  // opportunistic prune at most once a minute — keeps the table tiny
+  if (now - guestPrunedAt > 60_000) {
+    guestPrunedAt = now;
+    await db.guestAttempt
+      .deleteMany({ where: { createdAt: { lt: new Date(now - GUEST_PRUNE_MS) } } })
+      .catch(() => {});
+  }
+  const hits = await db.guestAttempt.count({
+    where: { key, createdAt: { gte: new Date(now - windowMs) } },
+  });
+  if (hits >= max) {
+    return {
+      ok: false,
+      retryAfterSec: Math.ceil(windowMs / 1000),
+      message: "Too many requests — wait a few minutes and try again",
+    };
+  }
+  await db.guestAttempt.create({ data: { key } });
+  return { ok: true };
+}
+
+/** Per-route guest limits (per IP, rolling window). */
+export const GUEST_LIMITS = {
+  order: { max: 25, windowMs: 10 * 60 * 1000 }, // group ordering for a table
+  amend: { max: 30, windowMs: 10 * 60 * 1000 }, // cart revisions while editing
+  rate: { max: 12, windowMs: 10 * 60 * 1000 }, // one rating per order anyway
+  request: { max: 15, windowMs: 10 * 60 * 1000 }, // coal refills / call requests
+} as const;
+
+/** Uniform 429 response for a blocked guest write. */
+export function guestRateLimitResponse(limit: RateLimitResult & { ok: false }) {
+  return NextResponse.json(
+    { ok: false, error: limit.message },
+    { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } }
+  );
 }

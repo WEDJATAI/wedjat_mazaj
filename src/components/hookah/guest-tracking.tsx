@@ -83,12 +83,16 @@ export function GuestTrackingSheet({
   onOpenChange,
   guestName,
   focusOrderId,
+  branchId,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   guestName: string;
   /** order id to highlight (from the checkout confirmation) */
   focusOrderId?: string | null;
+  /** r71 — the guest's QR branch context: scopes the name lookup so a
+   *  common first name doesn't pull same-name guests from other branches */
+  branchId?: string | null;
 }) {
   const t = useI18n((s) => s.t);
   const [orders, setOrders] = React.useState<TrackOrder[]>([]);
@@ -99,8 +103,11 @@ export function GuestTrackingSheet({
   // name on the client — same-name guests could see each other).
   const load = React.useCallback(async () => {
     try {
+      // r71 — branchId scopes the lookup to this branch (server filters +
+      // returns a safe projection: no phone/internal fields)
       const res = await fetch(
-        `/api/orders?guest=${encodeURIComponent(guestName)}`
+        `/api/orders?guest=${encodeURIComponent(guestName)}` +
+          (branchId ? `&branchId=${encodeURIComponent(branchId)}` : "")
       );
       const data = await res.json();
       if (!data.ok) return;
@@ -136,7 +143,7 @@ export function GuestTrackingSheet({
     } finally {
       setLoading(false);
     }
-  }, [guestName, focusOrderId]);
+  }, [guestName, focusOrderId, branchId]);
 
   React.useEffect(() => {
     if (!open) return;

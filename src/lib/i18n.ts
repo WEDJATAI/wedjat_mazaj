@@ -1001,6 +1001,13 @@ export interface Translations {
   pccPersonAddedToast: string;
   pccPersonDisabled: string;
   pccPersonEnabled: string;
+  pccOnline: string;
+  pccOnlineTitle: string;
+  pccRevokeSessions: string;
+  pccRevokeTitle: string;
+  pccRevokeDesc: string;
+  pccRevokeConfirm: string;
+  pccSessionsRevoked: string;
   pccPersonName: string;
   pccPlatformName: string;
   pccPublishPrices: string;
@@ -2060,6 +2067,14 @@ export const translations: Record<Lang, Partial<Translations>> = {
     pccPersonAddedToast: "Account created",
     pccPersonDisabled: "Account disabled",
     pccPersonEnabled: "Account enabled",
+    pccOnline: "online",
+    pccOnlineTitle: "{n} active session(s)",
+    pccRevokeSessions: "Sign out all devices",
+    pccRevokeTitle: "Revoke sessions",
+    pccRevokeDesc:
+      "This signs {name} out of every device immediately. They can sign back in with their PIN.",
+    pccRevokeConfirm: "Sign out everywhere",
+    pccSessionsRevoked: "Signed {name} out of {n} session(s)",
     pccPersonName: "Name",
     pccPlatformName: "Platform display name",
     pccPublishPrices: "Publish prices",
@@ -3090,6 +3105,14 @@ export const translations: Record<Lang, Partial<Translations>> = {
     pccPersonAddedToast: "تم إنشاء الحساب",
     pccPersonDisabled: "تم تعطيل الحساب",
     pccPersonEnabled: "تم تنشيط الحساب",
+    pccOnline: "متصل",
+    pccOnlineTitle: "{n} جلسة نشطة",
+    pccRevokeSessions: "تسجيل الخروج من كل الأجهزة",
+    pccRevokeTitle: "إلغاء الجلسات",
+    pccRevokeDesc:
+      "سيتم تسجيل خروج {name} من كل الأجهزة فورًا. يمكنه تسجيل الدخول مرة أخرى برمز الدخول.",
+    pccRevokeConfirm: "تسجيل الخروج من كل الأجهزة",
+    pccSessionsRevoked: "تم تسجيل خروج {name} من {n} جلسة",
     pccPersonName: "الاسم",
     pccPlatformName: "اسم العرض للمنصة",
     pccPublishPrices: "نشر الأسعار",

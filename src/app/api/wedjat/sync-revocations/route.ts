@@ -1,14 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { fetchWedjatRevocations } from "@/lib/wedjat";
+import { requireStaff } from "@/lib/auth";
 
 // GET /api/wedjat/sync-revocations
 // Polls Wedjat RSM for checks that were pushed from Mazaj and have been
 // cancelled. Updates the Mazaj order status + records who revoked it.
-// Also run every 2 minutes by the Inngest poll job; this endpoint serves
-// the employee dashboard's manual refresh.
-export async function GET() {
+// Also run every 2 minutes by the Inngest poll job (which calls the lib
+// directly); this endpoint serves the employee dashboard's manual refresh.
+// r71: staff session required — an anonymous caller should not be able to
+// trigger order-status writes.
+export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req);
+      if ("resp" in guard) return guard.resp;
+    }
     const revocations = await fetchWedjatRevocations();
 
     let updated = 0;

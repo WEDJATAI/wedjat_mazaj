@@ -17,6 +17,13 @@ import {
 import { pointsEarnedOn, tierForLifetime } from "@/lib/loyalty";
 import { applyCatalogOverrides } from "@/lib/platform-settings";
 import { StockShortError } from "@/lib/stock-guard";
+import { sessionEmployee } from "@/lib/auth";
+import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
 
 /**
  * ─────────────────────────────────────────────────────────────────
@@ -157,6 +164,18 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+    // r71 — the amend endpoint is intentionally cookie-free (guests amend
+    // their own cuid-keyed orders), so it gets the per-IP guest limit;
+    // a signed-in staff member amending from the dashboard bypasses it.
+    const caller = await sessionEmployee(req);
+    if (!caller) {
+      const limit = await hitGuestRateLimit(
+        `amend:${clientIp(req.headers)}`,
+        GUEST_LIMITS.amend.max,
+        GUEST_LIMITS.amend.windowMs
+      );
+      if (!limit.ok) return guestRateLimitResponse(limit);
+    }
     const body = await req.json();
     const parsed = AmendSchema.safeParse(body);
     if (!parsed.success) {

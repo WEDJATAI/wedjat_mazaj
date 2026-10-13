@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
 
 const RateSchema = z.object({
   rating: z.number().int().min(1).max(5),
@@ -18,6 +24,16 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+    // r71 — guest-only write: per-IP rate limit (one rating per order is
+    // already enforced; this stops a script from walking order ids)
+    {
+      const limit = await hitGuestRateLimit(
+        `rate:${clientIp(req.headers)}`,
+        GUEST_LIMITS.rate.max,
+        GUEST_LIMITS.rate.windowMs
+      );
+      if (!limit.ok) return guestRateLimitResponse(limit);
+    }
     const body = await req.json();
     const parsed = RateSchema.safeParse(body);
     if (!parsed.success) {

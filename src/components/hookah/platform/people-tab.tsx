@@ -13,6 +13,7 @@ import * as React from "react";
 import {
   Building2,
   Loader2,
+  LogOut,
   MapPin,
   Power,
   RefreshCw,
@@ -23,6 +24,16 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +66,8 @@ interface Person {
   venue: { id: string; name: string; nameAr: string | null } | null;
   branch: { id: string; name: string; nameAr: string | null } | null;
   createdAt: string;
+  /** r71 — live session count (0 when disabled) for the online badge */
+  activeSessions?: number;
 }
 
 const ROLE_LABEL: Record<string, { key: string; cls: string }> = {
@@ -85,6 +98,8 @@ export function PeopleTab({
   const [addOpen, setAddOpen] = React.useState(false);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
+  /** r71 — session revocation confirm state */
+  const [revokeTarget, setRevokeTarget] = React.useState<Person | null>(null);
 
   const load = React.useCallback(
     async (silent = false) => {
@@ -129,6 +144,30 @@ export function PeopleTab({
         const data = (await res.json()) as { ok?: boolean; error?: string };
         if (!res.ok || !data.ok) throw new Error(data.error ?? t("failed"));
         toast.success(person.active ? t("pccPersonDisabled") : t("pccPersonEnabled"));
+        void load(true);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t("failed"));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [load, t]
+  );
+
+  /** r71 — revoke every session for an account (sign out all devices). */
+  const revokeSessions = React.useCallback(
+    async (person: Person) => {
+      setBusyId(person.id);
+      try {
+        const res = await fetch(`/api/platform/employees/${person.id}/sessions`, {
+          method: "DELETE",
+        });
+        const data = (await res.json()) as { ok?: boolean; error?: string; revoked?: number };
+        if (!res.ok || !data.ok) throw new Error(data.error ?? t("failed"));
+        toast.success(
+          t("pccSessionsRevoked", { n: data.revoked ?? 0, name: person.name })
+        );
+        setRevokeTarget(null);
         void load(true);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("failed"));
@@ -197,6 +236,7 @@ export function PeopleTab({
             {filtered.map((p) => {
               const role = ROLE_LABEL[p.role] ?? ROLE_LABEL.employee;
               const isSelf = p.id === selfId;
+              const online = (p.activeSessions ?? 0) > 0;
               return (
                 <StaggerItem key={p.id}>
                   <li
@@ -219,6 +259,15 @@ export function PeopleTab({
                         {isSelf && (
                           <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-primary ring-1 ring-inset ring-primary/25">
                             {t("pccYou")}
+                          </span>
+                        )}
+                        {online && (
+                          <span
+                            className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-300 ring-1 ring-inset ring-emerald-500/25"
+                            title={t("pccOnlineTitle", { n: p.activeSessions ?? 0 })}
+                          >
+                            <span className="me-1 inline-block size-1.5 rounded-full bg-emerald-400" aria-hidden />
+                            {p.activeSessions} {t("pccOnline")}
                           </span>
                         )}
                       </p>
@@ -247,6 +296,22 @@ export function PeopleTab({
                     >
                       {t(role.key as never)}
                     </span>
+                    {online && (
+                      <button
+                        type="button"
+                        onClick={() => setRevokeTarget(p)}
+                        disabled={busyId === p.id}
+                        aria-label={t("pccRevokeSessions")}
+                        title={t("pccRevokeSessions")}
+                        className="grid size-11 shrink-0 place-items-center rounded-full text-amber-300 ring-1 ring-inset ring-amber-500/30 transition-colors hover:bg-amber-500/10"
+                      >
+                        {busyId === p.id ? (
+                          <Loader2 className="size-4 animate-spin" aria-hidden />
+                        ) : (
+                          <LogOut className="size-4" aria-hidden />
+                        )}
+                      </button>
+                    )}
                     {!isSelf && (
                       <button
                         type="button"
@@ -281,6 +346,38 @@ export function PeopleTab({
         venues={people.flatMap((p) => (p.venue ? [p.venue] : []))}
         onDone={() => void load(true)}
       />
+
+      {/* r71 — confirm before signing someone out of every device */}
+      <AlertDialog
+        open={revokeTarget !== null}
+        onOpenChange={(o) => !o && setRevokeTarget(null)}
+      >
+        <AlertDialogContent className="border-white/[0.08] bg-[oklch(0.175_0.015_60/0.92)] backdrop-blur-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight text-gold-soft">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-amber-500/25 to-amber-500/[0.06] text-amber-300 ring-1 ring-amber-500/25">
+                <LogOut className="size-4" />
+              </span>
+              {t("pccRevokeTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("pccRevokeDesc", { name: revokeTarget?.name ?? "" })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-11 rounded-xl border-white/[0.12]">
+              {t("cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 rounded-xl bg-amber-500 text-black hover:bg-amber-400"
+              onClick={() => revokeTarget && void revokeSessions(revokeTarget)}
+            >
+              <LogOut className="size-4" aria-hidden />
+              {t("pccRevokeConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

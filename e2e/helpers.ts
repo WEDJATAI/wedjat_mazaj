@@ -88,6 +88,9 @@ export async function cleanupE2EState(): Promise<void> {
   await db.inventoryItem.updateMany({ data: { stockGrams: 1000 } });
   // reset the PIN rate-limit bucket (the api spec deliberately trips it)
   await db.pinAttempt.deleteMany({});
+  // r71 — reset the guest write rate-limit buckets too (specs place guest
+  // orders / requests through the real API from one shared IP)
+  await db.guestAttempt.deleteMany({});
   // requests created by the suite
   await db.serviceRequest.deleteMany({
     where: { guestName: { startsWith: E2E_TABLE_PREFIX } },

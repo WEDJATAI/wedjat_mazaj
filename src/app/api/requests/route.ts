@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveBranchScope } from "@/lib/branch-scope";
-import { requireStaff } from "@/lib/auth";
+import { requireStaff, sessionEmployee } from "@/lib/auth";
+import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
 
 /**
  * r57 — branch-scoped service requests (Call shisha man / Coal).
@@ -102,6 +108,17 @@ const CreateSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // r71 — guests create requests cookie-free: per-IP limit; staff with
+    // a session (e.g. re-sending on a guest's behalf) bypass it
+    const caller = await sessionEmployee(req);
+    if (!caller) {
+      const limit = await hitGuestRateLimit(
+        `request:${clientIp(req.headers)}`,
+        GUEST_LIMITS.request.max,
+        GUEST_LIMITS.request.windowMs
+      );
+      if (!limit.ok) return guestRateLimitResponse(limit);
+    }
     const body = await req.json();
     const parsed = CreateSchema.safeParse(body);
     if (!parsed.success) {

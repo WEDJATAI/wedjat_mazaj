@@ -2,16 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { pushOrderToWedjat } from "@/lib/wedjat";
 import { z } from "zod";
+import { requireStaff } from "@/lib/auth";
 
 // POST /api/wedjat/push-order — re-push an EXISTING mazaj order to the
 // Wedjat RSM check (manual retry from the sync dashboard). Idempotent:
 // the RSM webhook dedupes per mazaj order id, so re-pushing is safe.
+// r71: requires a staff session with the "sync" permission — this writes
+// to the restaurant's POS and was previously callable by anyone.
 const Schema = z.object({
   orderId: z.string().min(1, "orderId is required"),
 });
 
 export async function POST(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "sync");
+      if ("resp" in guard) return guard.resp;
+    }
     const body = await req.json().catch(() => ({}));
     const parsed = Schema.safeParse(body);
     if (!parsed.success) {

@@ -305,6 +305,7 @@ export function GuestOrder() {
         onOpenChange={setTrackOpen}
         guestName={guest.name}
         focusOrderId={focusOrderId}
+        branchId={guest.branchId ?? null}
       />
       <SommelierSheet
         open={sommOpen}

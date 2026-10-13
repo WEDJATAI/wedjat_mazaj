@@ -354,6 +354,18 @@ model PinAttempt {
   @@index([pin, createdAt])
 }
 
+// r71 — DB-backed rate limiting for the OPEN guest write endpoints
+// (order placement, living-order amendments, ratings, coal/call
+// requests). Same cross-instance pattern as PinAttempt: one row per
+// allowed attempt, counted over a rolling window, pruned opportunistically.
+model GuestAttempt {
+  id        String   @id @default(cuid())
+  key       String // e.g. "order:1.2.3.4"
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
 // r69 (audit ⑧) — lightweight error tracking. The client reports uncaught
 // errors / unhandled rejections (see src/lib/error-reporter.ts); the
 // platform owner reviews them via GET /api/errors?pin=<platform pin>.
