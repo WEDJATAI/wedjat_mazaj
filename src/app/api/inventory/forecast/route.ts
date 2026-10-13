@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { BRANDS, SUPPLIES, getBrand, getSupply } from "@/lib/catalog";
+import { requireStaff } from "@/lib/auth";
+import type { NextRequest } from "next/server";
 
 /**
  * GET /api/inventory/forecast — inventory intelligence:
@@ -13,8 +15,12 @@ import { BRANDS, SUPPLIES, getBrand, getSupply } from "@/lib/catalog";
  * for brands with no history: a nominal 20g/day so new installs still get
  * a sensible forecast.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "inventory");
+      if ("resp" in guard) return guard.resp;
+    }
     const now = new Date();
     const daysAgo14 = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const windowDays = 14;

@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getBrand } from "@/lib/catalog";
+import { requireStaff } from "@/lib/auth";
 
 /**
  * GET /api/analytics — manager analytics dashboard aggregates.
  * Everything is computed from the last 30 days of orders (small dataset —
  * a lounge POS — so JS aggregation is exact and fast).
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "analytics");
+      if ("resp" in guard) return guard.resp;
+    }
     const now = new Date();
     const daysAgo30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const daysAgo14 = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);

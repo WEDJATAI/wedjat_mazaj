@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { requireStaff } from "@/lib/auth";
 
 const RestockSchema = z.object({
   addGrams: z.number().positive().max(100000),
@@ -11,6 +12,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    {
+      const guard = await requireStaff(req, "inventory");
+      if ("resp" in guard) return guard.resp;
+    }
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const parsed = RestockSchema.safeParse(body);

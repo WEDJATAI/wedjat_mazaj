@@ -78,7 +78,7 @@ function pickName(name: string, nameAr: string | null, lang: Lang): string {
 /* InventoryTab                                                        */
 /* ------------------------------------------------------------------ */
 
-export function InventoryTab({ employeeId }: { employeeId: string }) {
+export function InventoryTab() {
   const { t, lang } = useI18n();
   const [data, setData] = React.useState<MatrixData | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -92,9 +92,7 @@ export function InventoryTab({ employeeId }: { employeeId: string }) {
         setError(null);
       }
       try {
-        const res = await fetch(
-          `/api/platform/inventory?employeeId=${encodeURIComponent(employeeId)}`
-        );
+        const res = await fetch(`/api/platform/inventory`);
         const json = (await res.json()) as MatrixData & { error?: string };
         if (!res.ok || !json.ok) throw new Error(json.error ?? t("failed"));
         setData(json);
@@ -105,7 +103,7 @@ export function InventoryTab({ employeeId }: { employeeId: string }) {
         if (!silent) setLoading(false);
       }
     },
-    [employeeId, t]
+    [t]
   );
 
   React.useEffect(() => {

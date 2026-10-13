@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requirePlatformAdmin } from "@/lib/platform-auth";
+import { requirePlatformAdminSession } from "@/lib/auth";
 import { getRsmConfig, computeWithConfig } from "@/lib/platform-settings";
 
 /**
@@ -23,15 +23,8 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 export async function GET(req: NextRequest) {
   const started = Date.now();
   try {
-    const admin = await requirePlatformAdmin(
-      req.nextUrl.searchParams.get("employeeId")
-    );
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
 
     const cfg = await getRsmConfig();
 

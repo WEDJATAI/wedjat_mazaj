@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { resolvePermissions, type Permission } from "@/lib/permissions";
 import { toBranchInfo } from "@/lib/branch-scope";
+import { attachSession } from "@/lib/auth";
 import {
   checkPinRateLimit,
   clearPinFailures,
@@ -95,7 +96,10 @@ export async function POST(req: NextRequest) {
       branches = row ? [toBranchInfo(row)] : [];
     }
 
-    return NextResponse.json({
+    // r70 — mint the server-side session: an httpOnly cookie that every
+    // privileged API route derives the caller from (employeeId params are
+    // no longer trusted).
+    const res = NextResponse.json({
       ok: true,
       employee: {
         id: emp.id,
@@ -108,6 +112,8 @@ export async function POST(req: NextRequest) {
         branches,
       },
     });
+    await attachSession(res, emp.id, req);
+    return res;
   } catch (err) {
     console.error("employee auth error", err);
     return NextResponse.json(

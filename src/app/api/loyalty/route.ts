@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { requireStaff } from "@/lib/auth";
 import {
   SIGNUP_BONUS,
   tierForLifetime,
@@ -31,7 +32,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, member });
     }
 
-    // Full list + program stats for the manager panel.
+    // Full list + program stats for the manager panel (r70: session +
+    // "loyalty" permission — the ?phone= checkout lookup above stays open).
+    {
+      const guard = await requireStaff(req, "loyalty");
+      if ("resp" in guard) return guard.resp;
+    }
     const members = await db.loyaltyMember.findMany({
       orderBy: { lifetimePoints: "desc" },
       take: 200,
@@ -76,6 +82,10 @@ const EnrollSchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "loyalty");
+      if ("resp" in guard) return guard.resp;
+    }
     const body = await req.json();
     const parsed = EnrollSchema.safeParse(body);
     if (!parsed.success) {

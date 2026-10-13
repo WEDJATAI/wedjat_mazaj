@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { requirePlatformAdminSession } from "@/lib/auth";
 
 /**
  * r57 — Platform super-admin venue controls.
- * PATCH /api/platform/venues/[id] { employeeId, status }
+ * PATCH /api/platform/venues/[id] { status }   (r70: caller = session cookie)
  *   status: "active"   → connect / re-activate a venue
  *          "pending"   → park it (awaiting paperwork / payment)
  *          "suspended" → hard-off: its branches disappear from guest
@@ -14,7 +15,6 @@ import { z } from "zod";
  */
 
 const PatchSchema = z.object({
-  employeeId: z.string(),
   status: z.enum(["active", "pending", "suspended"]),
 });
 
@@ -32,14 +32,9 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    const { employeeId, status } = parsed.data;
-    const admin = await db.employee.findUnique({ where: { id: employeeId } });
-    if (!admin || !admin.active || admin.role !== "platform_admin") {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const { status } = parsed.data;
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
     const venue = await db.venue.findUnique({ where: { id } });
     if (!venue) {
       return NextResponse.json({ ok: false, error: "Venue not found" }, { status: 404 });

@@ -6,6 +6,9 @@ import {
   resolvePermissions,
   type Role,
 } from "@/lib/permissions";
+import { requireStaff } from "@/lib/auth";
+
+// r70 — staff-account edits require the "employees" permission (session).
 
 const UpdateSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
@@ -20,6 +23,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    {
+      const guard = await requireStaff(req, "employees");
+      if ("resp" in guard) return guard.resp;
+    }
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const parsed = UpdateSchema.safeParse(body);
@@ -82,10 +89,14 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    {
+      const guard = await requireStaff(req, "employees");
+      if ("resp" in guard) return guard.resp;
+    }
     const { id } = await params;
     const existing = await db.employee.findUnique({ where: { id } });
     if (!existing) {

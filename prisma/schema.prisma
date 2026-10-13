@@ -83,7 +83,25 @@ model Employee {
   branchId    String?
   createdAt   DateTime @default(now())
 
-  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  sessions EmployeeSession[]
+}
+
+// r70 — server-side staff sessions. The PIN login mints an httpOnly cookie
+// (mazaj_session) holding a random 32-byte token; only its SHA-256 hash is
+// stored. Privileged API routes derive the caller from this session instead
+// of trusting a client-supplied employeeId (which anyone could spoof).
+model EmployeeSession {
+  // sha256(token) hex — the raw token lives ONLY in the cookie
+  id         String   @id
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  // 30-day sliding window: every authenticated call refreshes it
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
 }
 
 model InventoryItem {

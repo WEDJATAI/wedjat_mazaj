@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaff } from "@/lib/auth";
 
-// POST /api/orders/[id]/assign
-// An employee confirms/claims an unassigned guest order → it goes under their name.
+/**
+ * POST /api/orders/[id]/assign
+ * An employee confirms/claims an unassigned guest order → it goes under
+ * their name.
+ *
+ * r70: the claimer is the signed-in session employee — the body no longer
+ * carries a client-supplied employeeId/name (anyone could have spoofed
+ * those).
+ */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireStaff(req);
+    if ("resp" in guard) return guard.resp;
+    const { id: employeeId, name: employeeName } = guard.emp;
+
     const { id } = await params;
-    const body = await req.json().catch(() => ({}));
-    const { employeeId, employeeName } = body as {
-      employeeId?: string;
-      employeeName?: string;
-    };
-    if (!employeeId || !employeeName) {
-      return NextResponse.json(
-        { ok: false, error: "employeeId and employeeName required" },
-        { status: 400 }
-      );
-    }
     const existing = await db.order.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json(

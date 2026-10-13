@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 import { getRsmConfig, computeWithConfig } from "@/lib/platform-settings";
+import { sessionEmployee } from "@/lib/auth";
 
 /**
  * r59 — WEDJAT RSM finance (Revenue Share Management).
  *
- * GET /api/rsm/finance?employeeId=…&range=today|7d|30d|all&branchId=…
+ * GET /api/rsm/finance?range=today|7d|30d|all&branchId=…   (r70: the
+ * caller is the session employee — no more trusted employeeId param)
  *
  * Computes the WEDJAT gross profit on shisha:
  *   shisha revenue × 12% commission × 40% WEDJAT share
@@ -43,24 +45,18 @@ function rangeStart(range: Range): Date | null {
 
 export async function GET(req: NextRequest) {
   try {
-    const employeeId = req.nextUrl.searchParams.get("employeeId");
     const rangeParam = req.nextUrl.searchParams.get("range") ?? "7d";
     const range: Range = (RANGES as readonly string[]).includes(rangeParam)
       ? (rangeParam as Range)
       : "7d";
     const branchParam = req.nextUrl.searchParams.get("branchId"); // "all" | concrete id | null
 
-    if (!employeeId) {
+    // r70 — the caller comes from the session cookie
+    const emp = await sessionEmployee(req);
+    if (!emp) {
       return NextResponse.json(
-        { ok: false, error: "Sign in required" },
+        { ok: false, error: "Sign-in required" },
         { status: 401 }
-      );
-    }
-    const emp = await db.employee.findUnique({ where: { id: employeeId } });
-    if (!emp || !emp.active) {
-      return NextResponse.json(
-        { ok: false, error: "Unknown employee" },
-        { status: 403 }
       );
     }
     const isPlatformAdmin = emp.role === "platform_admin";

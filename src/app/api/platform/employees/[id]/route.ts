@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requirePlatformAdmin } from "@/lib/platform-auth";
+import { requirePlatformAdminSession } from "@/lib/auth";
 
 /**
  * r61 — Platform Control Center · PEOPLE · PATCH one account.
  *
  * PATCH /api/platform/employees/[id]
- *   { employeeId, active?: boolean, name?: string }
+ *   { active?: boolean, name?: string }      (r70: caller = session)
  *
  * Safety rails:
  *   • the platform owner can never disable or rename THEMSELVES from here
@@ -17,7 +17,6 @@ import { requirePlatformAdmin } from "@/lib/platform-auth";
  */
 
 const PatchSchema = z.object({
-  employeeId: z.string(),
   active: z.boolean().optional(),
   name: z.string().trim().min(2).max(60).optional(),
 });
@@ -37,13 +36,9 @@ export async function PATCH(
       );
     }
     const data = parsed.data;
-    const admin = await requirePlatformAdmin(data.employeeId);
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
+    const admin = guard.emp;
     if (id === admin.id && (data.active === false || data.name)) {
       return NextResponse.json(
         { ok: false, error: "You cannot edit or disable your own platform account" },

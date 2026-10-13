@@ -86,6 +86,26 @@ export function EmployeeDashboard() {
     return () => document.removeEventListener("pointerdown", onDown);
   }, [branchMenuOpen]);
 
+  // r70 — validate the persisted session against the server on mount: a
+  // stale localStorage employee whose httpOnly session cookie expired (30d
+  // idle) or was revoked (deactivated) is signed out immediately instead of
+  // failing on every API call.
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/auth/session")
+      .then((res) => {
+        if (res.ok || cancelled) return;
+        useSession.getState().signOut();
+      })
+      .catch(() => {
+        // offline / server unreachable — keep the local session (guest-mode
+        // resilience); the API calls will surface errors if truly signed out
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // R49 smart alerts: chime + notification + badge for new orders/requests.
   const alerts = useSmartAlerts();
 
@@ -128,7 +148,7 @@ export function EmployeeDashboard() {
     () => [
       {
         key: "queue",
-        label: "Queue",
+        label: t("tabQueue"),
         icon: <ScrollText className="size-5" />,
         render: (so) => (
           <OrdersPanel
@@ -139,7 +159,7 @@ export function EmployeeDashboard() {
       },
       {
         key: "new_order",
-        label: amendActive ? "Edit" : "New",
+        label: amendActive ? t("tabEdit") : t("tabNew"),
         icon: amendActive ? (
           <PenLine className="size-5" />
         ) : (
@@ -152,7 +172,6 @@ export function EmployeeDashboard() {
               subtitle={t("amendStaffSubtitle")}
               source="employee"
               orderedByName={employee?.name ?? ""}
-              employeeId={employee?.id ?? null}
               bottomInset={64}
               onAmended={() => selectTab("queue")}
               headerExtra={
@@ -170,62 +189,61 @@ export function EmployeeDashboard() {
           ) : (
             <BowlBuilder
               orderedByName={employee?.name ?? ""}
-              employeeId={employee?.id ?? ""}
               onSignOut={so}
             />
           ),
       },
       {
         key: "inventory",
-        label: "Inventory",
+        label: t("tabInventory"),
         icon: <Boxes className="size-5" />,
         render: (so) => <InventoryPanel onSignOut={so} />,
       },
       {
         key: "requests",
-        label: "Requests",
+        label: t("tabRequests"),
         icon: <BellRing className="size-5" />,
         render: (so) => <RequestsPanel onSignOut={so} />,
       },
       {
         key: "employees",
-        label: "Staff",
+        label: t("tabStaff"),
         icon: <Users className="size-5" />,
         render: (so) => <EmployeesPanel onSignOut={so} />,
       },
       {
         key: "purchases",
-        label: "Buy",
+        label: t("tabBuy"),
         icon: <ShoppingCart className="size-5" />,
         render: (so) => <PurchasesPanel onSignOut={so} />,
       },
       {
         key: "profit",
-        label: "Profit",
+        label: t("tabProfit"),
         icon: <TrendingUp className="size-5" />,
         render: (so) => <ProfitPanel onSignOut={so} />,
       },
       {
         key: "rsm",
-        label: "RSM",
+        label: t("tabRsm"),
         icon: <Scale className="size-5" />,
         render: (so) => <RsmFinancePanel onSignOut={so} />,
       },
       {
         key: "analytics",
-        label: "Stats",
+        label: t("tabStats"),
         icon: <BarChart3 className="size-5" />,
         render: (so) => <AnalyticsPanel onSignOut={so} />,
       },
       {
         key: "loyalty",
-        label: "Mazaj+",
+        label: t("tabMazajPlus"),
         icon: <Crown className="size-5" />,
         render: (so) => <LoyaltyPanel onSignOut={so} />,
       },
       {
         key: "sync",
-        label: "Sync",
+        label: t("tabSync"),
         icon: <RefreshCw className="size-5" />,
         render: (so) => <SyncPanel onSignOut={so} />,
       },
@@ -253,15 +271,15 @@ export function EmployeeDashboard() {
       <div className="dark flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-[oklch(0.135_0.014_60)] px-6 text-center text-foreground">
         <EmptyState
           icon={<ShieldX className="size-6" />}
-          title="No access"
-          description="You don't have permission to access any section. Ask a super admin to assign you a role."
+          title={t("noAccess")}
+          description={t("noAccessDesc")}
           action={
             <button
               type="button"
               className="glass rounded-full px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               onClick={signOut}
             >
-              Sign out
+              {t("signOut")}
             </button>
           }
         />
@@ -424,8 +442,8 @@ export function EmployeeDashboard() {
                 exit={{ opacity: 0, scale: 0.5, y: 10 }}
                 transition={{ duration: 0.22, delay: 0.05, ease: EASE }}
                 onClick={() => usePwa.getState().setGetAppOpen(true)}
-                aria-label="Show guest app QR"
-                title="Show the guest download QR"
+                aria-label={t("showQr")}
+                title={t("showQr")}
                 className="glass grid size-10 place-items-center rounded-full text-primary shadow-lg transition-colors hover:border-primary/50 hover:bg-primary/20"
               >
                 <QrCode className="size-4" />
@@ -441,8 +459,8 @@ export function EmployeeDashboard() {
                   setSommOpen(true);
                   setFabOpen(false);
                 }}
-                aria-label="AI Sommelier"
-                title="AI Sommelier — recommend a bowl for a guest"
+                aria-label={t("aiSommelier")}
+                title={t("sommelierTip")}
                 className="glass grid size-10 place-items-center rounded-full text-primary shadow-lg transition-colors hover:border-primary/50 hover:bg-primary/20"
               >
                 <Wand2 className="size-4" />
@@ -454,9 +472,9 @@ export function EmployeeDashboard() {
           type="button"
           onClick={() => setFabOpen((o) => !o)}
           whileTap={{ scale: 0.92 }}
-          aria-label={fabOpen ? "Close actions" : "Open actions — AI sommelier, QR, alerts, language"}
+          aria-label={fabOpen ? t("closeActions") : t("openActions")}
           aria-expanded={fabOpen}
-          title="AI Sommelier & more"
+          title={t("aiSommelier")}
           className="relative grid size-12 place-items-center rounded-full bg-gradient-to-b from-[oklch(0.86_0.13_74)] to-[oklch(0.72_0.145_60)] text-[oklch(0.17_0.03_50)] shadow-[0_12px_34px_-10px_oklch(0.72_0.145_60/0.65)]"
         >
           <span

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { SUPPLIES } from "@/lib/catalog";
 import { resolveBranchScope } from "@/lib/branch-scope";
 import { z } from "zod";
+import { requireStaff } from "@/lib/auth";
 
 /**
  * r57 — branch-scoped supplies (coal, foil, hose…).
@@ -10,6 +11,10 @@ import { z } from "zod";
  */
 export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "inventory");
+      if ("resp" in guard) return guard.resp;
+    }
     const raw = req.nextUrl.searchParams.get("branchId");
     const { branchId } = await resolveBranchScope(raw);
 
@@ -110,6 +115,10 @@ const RestockSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "inventory");
+      if ("resp" in guard) return guard.resp;
+    }
     const body = await req.json();
     const parsed = RestockSchema.safeParse(body);
     if (!parsed.success) {

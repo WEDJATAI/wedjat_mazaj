@@ -3,9 +3,14 @@ import { db } from "@/lib/db";
 import { resolveBranchScope } from "@/lib/branch-scope";
 import { z } from "zod";
 import { BRANDS, SUPPLIES, getBrand, getSupply } from "@/lib/catalog";
+import { requireStaff } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "purchases");
+      if ("resp" in guard) return guard.resp;
+    }
     const purchases = await db.purchase.findMany({
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -34,6 +39,10 @@ const CreateSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "purchases");
+      if ("resp" in guard) return guard.resp;
+    }
     const body = await req.json();
     const parsed = CreateSchema.safeParse(body);
     if (!parsed.success) {

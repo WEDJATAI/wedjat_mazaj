@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requirePlatformAdmin } from "@/lib/platform-auth";
+import { requirePlatformAdminSession } from "@/lib/auth";
 import {
   SETTING_KEYS,
   DEFAULT_RSM_CONFIG,
@@ -29,15 +29,8 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
-    const admin = await requirePlatformAdmin(
-      req.nextUrl.searchParams.get("employeeId")
-    );
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
     const [rsm, platform] = await Promise.all([getRsmConfig(), getPlatformInfo()]);
     return NextResponse.json({
       ok: true,
@@ -58,7 +51,6 @@ export async function GET(req: NextRequest) {
 }
 
 const PutSchema = z.object({
-  employeeId: z.string(),
   rsm: z
     .object({
       commissionPct: z.number().min(0.5).max(90),
@@ -90,13 +82,9 @@ export async function PUT(req: NextRequest) {
       );
     }
     const data = parsed.data;
-    const admin = await requirePlatformAdmin(data.employeeId);
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
+    const admin = guard.emp;
 
     if (data.rsm) {
       await upsertSetting(SETTING_KEYS.rsm, data.rsm, admin.name);

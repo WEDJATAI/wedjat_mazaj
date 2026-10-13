@@ -108,7 +108,11 @@ export function GuestTrackingSheet({
       // keep the focused (just-placed) order visible even if the name changed
       if (focusOrderId) {
         try {
-          const all = await fetch("/api/orders").then((r) => r.json());
+          // r70: focused lookup by order id — the full queue needs a staff
+          // session now, but a guest can always re-find their own order
+          const all = await fetch(
+            `/api/orders?id=${encodeURIComponent(focusOrderId)}`
+          ).then((r) => r.json());
           if (all.ok) {
             const focused = (all.orders as TrackOrder[]).find(
               (o) => o.id === focusOrderId

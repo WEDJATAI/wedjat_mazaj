@@ -52,7 +52,27 @@ export interface Translations {
   loyalty: string;
   track: string;
   noAccess: string;
+  noAccessDesc: string;
   signOut: string;
+
+  // r70 — employee dashboard shell tabs
+  tabQueue: string;
+  tabNew: string;
+  tabEdit: string;
+  tabInventory: string;
+  tabRequests: string;
+  tabStaff: string;
+  tabBuy: string;
+  tabProfit: string;
+  tabRsm: string;
+  tabStats: string;
+  tabMazajPlus: string;
+  tabSync: string;
+  // r70 — dashboard FAB tooltips
+  showQr: string;
+  sommelierTip: string;
+  openActions: string;
+  closeActions: string;
 
   // Bowl builder
   bowlBuilder: string;
@@ -1070,7 +1090,27 @@ export const translations: Record<Lang, Partial<Translations>> = {
     loyalty: "Mazaj+",
     track: "Track",
     noAccess: "No access",
+    noAccessDesc:
+      "You don't have permission to access any section. Ask a super admin to assign you a role.",
     signOut: "Sign out",
+
+    // r70 — employee dashboard shell tabs
+    tabQueue: "Queue",
+    tabNew: "New",
+    tabEdit: "Edit",
+    tabInventory: "Inventory",
+    tabRequests: "Requests",
+    tabStaff: "Staff",
+    tabBuy: "Buy",
+    tabProfit: "Profit",
+    tabRsm: "RSM",
+    tabStats: "Stats",
+    tabMazajPlus: "Mazaj+",
+    tabSync: "Sync",
+    showQr: "Show the guest download QR",
+    sommelierTip: "AI Sommelier — recommend a bowl for a guest",
+    openActions: "Open actions — AI sommelier, QR, alerts, language",
+    closeActions: "Close actions",
 
     // Bowl builder
     bowlBuilder: "Bowl builder",
@@ -2105,7 +2145,27 @@ export const translations: Record<Lang, Partial<Translations>> = {
     loyalty: "مزاج+",
     track: "تتبع",
     noAccess: "لا يوجد وصول",
+    noAccessDesc:
+      "لا تملك صلاحية الوصول إلى أي قسم. اطلب من المدير الأعلى تعيين دور لك.",
     signOut: "تسجيل الخروج",
+
+    // r70 — employee dashboard shell tabs
+    tabQueue: "الطلبات",
+    tabNew: "جديد",
+    tabEdit: "تعديل",
+    tabInventory: "المخزون",
+    tabRequests: "الطلبات الخاصة",
+    tabStaff: "الفريق",
+    tabBuy: "الشراء",
+    tabProfit: "الأرباح",
+    tabRsm: "RSM",
+    tabStats: "الإحصائيات",
+    tabMazajPlus: "مزاج+",
+    tabSync: "المزامنة",
+    showQr: "اعرض رمز تحميل تطبيق الضيوف",
+    sommelierTip: "السوميلييه الذكي — اقترح جبلة لضيف",
+    openActions: "افتح الإجراءات — السوميلييه، الرمز، التنبيهات، اللغة",
+    closeActions: "إغلاق الإجراءات",
 
     bowlBuilder: "بناء الجبلة",
     build: "بناء",

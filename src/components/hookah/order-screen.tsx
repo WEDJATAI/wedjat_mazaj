@@ -76,7 +76,6 @@ interface OrderScreenProps {
   subtitle?: string;
   source: "employee" | "guest_scan" | "guest_call";
   orderedByName: string;
-  employeeId?: string | null;
   defaultCustomer?: string;
   defaultTable?: string;
   /** R46: numeric Wedjat table id (POS link / picker) — threaded to the
@@ -109,7 +108,6 @@ export function OrderScreen({
   subtitle,
   source,
   orderedByName,
-  employeeId,
   defaultCustomer,
   defaultTable,
   defaultTableId,
@@ -1177,7 +1175,6 @@ export function OrderScreen({
         onOpenChange={setCheckoutOpen}
         source={source}
         orderedByName={orderedByName}
-        employeeId={employeeId}
         defaultCustomer={defaultCustomer}
         defaultTable={defaultTable}
         defaultTableId={defaultTableId}

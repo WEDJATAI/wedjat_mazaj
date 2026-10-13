@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { BRANDS, molassesCostPerHookah, egp } from "@/lib/catalog";
+import { requireStaff } from "@/lib/auth";
 
 // GET /api/profit — aggregates revenue, COGS, net profit from all orders.
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "profit");
+      if ("resp" in guard) return guard.resp;
+    }
     const orders = await db.order.findMany({
       orderBy: { createdAt: "desc" },
     });

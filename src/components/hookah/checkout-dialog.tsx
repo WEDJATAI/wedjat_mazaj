@@ -43,7 +43,6 @@ interface CheckoutDialogProps {
   onOpenChange: (open: boolean) => void;
   source: "employee" | "guest_scan" | "guest_call";
   orderedByName: string;
-  employeeId?: string | null;
   defaultCustomer?: string;
   defaultTable?: string;
   /** R46: numeric Wedjat table id (POS link / picker) — the
@@ -76,8 +75,6 @@ interface PlaceOrderPayload {
   ownType: string | null;
   addons: string[];
   source: string;
-  orderedByName: string;
-  employeeId?: string | null;
   favoriteMixId?: string | null;
   branchId?: string | null;
   loyaltyPhone?: string;
@@ -111,7 +108,6 @@ export function CheckoutDialog({
   onOpenChange,
   source,
   orderedByName,
-  employeeId,
   defaultCustomer,
   defaultTable,
   defaultTableId,
@@ -232,8 +228,6 @@ export function CheckoutDialog({
       ownType: ownType,
       addons,
       source,
-      orderedByName,
-      employeeId: employeeId ?? null,
       favoriteMixId: favoriteMixId ?? null,
       branchId: branchId ?? null,
       loyaltyPhone:

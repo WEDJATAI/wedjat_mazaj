@@ -77,7 +77,12 @@ export const useSession = create<SessionState>()(
           };
         });
       },
-      signOut: () => set({ role: null, employee: null, guest: null }),
+      // r70 — signing out also kills the server-side session (httpOnly
+      // cookie + EmployeeSession row); fire-and-forget so the UI never waits
+      signOut: () => {
+        set({ role: null, employee: null, guest: null });
+        void fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
+      },
     }),
     {
       name: "mazaj-session",

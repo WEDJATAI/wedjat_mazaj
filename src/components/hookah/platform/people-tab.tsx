@@ -74,10 +74,8 @@ function pickName(name: string, nameAr: string | null, lang: Lang): string {
 /* ------------------------------------------------------------------ */
 
 export function PeopleTab({
-  employeeId,
   selfId,
 }: {
-  employeeId: string;
   selfId: string;
 }) {
   const { t, lang } = useI18n();
@@ -95,9 +93,7 @@ export function PeopleTab({
         setError(null);
       }
       try {
-        const res = await fetch(
-          `/api/platform/employees?employeeId=${encodeURIComponent(employeeId)}`
-        );
+        const res = await fetch(`/api/platform/employees`);
         const data = (await res.json()) as { ok?: boolean; error?: string; employees?: Person[] };
         if (!res.ok || !data.ok || !Array.isArray(data.employees)) {
           throw new Error(data.error ?? t("failed"));
@@ -109,7 +105,7 @@ export function PeopleTab({
         if (!silent) setLoading(false);
       }
     },
-    [employeeId, t]
+    [t]
   );
 
   React.useEffect(() => {
@@ -127,7 +123,6 @@ export function PeopleTab({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            employeeId,
             active: !person.active,
           }),
         });
@@ -141,7 +136,7 @@ export function PeopleTab({
         setBusyId(null);
       }
     },
-    [employeeId, load, t]
+    [load, t]
   );
 
   const filtered = people.filter(
@@ -283,7 +278,6 @@ export function PeopleTab({
       <AddPersonDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        employeeId={employeeId}
         venues={people.flatMap((p) => (p.venue ? [p.venue] : []))}
         onDone={() => void load(true)}
       />
@@ -298,13 +292,11 @@ export function PeopleTab({
 function AddPersonDialog({
   open,
   onOpenChange,
-  employeeId,
   venues,
   onDone,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  employeeId: string;
   venues: NonNullable<Person["venue"]>[];
   onDone: () => void;
 }) {
@@ -344,7 +336,6 @@ function AddPersonDialog({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employeeId,
           name: name.trim(),
           pin: pin.trim(),
           role,

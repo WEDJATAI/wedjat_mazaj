@@ -66,7 +66,7 @@ function fmtTime(iso: string, lang: Lang): string {
 /* OrdersTab                                                           */
 /* ------------------------------------------------------------------ */
 
-export function OrdersTab({ employeeId }: { employeeId: string }) {
+export function OrdersTab() {
   const { t, lang } = useI18n();
   const [orders, setOrders] = React.useState<ExplorerOrder[]>([]);
   const [cursor, setCursor] = React.useState<string | null>(null);
@@ -97,7 +97,6 @@ export function OrdersTab({ employeeId }: { employeeId: string }) {
       }
       try {
         const params = new URLSearchParams({
-          employeeId,
           days: String(days),
           limit: "25",
           ...(venueId !== "all" ? { venueId } : {}),
@@ -124,13 +123,13 @@ export function OrdersTab({ employeeId }: { employeeId: string }) {
         setMore(false);
       }
     },
-    [employeeId, days, venueId, status, cursor, t]
+    [days, venueId, status, cursor, t]
   );
 
   // reset-fetch whenever a filter changes
   React.useEffect(() => {
     void fetchPage("reset");
-  }, [employeeId, days, venueId, status]);
+  }, [days, venueId, status]);
 
   React.useEffect(() => {
     const onRefresh = () => void fetchPage("reset");

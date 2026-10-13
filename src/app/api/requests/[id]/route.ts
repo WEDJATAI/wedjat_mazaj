@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaff } from "@/lib/auth";
 
+/** r70 — guest calls can only be acknowledged/closed by signed-in staff. */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    {
+      const guard = await requireStaff(req, "requests");
+      if ("resp" in guard) return guard.resp;
+    }
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const status = typeof body.status === "string" ? body.status : "acknowledged";

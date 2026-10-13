@@ -8,15 +8,23 @@ import {
   resolvePermissions,
   type Role,
 } from "@/lib/permissions";
+import { requireStaff } from "@/lib/auth";
 
 /**
  * r57 — staff management now carries multi-tenant scope:
  * every employee has a role (platform_admin | venue_admin | super_admin |
  * admin | employee) and may be pinned to one branch (branchId) or float
  * across their venue's branches (branchId = null).
+ *
+ * r70 — this directory (it lists PINs!) requires the "employees"
+ * permission, derived from the session cookie.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "employees");
+      if ("resp" in guard) return guard.resp;
+    }
     const employees = await db.employee.findMany({
       orderBy: [{ role: "asc" }, { name: "asc" }],
       include: { branch: { select: { id: true, name: true, nameAr: true } } },
@@ -62,6 +70,10 @@ const CreateSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "employees");
+      if ("resp" in guard) return guard.resp;
+    }
     const body = await req.json();
     const parsed = CreateSchema.safeParse(body);
     if (!parsed.success) {

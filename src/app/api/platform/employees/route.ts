@@ -1,31 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requirePlatformAdmin } from "@/lib/platform-auth";
+import { requirePlatformAdminSession } from "@/lib/auth";
 
 /**
  * r61 — Platform Control Center · PEOPLE.
  *
- * GET  /api/platform/employees?employeeId=…   — every account across the
- *        platform with its venue/branch scope (the directory the platform
- *        owner oversees; venue internals stay with the venue admins).
- * POST /api/platform/employees                — create a platform-level or
- *        venue-scoped account (owner names the role + venue/branch).
+ * GET  /api/platform/employees   — every account across the platform with
+ *        its venue/branch scope (the directory the platform owner oversees;
+ *        venue internals stay with the venue admins).
+ * POST /api/platform/employees   — create a platform-level or venue-scoped
+ *        account (owner names the role + venue/branch).
+ *
+ * r70: caller = platform_admin session cookie.
  */
 
 const ROLES = ["platform_admin", "venue_admin", "super_admin", "admin", "employee"];
 
 export async function GET(req: NextRequest) {
   try {
-    const admin = await requirePlatformAdmin(
-      req.nextUrl.searchParams.get("employeeId")
-    );
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
 
     const employees = await db.employee.findMany({
       orderBy: [{ active: "desc" }, { createdAt: "asc" }],
@@ -66,7 +61,6 @@ export async function GET(req: NextRequest) {
 }
 
 const CreateSchema = z.object({
-  employeeId: z.string(), // the platform admin creating the account
   name: z.string().trim().min(2).max(60),
   pin: z.string().trim().regex(/^\d{4}$/, "PIN must be 4 digits"),
   role: z.enum(["platform_admin", "venue_admin", "super_admin", "admin", "employee"]),
@@ -85,13 +79,8 @@ export async function POST(req: NextRequest) {
       );
     }
     const data = parsed.data;
-    const admin = await requirePlatformAdmin(data.employeeId);
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
 
     const pinTaken = await db.employee.findUnique({ where: { pin: data.pin } });
     if (pinTaken) {

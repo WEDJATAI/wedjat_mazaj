@@ -256,10 +256,7 @@ export function OrdersPanel({ onSignOut, onAmendStart }: { onSignOut: () => void
       const res = await fetch(`/api/orders/${order.id}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeId: employee.id,
-          employeeName: employee.name,
-        }),
+        // r70: the claimer is the signed-in session employee
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? t("couldNotClaim"));
@@ -765,9 +762,8 @@ function CommentsSheet({
   const [loading, setLoading] = React.useState(false);
   const [body, setBody] = React.useState("");
   const t = useI18n((s) => s.t);
-  // r69 — localized default author (won't live-switch on lang change; the
-  // field is user-editable anyway)
-  const [author, setAuthor] = React.useState(t("staff"));
+  // r70 — the comment author is the signed-in employee (server-side from
+  // the session cookie); no name input needed anymore
   const [sending, setSending] = React.useState(false);
 
   const load = React.useCallback(async () => {
@@ -798,7 +794,6 @@ function CommentsSheet({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          author: author.trim() || t("staff"),
           body: body.trim(),
         }),
       });
@@ -870,13 +865,6 @@ function CommentsSheet({
 
         <div className="ember-hairline" aria-hidden />
         <div className="space-y-2.5 p-5 pb-6">
-          <input
-            className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
-            placeholder={t("yourName")}
-            aria-label={t("author")}
-          />
           <textarea
             className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
             value={body}

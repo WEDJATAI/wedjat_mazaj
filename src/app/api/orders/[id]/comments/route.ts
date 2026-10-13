@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { requireStaff } from "@/lib/auth";
 
+/**
+ * r70 — order comments are a staff-only conversation about a live order:
+ * both listing and posting require a staff session, and the comment
+ * author is the signed-in employee (never a client-supplied name).
+ */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    {
+      const guard = await requireStaff(req);
+      if ("resp" in guard) return guard.resp;
+    }
     const { id } = await params;
     const comments = await db.orderComment.findMany({
       where: { orderId: id },
@@ -23,7 +33,6 @@ export async function GET(
 }
 
 const CreateCommentSchema = z.object({
-  author: z.string().trim().min(1, "Author is required").max(80),
   body: z.string().trim().min(1, "Comment cannot be empty").max(500),
 });
 
@@ -32,6 +41,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireStaff(req);
+    if ("resp" in guard) return guard.resp;
+    const { name: author } = guard.emp;
     const { id } = await params;
     const body = await req.json();
     const parsed = CreateCommentSchema.safeParse(body);
@@ -54,7 +66,7 @@ export async function POST(
     const created = await db.orderComment.create({
       data: {
         orderId: id,
-        author: parsed.data.author,
+        author,
         body: parsed.data.body,
       },
     });

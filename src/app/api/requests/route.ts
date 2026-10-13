@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveBranchScope } from "@/lib/branch-scope";
+import { requireStaff } from "@/lib/auth";
 
 /**
  * r57 — branch-scoped service requests (Call shisha man / Coal).
  *
- * GET  ?branchId=<id>  → that branch's requests
+ * GET  ?branchId=<id>  → that branch's requests (STAFF SESSION required,
+ *      r70 — guests never list requests, they only create them)
  *      ?branchId=all   → every branch (multi-branch admin view, with
  *                        branchName attached to each row)
  *
@@ -14,6 +16,10 @@ import { resolveBranchScope } from "@/lib/branch-scope";
  */
 export async function GET(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req, "requests");
+      if ("resp" in guard) return guard.resp;
+    }
     const raw = req.nextUrl.searchParams.get("branchId");
     const { branchId } = await resolveBranchScope(raw);
 

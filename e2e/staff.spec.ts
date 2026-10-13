@@ -22,12 +22,16 @@ test.afterAll(async () => {
   await db.$disconnect();
 });
 
-/** Inject the real Hassan session (what POST /api/auth/employee returns). */
+/** Inject the real Hassan session (what POST /api/auth/employee returns).
+ *
+ * r70: the login MUST go through page.request — it shares the browser
+ * context's cookie jar, so the httpOnly session cookie lands where the
+ * staff UI's subsequent API calls will send it from. A plain node fetch
+ * would set no cookie and every guarded endpoint would 401.
+ */
 async function signInAsHassan(page: Page) {
-  const res = await fetch(`${BASE}/api/auth/employee`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pin: "1234" }),
+  const res = await page.request.post(`${BASE}/api/auth/employee`, {
+    data: { pin: "1234" },
   });
   const data = await res.json();
   if (!data.ok) throw new Error(`auth failed: ${JSON.stringify(data)}`);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requirePlatformAdmin } from "@/lib/platform-auth";
+import { requirePlatformAdminSession } from "@/lib/auth";
 import { MOLASSES_GRAMS } from "@/lib/catalog";
 
 /**
@@ -20,15 +20,8 @@ const r1 = (n: number) => Math.round(n * 10) / 10;
 
 export async function GET(req: NextRequest) {
   try {
-    const admin = await requirePlatformAdmin(
-      req.nextUrl.searchParams.get("employeeId")
-    );
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
 
     const [branches, inventory, supplies] = await Promise.all([
       db.branch.findMany({

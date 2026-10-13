@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requirePlatformAdmin } from "@/lib/platform-auth";
+import { requirePlatformAdminSession } from "@/lib/auth";
 import { BRANDS, type BrandPricing } from "@/lib/catalog";
 import {
   SETTING_KEYS,
@@ -34,15 +34,8 @@ const DEFAULT_PRICING: Record<string, BrandPricing> = Object.fromEntries(
 
 export async function GET(req: NextRequest) {
   try {
-    const admin = await requirePlatformAdmin(
-      req.nextUrl.searchParams.get("employeeId")
-    );
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
     const overrides = await getMenuPricing();
     // reflect the persisted overrides in this instance before reporting
     applyPricingMap(overrides);
@@ -72,7 +65,6 @@ export async function GET(req: NextRequest) {
 }
 
 const PutSchema = z.object({
-  employeeId: z.string(),
   pricing: z.record(
     z.string(),
     z.object({
@@ -94,13 +86,9 @@ export async function PUT(req: NextRequest) {
       );
     }
     const data = parsed.data;
-    const admin = await requirePlatformAdmin(data.employeeId);
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
+    const adminName = guard.emp.name;
 
     // keep only known brands + at least one field each
     const known = new Set(BRANDS.map((b) => b.id));
@@ -116,8 +104,8 @@ export async function PUT(req: NextRequest) {
 
     await db.platformSetting.upsert({
       where: { key: SETTING_KEYS.menu },
-      update: { value: JSON.stringify(clean), updatedBy: admin.name },
-      create: { key: SETTING_KEYS.menu, value: JSON.stringify(clean), updatedBy: admin.name },
+      update: { value: JSON.stringify(clean), updatedBy: adminName },
+      create: { key: SETTING_KEYS.menu, value: JSON.stringify(clean), updatedBy: adminName },
     });
     invalidateSettingsCache(SETTING_KEYS.menu);
     applyPricingMap(clean); // apply immediately in this instance

@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { sessionEmployee } from "@/lib/auth";
 
 /**
  * r57 — Add a branch to an existing venue (platform admin or the venue's
  * own admin). The new branch starts active but unstocked — its inventory
  * gets created on first restock / first order (upsert semantics in the
  * orders + inventory routes handle missing rows gracefully).
+ *
+ * r70: the caller is derived from the session cookie (no more trusted
+ * employeeId body param).
  */
 
 const CreateSchema = z.object({
-  employeeId: z.string(),
   venueId: z.string(),
   name: z.string().trim().min(2).max(60),
   nameAr: z.string().trim().max(60).optional().or(z.literal("")),
@@ -37,12 +40,18 @@ export async function POST(req: NextRequest) {
       );
     }
     const data = parsed.data;
-    const emp = await db.employee.findUnique({ where: { id: data.employeeId } });
-    const isPlatformAdmin = emp?.role === "platform_admin";
+    const emp = await sessionEmployee(req);
+    if (!emp) {
+      return NextResponse.json(
+        { ok: false, error: "Sign-in required" },
+        { status: 401 }
+      );
+    }
+    const isPlatformAdmin = emp.role === "platform_admin";
     const isVenueAdmin =
-      (emp?.role === "venue_admin" || emp?.role === "super_admin") &&
-      emp?.venueId === data.venueId;
-    if (!emp || !emp.active || (!isPlatformAdmin && !isVenueAdmin)) {
+      (emp.role === "venue_admin" || emp.role === "super_admin") &&
+      emp.venueId === data.venueId;
+    if (!isPlatformAdmin && !isVenueAdmin) {
       return NextResponse.json(
         { ok: false, error: "Not allowed to manage this venue's branches" },
         { status: 403 }

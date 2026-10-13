@@ -101,7 +101,7 @@ const STATUS_DOT: Record<string, string> = {
 /* PulseTab                                                            */
 /* ------------------------------------------------------------------ */
 
-export function PulseTab({ employeeId }: { employeeId: string }) {
+export function PulseTab() {
   const { t, lang } = useI18n();
   const [data, setData] = React.useState<PulseData | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -114,9 +114,7 @@ export function PulseTab({ employeeId }: { employeeId: string }) {
         setError(null);
       }
       try {
-        const res = await fetch(
-          `/api/platform/pulse?employeeId=${encodeURIComponent(employeeId)}`
-        );
+        const res = await fetch(`/api/platform/pulse`);
         const json = (await res.json()) as PulseData & { error?: string };
         if (!res.ok || !json.ok) throw new Error(json.error ?? t("failed"));
         setData(json);
@@ -126,7 +124,7 @@ export function PulseTab({ employeeId }: { employeeId: string }) {
         if (!silent) setLoading(false);
       }
     },
-    [employeeId, t]
+    [t]
   );
 
   React.useEffect(() => {

@@ -505,7 +505,7 @@ export function RsmFinancePanel({ onSignOut }: { onSignOut: () => void }) {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/rsm/finance?employeeId=${encodeURIComponent(employee.id)}&range=${range}&branchId=${branchParam}`
+        `/api/rsm/finance?range=${range}&branchId=${branchParam}`
       );
       const json = await res.json();
       if (json.ok) setData(json as RsmData);
@@ -584,23 +584,16 @@ export function RsmFinancePanel({ onSignOut }: { onSignOut: () => void }) {
 // Platform console section — same body, embedded under the venue pulse.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function RsmFinanceSection({
-  employeeId,
-}: {
-  employeeId: string;
-}) {
+export function RsmFinanceSection() {
   const t = useI18n((s) => s.t);
   const [range, setRange] = React.useState<Range>("7d");
   const [data, setData] = React.useState<RsmData | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   const load = React.useCallback(async () => {
-    if (!employeeId) return;
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/rsm/finance?employeeId=${encodeURIComponent(employeeId)}&range=${range}`
-      );
+      const res = await fetch(`/api/rsm/finance?range=${range}`);
       const json = await res.json();
       if (json.ok) setData(json as RsmData);
     } catch {
@@ -608,7 +601,7 @@ export function RsmFinanceSection({
     } finally {
       setLoading(false);
     }
-  }, [employeeId, range]);
+  }, [range]);
 
   React.useEffect(() => {
     load();

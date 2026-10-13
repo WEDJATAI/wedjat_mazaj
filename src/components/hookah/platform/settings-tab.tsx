@@ -39,7 +39,7 @@ const r2 = (n: number) => Math.round(n * 10) / 10;
 /* SettingsTab                                                         */
 /* ------------------------------------------------------------------ */
 
-export function SettingsTab({ employeeId }: { employeeId: string }) {
+export function SettingsTab() {
   const { t } = useI18n();
   const [data, setData] = React.useState<SettingsData | null>(null);
   const [commission, setCommission] = React.useState("12");
@@ -50,9 +50,7 @@ export function SettingsTab({ employeeId }: { employeeId: string }) {
 
   const load = React.useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/platform/settings?employeeId=${encodeURIComponent(employeeId)}`
-      );
+      const res = await fetch(`/api/platform/settings`);
       const json = (await res.json()) as SettingsData & { error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error ?? "failed");
       setData(json);
@@ -63,7 +61,7 @@ export function SettingsTab({ employeeId }: { employeeId: string }) {
     } catch {
       toast.error(t("failed"));
     }
-  }, [employeeId, t]);
+  }, [t]);
 
   React.useEffect(() => {
     void load();
@@ -93,7 +91,6 @@ export function SettingsTab({ employeeId }: { employeeId: string }) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employeeId,
           rsm: { commissionPct: r2(cNum), wedjatSharePct: r2(sNum) },
         }),
       });
@@ -115,7 +112,7 @@ export function SettingsTab({ employeeId }: { employeeId: string }) {
       const res = await fetch("/api/platform/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeId, platform: { displayName: displayName.trim() } }),
+        body: JSON.stringify({ platform: { displayName: displayName.trim() } }),
       });
       const json = (await res.json()) as SettingsData & { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error ?? t("failed"));

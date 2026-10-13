@@ -107,7 +107,7 @@ function pickName(name: string, nameAr: string | null, lang: Lang): string {
 /* VenuesTab                                                           */
 /* ------------------------------------------------------------------ */
 
-export function VenuesTab({ employeeId }: { employeeId: string }) {
+export function VenuesTab() {
   const { t } = useI18n();
 
   const [venues, setVenues] = React.useState<PlatformVenue[]>([]);
@@ -124,9 +124,7 @@ export function VenuesTab({ employeeId }: { employeeId: string }) {
         setError(null);
       }
       try {
-        const res = await fetch(
-          `/api/platform/venues?employeeId=${encodeURIComponent(employeeId)}`
-        );
+        const res = await fetch(`/api/platform/venues`);
         const data = (await res.json()) as {
           ok?: boolean;
           error?: string;
@@ -142,7 +140,7 @@ export function VenuesTab({ employeeId }: { employeeId: string }) {
         if (!silent) setLoading(false);
       }
     },
-    [employeeId, t]
+    [t]
   );
 
   React.useEffect(() => {
@@ -166,7 +164,7 @@ export function VenuesTab({ employeeId }: { employeeId: string }) {
         const res = await fetch(`/api/platform/venues/${venueId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ employeeId, status }),
+          body: JSON.stringify({ status }),
         });
         const data = (await res.json()) as { ok?: boolean; error?: string };
         if (!res.ok || !data.ok) throw new Error(data.error ?? t("failed"));
@@ -178,7 +176,7 @@ export function VenuesTab({ employeeId }: { employeeId: string }) {
         setBusyVenueId(null);
       }
     },
-    [employeeId, load, t]
+    [load, t]
   );
 
   return (
@@ -241,12 +239,10 @@ export function VenuesTab({ employeeId }: { employeeId: string }) {
       <AddVenueDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        employeeId={employeeId}
         onDone={() => void load(true)}
       />
       <AddBranchDialog
         venue={branchVenue}
-        employeeId={employeeId}
         onOpenChange={(o) => {
           if (!o) setBranchVenue(null);
         }}
@@ -398,12 +394,10 @@ function VenueCard({
 export function AddVenueDialog({
   open,
   onOpenChange,
-  employeeId,
   onDone,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  employeeId: string;
   onDone: () => void;
 }) {
   const { t } = useI18n();
@@ -441,7 +435,6 @@ export function AddVenueDialog({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employeeId,
           name: name.trim(),
           nameAr: nameAr.trim(),
           kind,
@@ -604,12 +597,10 @@ export function AddVenueDialog({
 
 function AddBranchDialog({
   venue,
-  employeeId,
   onOpenChange,
   onDone,
 }: {
   venue: PlatformVenue | null;
-  employeeId: string;
   onOpenChange: (o: boolean) => void;
   onDone: () => void;
 }) {
@@ -636,7 +627,6 @@ function AddBranchDialog({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employeeId,
           venueId: venue.id,
           name: name.trim(),
           nameAr: nameAr.trim(),

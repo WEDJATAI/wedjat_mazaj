@@ -17,6 +17,7 @@ import {
 import { pushOrderToWedjat, pushAvailabilityToWedjat } from "@/lib/wedjat";
 import { resolveBranchScope } from "@/lib/branch-scope";
 import { applyCatalogOverrides } from "@/lib/platform-settings";
+import { requireStaff, sessionEmployee } from "@/lib/auth";
 import {
   pointsEarnedOn,
   redeemDiscount,
@@ -72,8 +73,6 @@ const CreateOrderSchema = z.object({
   bogo: z.boolean(),
   ownType: z.enum(["hookah", "molasses"]).optional().nullable(),
   source: z.enum(["employee", "guest_scan", "guest_call"]).default("employee"),
-  orderedByName: z.string().trim().max(80).optional().nullable(),
-  employeeId: z.string().optional().nullable(),
   favoriteMixId: z.string().optional().nullable(),
   // Add-ons the client chose (e.g. ["medical_hose"]) — server adds sellPrice to total.
   addons: z.array(z.string()).default([]),
@@ -101,6 +100,21 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data;
+
+    // r70 — WHO is creating this order? Guest flows (guest_scan /
+    // guest_call) stay cookie-free; a staff order (source "employee") MUST
+    // carry a staff session, and the creator is derived from it — the
+    // client-sent employeeId/orderedByName are never trusted.
+    const caller = await sessionEmployee(req);
+    const isGuestOrder =
+      data.source === "guest_scan" || data.source === "guest_call";
+    if (!isGuestOrder && !caller) {
+      return NextResponse.json(
+        { ok: false, error: "Staff sign-in required to place an order" },
+        { status: 401 }
+      );
+    }
+    const creatorEmployee = !isGuestOrder && caller ? caller : null;
 
     // r57: which branch receives (and stock-deducts) this order
     const { branchId: effectiveBranchId } = await resolveBranchScope(
@@ -240,12 +254,11 @@ export async function POST(req: NextRequest) {
     // pass against the same jar and both deduct it (oversell race).
 
     // Determine assignment: guest self-orders start unassigned; employee
-    // orders are immediately theirs.
-    const isGuestOrder =
-      data.source === "guest_scan" || data.source === "guest_call";
+    // orders are immediately theirs (r70: creator identity comes from the
+    // session, never from the request body).
     const assignment = isGuestOrder ? "unassigned" : null;
-    const assignedToName = isGuestOrder ? null : data.orderedByName ?? null;
-    const assignedToId = isGuestOrder ? null : data.employeeId ?? null;
+    const assignedToName = creatorEmployee?.name ?? null;
+    const assignedToId = creatorEmployee?.id ?? null;
 
     // --- Compute cost-of-goods + profit (server-side, from catalog costs) ---
     const cogs = computeOrderCogs(sanitizedItems);
@@ -379,8 +392,8 @@ export async function POST(req: NextRequest) {
           itemCount: totalHookahs,
           status: "pending",
           source: data.source,
-          orderedByName: isGuestOrder ? null : data.orderedByName || null,
-          employeeId: isGuestOrder ? null : data.employeeId || null,
+          orderedByName: creatorEmployee?.name ?? null,
+          employeeId: creatorEmployee?.id ?? null,
           favoriteMixId: data.favoriteMixId || null,
           assignment,
           assignedToName,
@@ -700,6 +713,23 @@ export async function GET(req: NextRequest) {
         .slice(0, 50);
       return NextResponse.json({ ok: true, orders });
     }
+    // r70 — focused lookup by order id (?id=): the guest already holds the
+    // cuid from placing the order (same trust model as the rate endpoint),
+    // so no session is needed to re-find a just-placed order after a name
+    // change. Everything else (the full staff queue) requires a session.
+    const focusId = req.nextUrl.searchParams.get("id")?.trim();
+    if (focusId) {
+      const focused = await db.order.findUnique({ where: { id: focusId } });
+      return NextResponse.json({
+        ok: true,
+        orders: focused ? [focused] : [],
+      });
+    }
+    // full queue → staff session required (r70)
+    {
+      const guard = await requireStaff(req);
+      if ("resp" in guard) return guard.resp;
+    }
     // r57: ?branchId= scopes the staff queue (absent/"all" = every branch)
     const branchParam = req.nextUrl.searchParams.get("branchId");
     const scoped = branchParam && branchParam !== "all" ? branchParam : null;
@@ -739,6 +769,10 @@ export async function GET(req: NextRequest) {
 const ALLOWED_STATUSES = new Set(["pending", "preparing", "done"]);
 export async function PATCH(req: NextRequest) {
   try {
+    {
+      const guard = await requireStaff(req);
+      if ("resp" in guard) return guard.resp;
+    }
     const body = await req.json().catch(() => ({}));
     const { id, status } = body as { id?: string; status?: string };
     if (!id || !status) {

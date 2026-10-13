@@ -51,7 +51,7 @@ interface MenuBrand {
 /* MenuTab                                                             */
 /* ------------------------------------------------------------------ */
 
-export function MenuTab({ employeeId }: { employeeId: string }) {
+export function MenuTab() {
   const { t, lang } = useI18n();
   const [brands, setBrands] = React.useState<MenuBrand[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -65,9 +65,7 @@ export function MenuTab({ employeeId }: { employeeId: string }) {
         setError(null);
       }
       try {
-        const res = await fetch(
-          `/api/platform/menu?employeeId=${encodeURIComponent(employeeId)}`
-        );
+        const res = await fetch(`/api/platform/menu`);
         const data = (await res.json()) as {
           ok?: boolean;
           error?: string;
@@ -83,7 +81,7 @@ export function MenuTab({ employeeId }: { employeeId: string }) {
         if (!silent) setLoading(false);
       }
     },
-    [employeeId, t]
+    [t]
   );
 
   React.useEffect(() => {
@@ -204,7 +202,6 @@ export function MenuTab({ employeeId }: { employeeId: string }) {
 
       <EditPricingDialog
         brand={editBrand}
-        employeeId={employeeId}
         onOpenChange={(o) => {
           if (!o) setEditBrand(null);
         }}
@@ -262,12 +259,10 @@ function PriceCell({
 
 function EditPricingDialog({
   brand,
-  employeeId,
   onOpenChange,
   onSaved,
 }: {
   brand: MenuBrand | null;
-  employeeId: string;
   onOpenChange: (o: boolean) => void;
   onSaved: () => void;
 }) {
@@ -319,7 +314,7 @@ function EditPricingDialog({
       const res = await fetch("/api/platform/menu", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeId, pricing: { [brand.id]: next } }),
+        body: JSON.stringify({ pricing: { [brand.id]: next } }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) throw new Error(data.error ?? t("failed"));

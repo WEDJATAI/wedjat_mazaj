@@ -88,8 +88,25 @@ export function PlatformControlCenter({ onSignOut }: { onSignOut: () => void }) 
   const [tab, setTab] = React.useState<TabKey>("pulse");
   const [paletteOpen, setPaletteOpen] = React.useState(false);
 
-  const employeeId = employee?.id ?? "";
   const selfId = employee?.id ?? "";
+
+  /* r70 — validate the persisted session against the server on mount (an
+     expired/revoked cookie signs the console out instead of 401-ing every
+     call). */
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/auth/session")
+      .then((res) => {
+        if (res.ok || cancelled) return;
+        onSignOut();
+      })
+      .catch(() => {
+        // offline — keep the local session
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [onSignOut]);
 
   /* keyboard shortcuts — ⌘K opens the palette, ⌘1..⌘8 jump to tabs */
   React.useEffect(() => {
@@ -174,21 +191,21 @@ export function PlatformControlCenter({ onSignOut }: { onSignOut: () => void }) 
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-6 sm:px-5">
         <FadeSwap swapKey={tab} className={cn(tab === "pulse" && "min-h-[60vh]")}>
-          {tab === "pulse" && <PulseTab employeeId={employeeId} />}
-          {tab === "venues" && <VenuesTab employeeId={employeeId} />}
-          {tab === "menu" && <MenuTab employeeId={employeeId} />}
-          {tab === "orders" && <OrdersTab employeeId={employeeId} />}
-          {tab === "inventory" && <InventoryTab employeeId={employeeId} />}
-          {tab === "people" && <PeopleTab employeeId={employeeId} selfId={selfId} />}
+          {tab === "pulse" && <PulseTab />}
+          {tab === "venues" && <VenuesTab />}
+          {tab === "menu" && <MenuTab />}
+          {tab === "orders" && <OrdersTab />}
+          {tab === "inventory" && <InventoryTab />}
+          {tab === "people" && <PeopleTab selfId={selfId} />}
           {tab === "finance" && (
             <section className="space-y-6">
               <div>
                 <h2 className="sr-only">{t("pccTabFinance")}</h2>
-                <RsmFinanceSection employeeId={employeeId} />
+                <RsmFinanceSection />
               </div>
             </section>
           )}
-          {tab === "settings" && <SettingsTab employeeId={employeeId} />}
+          {tab === "settings" && <SettingsTab />}
         </FadeSwap>
       </main>
 

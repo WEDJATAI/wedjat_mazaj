@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requirePlatformAdmin } from "@/lib/platform-auth";
+import { requirePlatformAdminSession } from "@/lib/auth";
 
 /**
  * r61 — Platform Control Center · ORDERS explorer.
@@ -29,15 +29,8 @@ const STATUSES = new Set(["pending", "preparing", "done"]);
 
 export async function GET(req: NextRequest) {
   try {
-    const admin = await requirePlatformAdmin(
-      req.nextUrl.searchParams.get("employeeId")
-    );
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
 
     const venueParam = req.nextUrl.searchParams.get("venueId");
     const statusParam = req.nextUrl.searchParams.get("status");

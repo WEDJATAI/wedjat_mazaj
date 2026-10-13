@@ -130,11 +130,10 @@ function GoldCheck({ size = "size-10" }: { size?: string }) {
 
 interface BowlBuilderProps {
   orderedByName: string;
-  employeeId: string;
   onSignOut: () => void;
 }
 
-export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilderProps) {
+export function BowlBuilder({ orderedByName, onSignOut }: BowlBuilderProps) {
   // r69 (audit ②) — the staff New tab speaks the guest's language now
   const t = useI18n((s) => s.t);
   // r57: orders created here belong to the employee's working branch
@@ -315,8 +314,6 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             bogo,
             ownType,
             source: "employee",
-            orderedByName,
-            employeeId,
             branchId: workingBranchId ?? undefined,
             loyaltyPhone: loyaltyPhone.trim() || undefined,
           },
@@ -351,8 +348,6 @@ export function BowlBuilder({ orderedByName, employeeId, onSignOut }: BowlBuilde
             bogo,
             ownType,
             source: "employee",
-            orderedByName,
-            employeeId,
             loyaltyPhone: loyaltyPhone.trim() || undefined,
           }),
         });

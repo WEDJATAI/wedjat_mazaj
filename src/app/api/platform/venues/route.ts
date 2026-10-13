@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { requirePlatformAdminSession } from "@/lib/auth";
 
 /**
  * r57 — Platform super-admin venue management.
@@ -11,27 +12,15 @@ import { z } from "zod";
  *                              venue, its first (flagship) branch, and the
  *                              venue's own admin account in one shot.
  *
- * Authz: the caller must present a platform_admin employeeId; staff PINs
+ * Authz (r70): the caller must hold a platform_admin SESSION (httpOnly
+ * cookie minted at PIN login) — staff PINs and spoofed employeeId params
  * can't touch the platform layer.
  */
 
-async function requirePlatformAdmin(employeeId: string | null) {
-  if (!employeeId) return null;
-  const emp = await db.employee.findUnique({ where: { id: employeeId } });
-  if (!emp || !emp.active || emp.role !== "platform_admin") return null;
-  return emp;
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const employeeId = req.nextUrl.searchParams.get("employeeId");
-    const admin = await requirePlatformAdmin(employeeId);
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
 
     const venues = await db.venue.findMany({
       orderBy: { createdAt: "asc" },
@@ -92,7 +81,6 @@ export async function GET(req: NextRequest) {
 }
 
 const CreateSchema = z.object({
-  employeeId: z.string(), // the platform admin performing the onboarding
   name: z.string().trim().min(2).max(60),
   nameAr: z.string().trim().max(60).optional().or(z.literal("")),
   kind: z.enum(["hookah", "cafe", "restaurant"]),
@@ -125,13 +113,8 @@ export async function POST(req: NextRequest) {
       );
     }
     const data = parsed.data;
-    const admin = await requirePlatformAdmin(data.employeeId);
-    if (!admin) {
-      return NextResponse.json(
-        { ok: false, error: "Platform admin only" },
-        { status: 403 }
-      );
-    }
+    const guard = await requirePlatformAdminSession(req);
+    if ("resp" in guard) return guard.resp;
 
     // unique PIN guard
     const pinTaken = await db.employee.findUnique({ where: { pin: data.adminPin } });
