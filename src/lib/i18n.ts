@@ -1004,6 +1004,25 @@ export interface Translations {
   pccOnline: string;
   pccOnlineTitle: string;
   pccRevokeSessions: string;
+  pccBackupsTitle: string;
+  pccBackupsDesc: string;
+  pccBackupRunNow: string;
+  pccBackupRunning: string;
+  pccBackupDoneToast: string;
+  pccBackupSuccess: string;
+  pccBackupPartial: string;
+  pccBackupFailed: string;
+  pccBackupRows: string;
+  pccBackupOffsite: string;
+  pccBackupOffsiteNo: string;
+  pccBackupLastNever: string;
+  pccBackupCron: string;
+  pccBackupManual: string;
+  pccBackupCronHint: string;
+  pccBackupAgoNow: string;
+  pccBackupAgoMin: string;
+  pccBackupAgoHour: string;
+  pccBackupAgoDay: string;
   pccRevokeTitle: string;
   pccRevokeDesc: string;
   pccRevokeConfirm: string;
@@ -2077,6 +2096,27 @@ export const translations: Record<Lang, Partial<Translations>> = {
     pccSessionsRevoked: "Signed {name} out of {n} session(s)",
     pccPersonName: "Name",
     pccPlatformName: "Platform display name",
+    pccBackupsTitle: "Off-site backups",
+    pccBackupsDesc:
+      "A nightly snapshot of every table, pushed to a private backup repository. You can also run one on demand.",
+    pccBackupRunNow: "Back up now",
+    pccBackupRunning: "Backing up…",
+    pccBackupDoneToast: "Backup complete",
+    pccBackupSuccess: "Success",
+    pccBackupPartial: "Snapshot OK, off-site copy failed",
+    pccBackupFailed: "Failed",
+    pccBackupRows: "rows",
+    pccBackupOffsite: "Off-site copy ✓",
+    pccBackupOffsiteNo: "DB-only",
+    pccBackupLastNever: "No backup has run yet.",
+    pccBackupCron: "Nightly",
+    pccBackupManual: "Manual",
+    pccBackupCronHint:
+      "Runs automatically every night at ~3 AM Cairo time. The newest 30 snapshots are kept.",
+    pccBackupAgoNow: "just now",
+    pccBackupAgoMin: "{n}m ago",
+    pccBackupAgoHour: "{n}h ago",
+    pccBackupAgoDay: "{n}d ago",
     pccPublishPrices: "Publish prices",
     pccRefreshAll: "Refresh everything",
     pccResetToDefault: "Reset to default",
@@ -3108,6 +3148,27 @@ export const translations: Record<Lang, Partial<Translations>> = {
     pccOnline: "متصل",
     pccOnlineTitle: "{n} جلسة نشطة",
     pccRevokeSessions: "تسجيل الخروج من كل الأجهزة",
+    pccBackupsTitle: "نسخ احتياطية خارجية",
+    pccBackupsDesc:
+      "لقطة ليلية لكل الجداول تُرفع إلى مستودع نسخ احتياطية خاص. يمكنك أيضًا تشغيلها يدويًا.",
+    pccBackupRunNow: "نسخة احتياطية الآن",
+    pccBackupRunning: "جارٍ النسخ…",
+    pccBackupDoneToast: "تمت النسخة الاحتياطية",
+    pccBackupSuccess: "ناجحة",
+    pccBackupPartial: "اللقطة تمت، لكن الرفع الخارجي فشل",
+    pccBackupFailed: "فشلت",
+    pccBackupRows: "سجل",
+    pccBackupOffsite: "نسخة خارجية ✓",
+    pccBackupOffsiteNo: "محلية فقط",
+    pccBackupLastNever: "لم تُشغّل أي نسخة احتياطية بعد.",
+    pccBackupCron: "ليلية",
+    pccBackupManual: "يدوية",
+    pccBackupCronHint:
+      "تعمل تلقائيًا كل ليلة حوالي الساعة ٣ فجرًا بتوقيت القاهرة، ويُحتفظ بآخر ٣٠ لقطة.",
+    pccBackupAgoNow: "الآن",
+    pccBackupAgoMin: "منذ {n} د",
+    pccBackupAgoHour: "منذ {n} س",
+    pccBackupAgoDay: "منذ {n} يوم",
     pccRevokeTitle: "إلغاء الجلسات",
     pccRevokeDesc:
       "سيتم تسجيل خروج {name} من كل الأجهزة فورًا. يمكنه تسجيل الدخول مرة أخرى برمز الدخول.",

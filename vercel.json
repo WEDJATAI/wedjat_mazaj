@@ -14,5 +14,10 @@
       "maxDuration": 30
     }
   },
-  "crons": []
+  "crons": [
+    {
+      "path": "/api/platform/backup/cron",
+      "schedule": "0 1 * * *"
+    }
+  ]
 }

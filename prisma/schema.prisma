@@ -384,3 +384,24 @@ model ErrorLog {
   @@index([createdAt])
   @@index([message])
 }
+
+// r73 — off-site backup audit log. The Vercel cron (and the owner from the
+// Settings tab) snapshots EVERY table, pushes the JSON to the private
+// wedjat_mazaj_backups repo (data branch, 30-snapshot retention) and
+// records each run here: what was captured, how big, whether the off-site
+// copy landed. The run log itself lives in the DB it protects — restoring
+// means replaying the latest snapshot file, this table included.
+model BackupRun {
+  id        String   @id @default(cuid())
+  kind      String // cron | manual
+  status    String // success | partial | failed
+  tables    Int      @default(0)
+  rows      Int      @default(0)
+  sizeBytes Int      @default(0)
+  sha256    String   @default("")
+  offsite   Boolean  @default(false) // snapshot landed on the private repo
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

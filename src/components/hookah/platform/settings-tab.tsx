@@ -14,12 +14,22 @@
  */
 
 import * as React from "react";
-import { Landmark, Loader2, RotateCcw, Save, ScrollText, Type } from "lucide-react";
+import {
+  DatabaseBackup,
+  Landmark,
+  Loader2,
+  RotateCcw,
+  Save,
+  ScrollText,
+  ShieldCheck,
+  Type,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/store/i18n";
+import type { Translations } from "@/lib/i18n";
 import { CineCard, GoldButton, Kicker } from "../kit/kit";
 
 /* ------------------------------------------------------------------ */
@@ -274,6 +284,185 @@ export function SettingsTab() {
           </GoldButton>
         </div>
       </CineCard>
+
+      {/* ── off-site backups (r73) ───────────────────────────────── */}
+      <BackupsCard />
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* BackupsCard — nightly off-site snapshot + on-demand runs            */
+/* ------------------------------------------------------------------ */
+
+interface BackupRunRow {
+  id: string;
+  kind: string;
+  status: string;
+  tables: number;
+  rows: number;
+  sizeBytes: number;
+  offsite: boolean;
+  error: string | null;
+  createdAt: string;
+}
+
+function ago(
+  iso: string,
+  t: (key: keyof Translations, params?: Record<string, string | number>) => string
+): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return t("pccBackupAgoNow");
+  if (mins < 60) return t("pccBackupAgoMin").replace("{n}", String(mins));
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return t("pccBackupAgoHour").replace("{n}", String(hours));
+  return t("pccBackupAgoDay").replace("{n}", String(Math.round(hours / 24)));
+}
+
+const kb = (bytes: number) =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+
+function BackupsCard() {
+  const { t } = useI18n();
+  const [runs, setRuns] = React.useState<BackupRunRow[] | null>(null);
+  const [running, setRunning] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/platform/backup");
+      const json = (await res.json()) as { ok: boolean; runs?: BackupRunRow[] };
+      if (!res.ok || !json.ok) throw new Error();
+      setRuns(json.runs ?? []);
+    } catch {
+      setRuns([]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const runNow = async () => {
+    if (running) return;
+    setRunning(true);
+    try {
+      const res = await fetch("/api/platform/backup", { method: "POST" });
+      const json = (await res.json()) as {
+        ok: boolean;
+        result?: { status: string; rows: number };
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? t("failed"));
+      toast.success(t("pccBackupDoneToast"), {
+        description: `${json.result?.rows ?? 0} ${t("pccBackupRows")} · ${t(
+          json.result?.status === "success" ? "pccBackupSuccess" : "pccBackupPartial"
+        )}`,
+      });
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("failed"));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const last = runs?.[0];
+  const statusChip = (s: string) =>
+    s === "success"
+      ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/30"
+      : s === "partial"
+        ? "bg-amber-500/10 text-amber-300 ring-amber-500/30"
+        : "bg-destructive/15 text-red-300 ring-destructive/40";
+
+  return (
+    <CineCard className="p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <Kicker className="justify-start">
+            <DatabaseBackup className="size-3.5" aria-hidden />
+            {t("pccBackupsTitle")}
+          </Kicker>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {t("pccBackupsDesc")}
+          </p>
+        </div>
+        <GoldButton
+          className="h-10 shrink-0 px-4 text-xs"
+          disabled={running}
+          onClick={() => void runNow()}
+        >
+          {running ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <ShieldCheck className="size-4" aria-hidden />
+          )}
+          {running ? t("pccBackupRunning") : t("pccBackupRunNow")}
+        </GoldButton>
+      </div>
+
+      {/* last run summary */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/[0.04] p-3 ring-1 ring-inset ring-white/[0.07]">
+        {last ? (
+          <>
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${statusChip(last.status)}`}
+            >
+              {t(
+                last.status === "success"
+                  ? "pccBackupSuccess"
+                  : last.status === "partial"
+                    ? "pccBackupPartial"
+                    : "pccBackupFailed"
+              )}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {ago(last.createdAt, t)} · {last.rows} {t("pccBackupRows")} · {kb(last.sizeBytes)}
+            </span>
+            <span
+              className={`ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${
+                last.offsite ? "text-emerald-300" : "text-amber-300"
+              }`}
+            >
+              <ShieldCheck className="size-3.5" aria-hidden />
+              {last.offsite ? t("pccBackupOffsite") : t("pccBackupOffsiteNo")}
+            </span>
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground">{t("pccBackupLastNever")}</span>
+        )}
+      </div>
+
+      {/* history */}
+      {runs && runs.length > 0 && (
+        <div className="slim-scroll mt-3 max-h-64 space-y-1.5 overflow-y-auto pr-1">
+          {runs.map((r) => (
+            <div
+              key={r.id}
+              className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2 text-xs ring-1 ring-inset ring-white/[0.05]"
+            >
+              <span className={`size-1.5 shrink-0 rounded-full ${
+                r.status === "success" ? "bg-emerald-400" : r.status === "partial" ? "bg-amber-400" : "bg-red-400"
+              }`} aria-hidden />
+              <span className="text-muted-foreground">{ago(r.createdAt, t)}</span>
+              <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground/70">
+                {r.kind === "cron" ? t("pccBackupCron") : t("pccBackupManual")}
+              </span>
+              <span className="ml-auto tabular-nums text-muted-foreground">
+                {r.rows} · {kb(r.sizeBytes)}
+              </span>
+              <span className={`shrink-0 font-bold ${r.offsite ? "text-emerald-300" : "text-amber-300"}`}>
+                {r.offsite ? "✓" : "—"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="mt-3 text-[10px] text-muted-foreground">
+        {t("pccBackupCronHint")}
+      </p>
+    </CineCard>
   );
 }

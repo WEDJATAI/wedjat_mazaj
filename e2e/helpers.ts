@@ -105,6 +105,8 @@ export async function cleanupE2EState(): Promise<void> {
   await db.errorLog.deleteMany({
     where: { message: { startsWith: "r72-e2e" } },
   });
+  // r73 — backup runs the specs recorded
+  await db.backupRun.deleteMany({});
 }
 
 /** Place a guest order through the real API (kitchen-visible). */
