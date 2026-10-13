@@ -31,7 +31,8 @@ export async function GET(req: NextRequest) {
             cost: s.cost,
             sellPrice: s.sellPrice,
             emoji: s.emoji,
-            updatedAt: new Date().toISOString(),
+            // r69 fix #3 — no fake timestamps on catalog placeholders.
+            updatedAt: null,
           }
       );
       return NextResponse.json({ ok: true, scope: "branch", branchId, items: merged });

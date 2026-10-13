@@ -384,6 +384,8 @@ function TrackedOrder({
     primaryBrandId?: string;
     components?: { brandId: string }[];
     flavorLabel: string;
+    /** r69 fix #2 — who this shisha belongs to (shared tables). */
+    forName?: string;
   }[] = [];
   try {
     const parsed = JSON.parse(order.itemsJson);
@@ -447,6 +449,12 @@ function TrackedOrder({
                   <BrandMark brandId={brandIds[0]} size="xs" noRing />
                 ) : null}
                 {it.qty}× {it.primaryBrandName} · {it.flavorLabel}
+                {it.forName && (
+                  <span className="font-semibold text-primary/90">
+                    {" "}
+                    · {it.forName}
+                  </span>
+                )}
               </span>
             );
           })}
