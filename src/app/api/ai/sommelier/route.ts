@@ -8,6 +8,13 @@ import {
   SommLang,
 } from "@/lib/sommelier";
 import { MOLASSES_GRAMS } from "@/lib/catalog";
+import { sessionEmployee } from "@/lib/auth";
+import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -26,45 +33,21 @@ const BodySchema = z.object({
   branchId: z.string().trim().optional(),
 });
 
-// Simple in-memory rate limit: 20 requests / minute / IP.
-const RATE_LIMIT = 20;
-const rateMap = new Map<string, { count: number; reset: number }>();
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateMap.get(ip);
-  if (!entry || now > entry.reset) {
-    rateMap.set(ip, { count: 1, reset: now + 60_000 });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > RATE_LIMIT;
-}
-
-// Periodic sweep so the map never grows unbounded.
-if (typeof globalThis !== "undefined") {
-  const g = globalThis as { __sommelierSweep?: ReturnType<typeof setInterval> };
-  if (!g.__sommelierSweep) {
-    g.__sommelierSweep = setInterval(() => {
-      const now = Date.now();
-      for (const [ip, e] of rateMap) {
-        if (now > e.reset) rateMap.delete(ip);
-      }
-    }, 120_000);
-  }
-}
+// r72 — the limiter is DB-backed (hitGuestRateLimit) so it holds across
+// Vercel's serverless instances; the in-memory Map this replaced reset
+// on every cold start. Signed-in staff bypass it — the sommelier is a
+// staff dashboard tool and a busy shift must never hit a wall.
 
 export async function POST(req: NextRequest) {
   try {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      req.headers.get("x-real-ip") ??
-      "local";
-    if (rateLimited(ip)) {
-      return NextResponse.json(
-        { ok: false, error: "Too many requests — take a breath 🌿" },
-        { status: 429 }
+    const caller = await sessionEmployee(req);
+    if (!caller) {
+      const limit = await hitGuestRateLimit(
+        `somm:${clientIp(req.headers)}`,
+        GUEST_LIMITS.sommelier.max,
+        GUEST_LIMITS.sommelier.windowMs
       );
+      if (!limit.ok) return guestRateLimitResponse(limit);
     }
 
     const body = await req.json();

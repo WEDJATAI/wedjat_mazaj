@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { sessionEmployee } from "@/lib/auth";
+import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
 
 // Favorites are keyed by guest name (lightweight — no auth/accounts here).
 
@@ -8,9 +15,16 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const guestName = searchParams.get("guestName");
-    const where = guestName ? { guestName } : undefined;
+    // r72 — the list is scoped to ONE guest: without this check the
+    // endpoint used to hand out every other guest's saved mixes.
+    if (!guestName) {
+      return NextResponse.json(
+        { ok: false, error: "guestName is required" },
+        { status: 400 }
+      );
+    }
     const favorites = await db.favoriteMix.findMany({
-      where,
+      where: { guestName },
       orderBy: { createdAt: "desc" },
       take: 100,
     });
@@ -40,6 +54,17 @@ const CreateFavoriteSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // r72 — cookie-free guest write → per-IP limit (staff sessions
+    // bypass, same model as the r71 guest-write endpoints)
+    const caller = await sessionEmployee(req);
+    if (!caller) {
+      const limit = await hitGuestRateLimit(
+        `fav:${clientIp(req.headers)}`,
+        GUEST_LIMITS.favorite.max,
+        GUEST_LIMITS.favorite.windowMs
+      );
+      if (!limit.ok) return guestRateLimitResponse(limit);
+    }
     const body = await req.json();
     const parsed = CreateFavoriteSchema.safeParse(body);
     if (!parsed.success) {

@@ -243,7 +243,8 @@ export function GuestTrackingSheet({
         items,
         (order.ownType as "hookah" | "molasses" | null) ?? null,
         addons,
-        guestName
+        guestName,
+        order.revision ?? null
       );
     toast.info(t("amendEditingTitle"), {
       description: t("amendGuestStartDesc"),

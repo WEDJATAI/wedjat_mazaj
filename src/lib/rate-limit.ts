@@ -129,6 +129,12 @@ export const GUEST_LIMITS = {
   amend: { max: 30, windowMs: 10 * 60 * 1000 }, // cart revisions while editing
   rate: { max: 12, windowMs: 10 * 60 * 1000 }, // one rating per order anyway
   request: { max: 15, windowMs: 10 * 60 * 1000 }, // coal refills / call requests
+  // r72 — the last cookie-free writes:
+  favorite: { max: 20, windowMs: 10 * 60 * 1000 }, // saving a mix you liked
+  favoriteDelete: { max: 40, windowMs: 10 * 60 * 1000 }, // pruning your list
+  push: { max: 15, windowMs: 10 * 60 * 1000 }, // push subscribe/unsubscribe
+  error: { max: 30, windowMs: 10 * 60 * 1000 }, // client error reports
+  sommelier: { max: 20, windowMs: 60 * 1000 }, // LLM chat turns (per minute)
 } as const;
 
 /** Uniform 429 response for a blocked guest write. */

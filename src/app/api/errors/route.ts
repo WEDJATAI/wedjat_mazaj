@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
 
 /**
  * r69 (audit ⑧) — lightweight error tracking.
@@ -25,6 +31,14 @@ const DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
+    // r72 — anonymous ingest → per-IP limit so the log can't be flooded
+    // (the client reporter self-throttles; this is the server-side net)
+    const limit = await hitGuestRateLimit(
+      `errors:${clientIp(req.headers)}`,
+      GUEST_LIMITS.error.max,
+      GUEST_LIMITS.error.windowMs
+    );
+    if (!limit.ok) return guestRateLimitResponse(limit);
     const body = await req.json().catch(() => null);
     const parsed = ReportSchema.safeParse(body);
     if (!parsed.success) {

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
 
 /**
  * POST /api/push/subscribe — register/refresh a push subscription for a
@@ -7,6 +13,9 @@ import { db } from "@/lib/db";
  *   Idempotent per endpoint (upsert), so re-subscribing is always safe.
  * POST /api/push/subscribe { unsubscribe: true, subscription } — remove the
  *   endpoint (user turned notifications off / pushsubscriptionchange).
+ *
+ * r72 — anonymous write → per-IP rate limit (browsers legitimately
+ * re-subscribe occasionally; 15 per 10 min is far above real use).
  */
 interface PushSubscriptionBody {
   subscription?: {
@@ -20,6 +29,12 @@ interface PushSubscriptionBody {
 
 export async function POST(req: NextRequest) {
   try {
+    const limit = await hitGuestRateLimit(
+      `push:${clientIp(req.headers)}`,
+      GUEST_LIMITS.push.max,
+      GUEST_LIMITS.push.windowMs
+    );
+    if (!limit.ok) return guestRateLimitResponse(limit);
     const body = (await req.json()) as PushSubscriptionBody;
     const sub = body.subscription;
     const endpoint = sub?.endpoint;

@@ -294,7 +294,8 @@ export function OrdersPanel({ onSignOut, onAmendStart }: { onSignOut: () => void
         items,
         (order.ownType as "hookah" | "molasses" | null) ?? null,
         addons,
-        employee?.name ?? "Staff"
+        employee?.name ?? "Staff",
+        order.revision ?? null
       );
     toast.info(t("amendEditingTitle"), {
       description: t("amendStartDesc"),

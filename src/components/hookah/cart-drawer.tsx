@@ -121,6 +121,9 @@ export function CartDrawer({ open, onOpenChange, onCheckout, onAmended }: CartDr
           ownType,
           addons,
           actorName: amendActorName ?? undefined,
+          // r72 — optimistic concurrency: reject the save if another
+          // editor committed a change since this session loaded the order
+          baseRevision: amendOriginal?.baseRevision ?? undefined,
         }),
       });
       const data = await res.json();

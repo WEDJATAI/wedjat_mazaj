@@ -82,9 +82,20 @@ const AmendSchema = z.object({
   table: z.string().trim().max(40).optional().nullable(),
   actorName: z.string().trim().max(80).optional().nullable(),
   actorId: z.string().optional().nullable(),
+  /** r72 — optimistic concurrency: the order revision this edit started
+   *  from. When present and stale, the save is rejected (409) instead of
+   *  silently discarding the other editor's changes. */
+  baseRevision: z.number().int().nonnegative().optional().nullable(),
 });
 
 type ParsedItem = z.infer<typeof CartItemSchema>;
+
+/** r72 — another editor committed a change while this amend was in
+ *  flight; nothing was written (the whole transaction rolls back). */
+class OrderChangedError extends Error {}
+
+const ORDER_CHANGED_MESSAGE =
+  "This order was just changed by someone else — reopen it to see the latest version, then save again.";
 
 /* ── human-readable diff between two item sets ───────────────────── */
 
@@ -203,6 +214,20 @@ export async function POST(
           error:
             "This order is already served — it can no longer be modified.",
         },
+        { status: 409 }
+      );
+    }
+
+    // r72 — client-side staleness guard: the editor pins the revision it
+    // loaded; if the order moved on since (kitchen amend, the other
+    // side of the table, the guest tracker…), refuse instead of letting
+    // the stale save silently discard the newer changes.
+    if (
+      data.baseRevision != null &&
+      data.baseRevision !== order.revision
+    ) {
+      return NextResponse.json(
+        { ok: false, error: ORDER_CHANGED_MESSAGE },
         { status: 409 }
       );
     }
@@ -526,8 +551,15 @@ export async function POST(
         }
       }
 
-      const saved = await tx.order.update({
-        where: { id: order.id },
+      // r72 — optimistic lock on revision: if another amendment
+      // committed between our read of `order` and this write, the
+      // conditional update matches ZERO rows and we abort — rolling
+      // back the stock deltas, the loyalty adjustment and the comment
+      // with it. Without this, two racing amends both computed their
+      // deltas against the same stale state and double-decremented jars
+      // (or returned grams twice) while only one itemsJson survived.
+      const commit = await tx.order.updateMany({
+        where: { id: order.id, revision: order.revision },
         data: {
           itemsJson: JSON.stringify(sanitized),
           addonsJson: JSON.stringify(validAddons),
@@ -550,6 +582,11 @@ export async function POST(
           amendedByName: actorName,
         },
       });
+      if (commit.count === 0) {
+        throw new OrderChangedError();
+      }
+      const saved = await tx.order.findUnique({ where: { id: order.id } });
+      if (!saved) throw new OrderChangedError(); // unreachable: the conditional update just matched this row
 
       // the amendment diff lands in the staff comment thread
       await tx.orderComment.create({
@@ -581,6 +618,14 @@ export async function POST(
       // written (rolled back); surface the same 409 as pre-r69.
       return NextResponse.json(
         { ok: false, error: err.message },
+        { status: 409 }
+      );
+    }
+    if (err instanceof OrderChangedError) {
+      // r72 — a concurrent amendment won the commit race: this save
+      // (and its stock/loyalty side effects) rolled back entirely.
+      return NextResponse.json(
+        { ok: false, error: ORDER_CHANGED_MESSAGE },
         { status: 409 }
       );
     }

@@ -67,8 +67,16 @@ interface CartState {
   amendOrderId: string | null;
   /** display name of the person amending (employee or guest) */
   amendActorName: string | null;
-  /** the order's original state, so the drawer can show a delta summary */
-  amendOriginal: { items: CartItem[]; ownType: OwnType; addons: string[] } | null;
+  /** the order's original state, so the drawer can show a delta summary.
+   *  r72: baseRevision = the order revision this edit session started
+   *  from — the amend API rejects the save if someone else committed a
+   *  change in between (optimistic concurrency). */
+  amendOriginal: {
+    items: CartItem[];
+    ownType: OwnType;
+    addons: string[];
+    baseRevision: number | null;
+  } | null;
   /** a draft cart that existed before the amend session started */
   amendStash: CartStash | null;
   addItem: (item: Omit<CartItem, "id">) => void;
@@ -79,13 +87,15 @@ interface CartState {
   clear: () => void;
   setOwnType: (own: OwnType) => void;
   toggleAddon: (key: string) => void;
-  /** r58: start editing a placed order — stashes any draft cart first */
+  /** r58: start editing a placed order — stashes any draft cart first.
+   *  r72: baseRevision pins the edit to the revision the editor loaded. */
   beginAmend: (
     orderId: string,
     items: CartItem[],
     ownType: OwnType,
     addons: string[],
-    actorName: string
+    actorName: string,
+    baseRevision?: number | null
   ) => void;
   /** r58: leave amend mode — restores the stashed draft cart (if any) */
   endAmend: () => void;
@@ -230,7 +240,7 @@ export const useCart = create<CartState>()(
             ? state.addons.filter((k) => k !== key)
             : [...state.addons, key],
         })),
-      beginAmend: (orderId, items, ownType, addons, actorName) =>
+      beginAmend: (orderId, items, ownType, addons, actorName, baseRevision) =>
         set((state) => ({
           // stash any draft cart so it comes back after the amend session
           amendStash:
@@ -242,7 +252,12 @@ export const useCart = create<CartState>()(
           addons: [...addons],
           amendOrderId: orderId,
           amendActorName: actorName,
-          amendOriginal: { items: items.map((i) => ({ ...i })), ownType, addons: [...addons] },
+          amendOriginal: {
+            items: items.map((i) => ({ ...i })),
+            ownType,
+            addons: [...addons],
+            baseRevision: baseRevision ?? null,
+          },
         })),
       endAmend: () =>
         set((state) => {

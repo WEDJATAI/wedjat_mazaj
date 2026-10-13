@@ -95,6 +95,16 @@ export async function cleanupE2EState(): Promise<void> {
   await db.serviceRequest.deleteMany({
     where: { guestName: { startsWith: E2E_TABLE_PREFIX } },
   });
+  // r72 — junk rows the limiter specs create
+  await db.favoriteMix.deleteMany({
+    where: { guestName: { startsWith: E2E_TABLE_PREFIX } },
+  });
+  await db.pushSubscription.deleteMany({
+    where: { endpoint: { startsWith: "https://r72-e2e.push.local" } },
+  });
+  await db.errorLog.deleteMany({
+    where: { message: { startsWith: "r72-e2e" } },
+  });
 }
 
 /** Place a guest order through the real API (kitchen-visible). */
