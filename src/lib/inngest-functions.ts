@@ -13,6 +13,8 @@ import {
   fullMenuSyncToWedjat,
   pushAvailabilityToWedjat,
   pushOrderToWedjat,
+  resolveWedjatTableRef,
+  syncWedjatTables,
 } from "@/lib/wedjat";
 
 /**
@@ -57,8 +59,12 @@ export const pollRevocations = inngest.createFunction(
 
 /**
  * Job 2: Retry failed order syncs to Wedjat every 5 minutes.
- * Only orders from the last 24h are retried — older failures stay failed
- * for manual review (a permanently-wrong table reference will never heal).
+ * r74: the window is 72h (was 24h — a weekend of RSM downtime used to
+ * leave orders failed forever) and each attempt RE-RESOLVES the table
+ * label against the floor-plan mirror, so an order that failed because
+ * its table wasn't in the RSM floor plan self-heals the moment the
+ * restaurant adds that table. Older failures stay failed for manual
+ * review.
  *
  * r47: also re-drives orders stuck in "pending" for >5 minutes. The order
  * POST fire-and-forget (void syncToWedjat) can be suspended by the serverless
@@ -75,7 +81,7 @@ export const retryFailedSyncs = inngest.createFunction(
   },
   async ({ step }) => {
     return await step.run("retry-syncs", async () => {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const since = new Date(Date.now() - 72 * 60 * 60 * 1000);
       const stuckPendingBefore = new Date(Date.now() - 5 * 60 * 1000);
       const failed = await db.order.findMany({
         where: {
@@ -88,6 +94,7 @@ export const retryFailedSyncs = inngest.createFunction(
       });
 
       let succeeded = 0;
+      let healed = 0;
       for (const order of failed) {
         try {
           let addons: string[] = [];
@@ -96,12 +103,38 @@ export const retryFailedSyncs = inngest.createFunction(
           } catch {
             addons = [];
           }
+          // r74 — re-resolve the table label against the (fresh) floor-plan
+          // mirror before pushing: an unresolved label was the #1 failure
+          // cause, and the mirror may have learned the table since.
+          let wedjatTableId = order.wedjatTableId;
+          if (wedjatTableId == null && (order.table ?? "").trim()) {
+            const ref = await resolveWedjatTableRef(order.table ?? "", order.wedjatFloor);
+            if (ref.tableId != null) {
+              wedjatTableId = ref.tableId;
+              healed++;
+              await db.order
+                .update({
+                  where: { id: order.id },
+                  data: { wedjatTableId, wedjatFloor: ref.floor },
+                })
+                .catch(() => {});
+            } else if (ref.reason && ref.reason !== order.wedjatSyncError) {
+              // keep the stored reason current (floor plan changed → the
+              // reason text may name different floors now)
+              await db.order
+                .update({
+                  where: { id: order.id },
+                  data: { wedjatSyncError: ref.reason.slice(0, 300) },
+                })
+                .catch(() => {});
+            }
+          }
           const result = await pushOrderToWedjat({
             id: order.id,
             customerName: order.customerName,
             phone: order.phone,
             table: order.table,
-            wedjatTableId: order.wedjatTableId,
+            wedjatTableId,
             notes: order.notes,
             itemsJson: order.itemsJson,
             bogo: order.bogo,
@@ -113,15 +146,26 @@ export const retryFailedSyncs = inngest.createFunction(
               data: {
                 wedjatOrderId: result.wedjatOrderId ?? null,
                 wedjatSyncStatus: "synced",
+                wedjatSyncError: null,
               },
             });
             succeeded++;
+          } else {
+            await db.order
+              .update({
+                where: { id: order.id },
+                data: {
+                  wedjatSyncStatus: "failed",
+                  wedjatSyncError: (result.error ?? "push failed").slice(0, 300),
+                },
+              })
+              .catch(() => {});
           }
         } catch {
           // still failed, will be retried next cycle
         }
       }
-      return { retried: failed.length, succeeded };
+      return { retried: failed.length, succeeded, healed };
     });
   }
 );
@@ -157,6 +201,8 @@ export const syncPricesHourly = inngest.createFunction(
  * Job 5 (R46): Availability mirror every 15 minutes — the POS shisha menu
  * always shows only what the mazaj inventory can actually make. (Orders
  * also trigger an immediate push; this is the self-healing safety net.)
+ * r74: also refreshes the WedjatTable floor-plan mirror (the guest table
+ * label → numeric tableId resolver's source of truth).
  */
 export const availabilityMirror = inngest.createFunction(
   {
@@ -167,7 +213,8 @@ export const availabilityMirror = inngest.createFunction(
   async ({ step }) => {
     return await step.run("push-availability", async () => {
       const r = await pushAvailabilityToWedjat();
-      return { ok: r.ok, matched: r.matched ?? 0 };
+      const t = await syncWedjatTables();
+      return { ok: r.ok, matched: r.matched ?? 0, tables: t.ok ? t.tables : 0 };
     });
   }
 );

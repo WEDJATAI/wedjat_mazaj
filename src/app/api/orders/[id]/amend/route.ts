@@ -18,6 +18,8 @@ import { pointsEarnedOn, tierForLifetime } from "@/lib/loyalty";
 import { applyCatalogOverrides } from "@/lib/platform-settings";
 import { StockShortError } from "@/lib/stock-guard";
 import { sessionEmployee } from "@/lib/auth";
+import { pushWebhookItemsToWedjat } from "@/lib/wedjat";
+import { mapOrderItems, type OrderItemJson, type WebhookItem } from "@/lib/rsm-mapping";
 import {
   clientIp,
   GUEST_LIMITS,
@@ -599,6 +601,122 @@ export async function POST(
 
       return saved;
     });
+
+    // ── r74 — keep the restaurant POS check in sync with the amendment ──
+    // The RSM webhook can only ADD lines to a check (no update/void op),
+    // so: net-ADDED lines are delivered as an amendment delta (a fresh
+    // idempotent externalId "<orderId>:r<revision>" that lands on the same
+    // table's open check — or a new check if it was already closed); net
+    // REMOVED lines cannot be retracted — the staff gets a comment telling
+    // them to void those lines in the POS. Deltas are computed on the
+    // MAPPED check lines (bogo-aware), so a 2-for-1 qty bump never
+    // double-charges.
+    try {
+      const aggregate = (lines: WebhookItem[]) => {
+        const m = new Map<string, WebhookItem>();
+        for (const l of lines) {
+          const cur = m.get(l.sku);
+          if (cur) cur.quantity += l.quantity;
+          else m.set(l.sku, { ...l });
+        }
+        return m;
+      };
+      const oldLines = aggregate(
+        mapOrderItems(oldItems as unknown as OrderItemJson[], order.bogo, oldAddons)
+      );
+      const newLines = aggregate(
+        mapOrderItems(sanitized as unknown as OrderItemJson[], updated.bogo, validAddons)
+      );
+      const added: WebhookItem[] = [];
+      const removedNames: string[] = [];
+      for (const [sku, line] of newLines) {
+        const oldQty = oldLines.get(sku)?.quantity ?? 0;
+        if (line.quantity > oldQty) {
+          added.push({ ...line, quantity: line.quantity - oldQty });
+        } else if (line.quantity < oldQty) {
+          removedNames.push(`${line.name}: ${oldQty} → ${line.quantity}`);
+        }
+      }
+      for (const [sku, line] of oldLines) {
+        if (!newLines.has(sku)) removedNames.push(`${line.name}: ${line.quantity} → 0`);
+      }
+
+      let removalStamp: string | null = null;
+      if (removedNames.length > 0) {
+        removalStamp =
+          `amend r${revision}: removed items still on the POS check — void manually (${removedNames
+            .join(" · ")
+            .slice(0, 180)})`;
+        await db.orderComment.create({
+          data: {
+            orderId: order.id,
+            author: "Wedjat sync",
+            body:
+              `⚠ Amendment r${revision} removed lines that are already on the restaurant check — ` +
+              `void them in the Wedjat POS: ${removedNames.join(" · ")}`,
+          },
+        });
+        await db.order
+          .update({
+            where: { id: order.id },
+            data: { wedjatSyncError: removalStamp },
+          })
+          .catch(() => {});
+      }
+
+      if (added.length > 0 && updated.wedjatSyncStatus === "synced") {
+        // pre-stamp so a suspended serverless runtime can't lose the fact
+        // that a delta delivery is in flight
+        await db.order
+          .update({
+            where: { id: order.id },
+            data: { wedjatSyncError: `amend r${revision}: delivering ${added.length} added line(s)…` },
+          })
+          .catch(() => {});
+        void (async () => {
+          const result = await pushWebhookItemsToWedjat(
+            {
+              customerName: updated.customerName,
+              phone: updated.phone,
+              table: updated.table,
+              wedjatTableId: updated.wedjatTableId,
+              notes: `amendment r${revision}: ${added
+                .map((a) => `+${a.quantity}× ${a.name}`)
+                .join(", ")}`,
+            },
+            added,
+            `${order.id}:r${revision}`
+          );
+          if (result.ok) {
+            console.log(
+              `[rsm sync] amend r${revision} delta delivered, wedjat id:`,
+              result.wedjatOrderId
+            );
+            // clear — or restore the removal warning when one was stamped
+            await db.order
+              .update({
+                where: { id: order.id },
+                data: { wedjatSyncError: removalStamp },
+              })
+              .catch(() => {});
+          } else {
+            console.warn(`[rsm sync] amend r${revision} delta failed:`, result.error);
+            await db.order
+              .update({
+                where: { id: order.id },
+                data: {
+                  wedjatSyncError: `amend r${revision} delta not delivered: ${(
+                    result.error ?? "push failed"
+                  ).slice(0, 200)}`,
+                },
+              })
+              .catch(() => {});
+          }
+        })().catch(() => {});
+      }
+    } catch (deltaErr) {
+      console.warn("[rsm sync] amend delta computation failed:", deltaErr);
+    }
 
     // Cloud → phone: tell the guest their order changed (best-effort).
     const guestName = updated.customerName?.trim();

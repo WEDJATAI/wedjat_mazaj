@@ -164,6 +164,7 @@ export function GuestOrder() {
         defaultCustomer={guest.name}
         defaultTable={guest.table}
         defaultTableId={tableCtx.tableId}
+        defaultTableFloor={guest.tableFloor ?? null}
         branchId={guest.branchId ?? null}
         onSignOut={signOut}
         enableScan

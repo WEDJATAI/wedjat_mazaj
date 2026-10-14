@@ -41,6 +41,7 @@ interface SyncedOrder {
   total: number;
   wedjatOrderId: number | null;
   wedjatSyncStatus: string;
+  wedjatSyncError?: string | null;
   wedjatRevokedBy: string | null;
   wedjatRevokedAt: string | null;
   createdAt: string;
@@ -52,6 +53,8 @@ export function SyncPanel({ onSignOut }: { onSignOut: () => void }) {
   const [loading, setLoading] = React.useState(true);
   const [syncingRevocations, setSyncingRevocations] = React.useState(false);
   const [syncingPrices, setSyncingPrices] = React.useState(false);
+  // r74 — per-order manual retry (re-push to the Wedjat check)
+  const [retrying, setRetrying] = React.useState<Set<string>>(new Set());
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -144,6 +147,37 @@ export function SyncPanel({ onSignOut }: { onSignOut: () => void }) {
   const revoked = orders.filter((o) => o.wedjatSyncStatus === "revoked");
   const synced = orders.filter((o) => o.wedjatSyncStatus === "synced");
   const failed = orders.filter((o) => o.wedjatSyncStatus === "failed");
+
+  // r74 — manual retry: re-push one order to its Wedjat check (re-resolves
+  // the table label first; idempotent on the RSM side)
+  const retryOrder = async (orderId: string) => {
+    setRetrying((prev) => new Set(prev).add(orderId));
+    try {
+      const res = await fetch("/api/wedjat/push-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error ?? "Push failed");
+      }
+      toast.success("Order pushed to Wedjat", {
+        description: data.duplicate
+          ? "Already on the check — status healed"
+          : `Check #${data.wedjatOrderId} updated`,
+      });
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Push failed");
+    } finally {
+      setRetrying((prev) => {
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
+    }
+  };
 
   return (
     <ScreenShell className="min-h-screen">
@@ -271,6 +305,50 @@ export function SyncPanel({ onSignOut }: { onSignOut: () => void }) {
           <StatCard label="Failed" value={String(failed.length)} color="red" />
         </section>
 
+        {/* r74 — Failed orders: the REASON is stored on the order, and a
+            manual retry re-pushes (after re-resolving the table label) */}
+        {failed.length > 0 && (
+          <section className="mb-6">
+            <h2 className="sr-only">Not on the restaurant check</h2>
+            <Kicker className="mb-3 justify-start">Not on the restaurant check</Kicker>
+            <Stagger className="space-y-2">
+              {failed.map((o) => (
+                <StaggerItem key={o.id}>
+                  <div className="glass flex flex-wrap items-center gap-3 rounded-2xl p-3 ring-1 ring-red-500/25">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-500/15 text-red-500">
+                      <AlertTriangle className="size-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">
+                        {o.customerName || "Walk-in"} · {o.table || "no table"}
+                      </p>
+                      <p className="text-xs text-red-400/90">
+                        {o.wedjatSyncError || "Push failed — retry to see the reason"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(o.createdAt).toLocaleString()} · {o.total} EGP
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => retryOrder(o.id)}
+                      disabled={retrying.has(o.id)}
+                      className="glass flex items-center gap-1.5 rounded-xl border-red-500/30 px-3 py-2 text-xs font-semibold text-red-300 transition-colors hover:border-red-500/60 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      {retrying.has(o.id) ? (
+                        <RefreshCw className="size-3.5 animate-spin" />
+                      ) : (
+                        <ArrowUpRight className="size-3.5" />
+                      )}
+                      Retry push
+                    </button>
+                  </div>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </section>
+        )}
+
         {/* Revoked orders (with Wedjat employee attribution) */}
         {revoked.length > 0 && (
           <section className="mb-6">
@@ -338,6 +416,11 @@ export function SyncPanel({ onSignOut }: { onSignOut: () => void }) {
                         Wedjat #{o.wedjatOrderId} ·{" "}
                         {new Date(o.createdAt).toLocaleString()}
                       </p>
+                      {/* r74 — surface amend-delta / removal warnings on
+                           synced orders (the check needs a manual POS fix) */}
+                      {o.wedjatSyncError && (
+                        <p className="text-xs text-amber-400/90">⚠ {o.wedjatSyncError}</p>
+                      )}
                     </div>
                     <div className="text-end">
                       <p className="font-display text-sm font-bold tabular-nums text-gold-soft">

@@ -14,7 +14,12 @@ import {
   serverComponentGrams,
   supplyConsumption,
 } from "@/lib/catalog";
-import { pushOrderToWedjat, pushAvailabilityToWedjat } from "@/lib/wedjat";
+import {
+  pushOrderToWedjat,
+  pushAvailabilityToWedjat,
+  resolveWedjatTableRef,
+  syncWedjatTables,
+} from "@/lib/wedjat";
 import { resolveBranchScope } from "@/lib/branch-scope";
 import { applyCatalogOverrides } from "@/lib/platform-settings";
 import { requireStaff, sessionEmployee } from "@/lib/auth";
@@ -71,6 +76,11 @@ const CreateOrderSchema = z.object({
   // the check (names repeat across the restaurant's floors). Comes from
   // the POS "Order Shisha" button URL (?tableId=) or the table picker.
   tableId: z.number().int().positive().max(1_000_000_000).optional().nullable(),
+  // r74: the floor the guest said they're sitting on ("In Door داخلي" /
+  // "Out Door خارجي" / "in" / "out") — captured at guest check-in when the
+  // table number exists on several floors; the server uses it to resolve
+  // the numeric tableId from the WedjatTable mirror.
+  tableFloor: z.string().trim().max(60).nullish().or(z.literal("")),
   notes: z.string().trim().max(400).nullish().or(z.literal("")),
   items: z.array(CartItemSchema).min(1, "Add at least one hookah"),
   subtotal: z.number().nonnegative(),
@@ -283,6 +293,29 @@ export async function POST(req: NextRequest) {
     const finalCogs = Math.round((cogs.totalCogs + addonCost) * 100) / 100;
     const profit = computeProfit(grandTotal, finalCogs);
 
+    // ── r74 — resolve the guest's table label to the NUMERIC Wedjat RSM ──
+    // table id (the only unambiguous check reference — table names repeat
+    // across the restaurant's floors: indoor "5" and outdoor "5" are
+    // different checks). Resolution uses the WedjatTable mirror; when the
+    // mirror is empty (fresh deploy / RSM was down) it bootstraps in the
+    // background — the order proceeds unresolved and the Inngest retry
+    // re-resolves it later. NEVER blocks the order (Mazaj principle).
+    let resolvedTableId = data.tableId ?? null;
+    let resolvedFloor: string | null = null;
+    let resolvedError: string | null = null;
+    if (!resolvedTableId && (data.table || "").trim()) {
+      const ref = await resolveWedjatTableRef(data.table ?? "", data.tableFloor ?? null);
+      resolvedTableId = ref.tableId;
+      resolvedFloor = ref.floor;
+      resolvedError = ref.reason ? ref.reason.slice(0, 300) : null;
+      if (ref.reason) console.warn("[r74 table-ref]", ref.reason);
+      if (ref.mirrorEmpty) {
+        // fresh deployment / RSM was down — bootstrap the mirror in the
+        // background; the Inngest retry re-resolves this order later
+        void syncWedjatTables().catch(() => {});
+      }
+    }
+
     // --- Create order + deduct everything in a single transaction ---
     // R49 loyalty summary — populated inside the transaction and returned
     // to the confirmation UI.
@@ -397,7 +430,9 @@ export async function POST(req: NextRequest) {
           customerName: data.customerName || null,
           phone: data.phone || null,
           table: data.table || null,
-          wedjatTableId: data.tableId ?? null,
+          wedjatTableId: resolvedTableId,
+          wedjatFloor: resolvedFloor,
+          wedjatSyncError: resolvedError,
           notes: data.notes || null,
           itemsJson: JSON.stringify(sanitizedItems),
           addonsJson: JSON.stringify(validAddons),
@@ -683,10 +718,14 @@ async function syncToWedjat(opts: {
     const result = await pushOrderToWedjat(opts.order);
     if (!result.ok) {
       console.warn("[rsm sync] failed:", result.error);
-      // Record failure so it can be retried
+      // Record failure + the REASON so the sync dashboard shows why
+      // (r74 — the error used to be console-only)
       await db.order.update({
         where: { id: opts.order.id },
-        data: { wedjatSyncStatus: "failed" },
+        data: {
+          wedjatSyncStatus: "failed",
+          wedjatSyncError: (result.error ?? "push failed").slice(0, 300),
+        },
       }).catch(() => {});
     } else {
       console.log(
@@ -699,11 +738,19 @@ async function syncToWedjat(opts: {
         data: {
           wedjatOrderId: result.wedjatOrderId ?? null,
           wedjatSyncStatus: "synced",
+          wedjatSyncError: null,
         },
       }).catch(() => {});
     }
   } catch (err) {
     console.warn("[rsm sync] error:", err);
+    await db.order.update({
+      where: { id: opts.order.id },
+      data: {
+        wedjatSyncStatus: "failed",
+        wedjatSyncError: err instanceof Error ? err.message.slice(0, 300) : "push threw",
+      },
+    }).catch(() => {});
   }
 }
 

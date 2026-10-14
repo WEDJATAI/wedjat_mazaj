@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { pushOrderToWedjat } from "@/lib/wedjat";
+import { pushOrderToWedjat, resolveWedjatTableRef } from "@/lib/wedjat";
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth";
 
@@ -40,18 +40,38 @@ export async function POST(req: NextRequest) {
     } catch {
       addons = [];
     }
+    // r74 — re-resolve the table label against the floor-plan mirror first
+    // (the order may have failed BEFORE the table was added on the RSM side)
+    let wedjatTableId = order.wedjatTableId;
+    let wedjatFloor = order.wedjatFloor;
+    if (wedjatTableId == null && (order.table ?? "").trim()) {
+      const ref = await resolveWedjatTableRef(order.table ?? "", order.wedjatFloor);
+      if (ref.tableId != null) {
+        wedjatTableId = ref.tableId;
+        wedjatFloor = ref.floor;
+      }
+    }
     const result = await pushOrderToWedjat({
       id: order.id,
       customerName: order.customerName,
       phone: order.phone,
       table: order.table,
-      wedjatTableId: order.wedjatTableId,
+      wedjatTableId,
       notes: order.notes,
       itemsJson: order.itemsJson,
       bogo: order.bogo,
       addonsJson: addons,
     });
     if (!result.ok) {
+      await db.order
+        .update({
+          where: { id: order.id },
+          data: {
+            wedjatSyncStatus: "failed",
+            wedjatSyncError: (result.error ?? "push failed").slice(0, 300),
+          },
+        })
+        .catch(() => {});
       return NextResponse.json({ ok: false, error: result.error }, { status: 409 });
     }
     await db.order
@@ -59,7 +79,10 @@ export async function POST(req: NextRequest) {
         where: { id: order.id },
         data: {
           wedjatOrderId: result.wedjatOrderId ?? null,
+          wedjatTableId,
+          wedjatFloor,
           wedjatSyncStatus: "synced",
+          wedjatSyncError: null,
         },
       })
       .catch(() => {});

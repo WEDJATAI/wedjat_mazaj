@@ -434,6 +434,11 @@ export interface Translations {
   chooseBranchGuest: string;
   branchLabel: string;
   branchChip: string;
+  // r74 — guest floor question (table number exists on several floors)
+  floorQuestion: string;
+  floorIndoors: string;
+  floorOutdoors: string;
+  floorOther: string;
 
   // r57 — inventory matrix (venue admins)
   invTotalAll: string;
@@ -1504,6 +1509,10 @@ export const translations: Record<Lang, Partial<Translations>> = {
     chooseBranchGuest: "Which branch are you at?",
     branchLabel: "Branch",
     branchChip: "Branch",
+    floorQuestion: "Where are you sitting?",
+    floorIndoors: "Indoors",
+    floorOutdoors: "Outdoors",
+    floorOther: "Other floor",
 
     // r57 — inventory matrix (venue admins)
     invTotalAll: "Total · all branches",
@@ -2578,6 +2587,10 @@ export const translations: Record<Lang, Partial<Translations>> = {
     chooseBranchGuest: "أنت في أي فرع؟",
     branchLabel: "الفرع",
     branchChip: "فرع",
+    floorQuestion: "قاعد فين؟",
+    floorIndoors: "داخلي",
+    floorOutdoors: "خارجي",
+    floorOther: "دور آخر",
 
     // r57 — inventory matrix (venue admins)
     invTotalAll: "الإجمالي · كل الفروع",

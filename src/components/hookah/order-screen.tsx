@@ -81,6 +81,9 @@ interface OrderScreenProps {
   /** R46: numeric Wedjat table id (POS link / picker) — threaded to the
    * checkout payload so the check lands on the right table. */
   defaultTableId?: number | null;
+  /** r74: the floor the guest picked at check-in (threaded to the checkout
+   * so an ambiguous table number resolves to the right floor's table). */
+  defaultTableFloor?: string | null;
   /** r57: the branch this order is placed at (guest session / employee scope) */
   branchId?: string | null;
   headerExtra?: React.ReactNode;
@@ -111,6 +114,7 @@ export function OrderScreen({
   defaultCustomer,
   defaultTable,
   defaultTableId,
+  defaultTableFloor,
   branchId,
   headerExtra,
   onSignOut,
@@ -1178,6 +1182,7 @@ export function OrderScreen({
         defaultCustomer={defaultCustomer}
         defaultTable={defaultTable}
         defaultTableId={defaultTableId}
+        defaultTableFloor={defaultTableFloor}
         branchId={branchId}
         onOrderPlaced={onOrderPlaced}
         variant={expressCheckout ? "express" : "full"}

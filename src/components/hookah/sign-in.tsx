@@ -475,6 +475,12 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
   const tableCtx = useTableContext();
   // r65 — the guest identity IS the table: no name, just the table number.
   const [table, setTable] = React.useState("");
+  // r74 — the restaurant floor plan (from the Wedjat RSM mirror). When the
+  // typed table number exists on SEVERAL floors (indoor "5" / outdoor "5"),
+  // the guest is asked which one — the answer resolves the NUMERIC table id
+  // so the order lands on the right table's POS check.
+  const [floors, setFloors] = React.useState<{ floor: string; tables: string[] }[]>([]);
+  const [floorPick, setFloorPick] = React.useState<string>("");
   // r57 — which branch is this guest sitting at?
   const [branches, setBranches] = React.useState<
     { id: string; name: string; nameAr: string | null; venueName: string; venueNameAr: string | null; isFlagship: boolean }[]
@@ -494,6 +500,14 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
         setBranchId((prev) => prev || list.find((b) => b.isFlagship)?.id || list[0]?.id || "");
       } catch {
         // silent — single-branch/legacy behavior when unreachable
+      }
+      try {
+        const fres = await fetch("/api/wedjat/floors");
+        const fdata = await fres.json();
+        if (cancelled || !fdata.ok) return;
+        setFloors((fdata.floors ?? []) as { floor: string; tables: string[] }[]);
+      } catch {
+        // silent — floor question simply doesn't appear
       }
     })();
     return () => {
@@ -516,6 +530,25 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
   const valid = table.trim().length > 0;
   const selectedBranch = branches.find((b) => b.id === branchId) ?? null;
 
+  // r74 — does the typed number exist on several floors? (skip when the
+  // POS link already carries the unambiguous numeric table id)
+  const typed = table.trim().toLowerCase();
+  const floorOptions =
+    tableCtx.fromPosLink && tableCtx.tableId != null
+      ? []
+      : floors.filter((f) => f.tables.some((n) => n.trim().toLowerCase() === typed));
+  const showFloorQuestion = floorOptions.length >= 2;
+  // changing the table number invalidates the earlier floor answer
+  React.useEffect(() => {
+    setFloorPick("");
+  }, [typed]);
+  const floorLabel = (floor: string) => {
+    const f = floor.toLowerCase();
+    if (f.startsWith("in") || floor.includes("داخلي")) return t("floorIndoors");
+    if (f.startsWith("out") || floor.includes("خارجي")) return t("floorOutdoors");
+    return floor;
+  };
+
   const submit = () => {
     if (!valid) return;
     const tableLabel =
@@ -527,6 +560,7 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
       branchName: selectedBranch
         ? (lang === "ar" && selectedBranch.nameAr) || selectedBranch.name
         : null,
+      tableFloor: showFloorQuestion ? floorPick || null : null,
     });
     toast.success(`${tableLabel} 🎉`);
   };
@@ -567,6 +601,38 @@ function GuestPanel({ onBack }: { onBack: () => void }) {
             {t("linkedPosNote")}
             {tableCtx.tableName ? ` · ${tableCtx.tableName}` : ""}
           </p>
+        )}
+
+        {/* r74 — the floor question: the typed table number exists on
+            several floors, so ask which one (resolves the right POS check) */}
+        {showFloorQuestion && (
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground/85">
+              <MapPin className="size-3 text-primary" />
+              {t("floorQuestion")}
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {floorOptions.map((f) => {
+                const active = floorPick === f.floor;
+                return (
+                  <button
+                    key={f.floor}
+                    type="button"
+                    onClick={() => setFloorPick(active ? "" : f.floor)}
+                    aria-pressed={active}
+                    className={
+                      "flex min-h-11 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-all duration-200 " +
+                      (active
+                        ? "border-primary/50 bg-primary/15 text-primary"
+                        : "border-white/[0.12] bg-white/[0.05] text-foreground/90 hover:border-primary/35")
+                    }
+                  >
+                    {floorLabel(f.floor)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {/* r57 — the branch picker (only when the venue has multiple) */}

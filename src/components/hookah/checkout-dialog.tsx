@@ -49,6 +49,9 @@ interface CheckoutDialogProps {
    * unambiguous check reference. Dropped if the user edits the table
    * text manually (their edit wins, matched by name server-side). */
   defaultTableId?: number | null;
+  /** r74 — the floor the guest picked at check-in; preselects the floor
+   * chip when the table number exists on several floors. */
+  defaultTableFloor?: string | null;
   /** id of a saved favorite mix applied to this order (optional) */
   favoriteMixId?: string | null;
   /** r57: the branch receiving this order (stock deducts from its jars) */
@@ -66,6 +69,8 @@ interface PlaceOrderPayload {
   phone: string;
   table?: string;
   tableId?: number | null;
+  /** r74 — floor hint for an ambiguous table number ("In Door داخلي"…) */
+  tableFloor?: string | null;
   notes?: string;
   items: CartItem[];
   subtotal: number;
@@ -111,6 +116,7 @@ export function CheckoutDialog({
   defaultCustomer,
   defaultTable,
   defaultTableId,
+  defaultTableFloor,
   favoriteMixId,
   branchId,
   onOrderPlaced,
@@ -129,6 +135,10 @@ export function CheckoutDialog({
   const [phone, setPhone] = React.useState("");
   const [table, setTable] = React.useState("");
   const [tableTouched, setTableTouched] = React.useState(false);
+  // r74 — the floor plan (guests/staff get asked "indoors or outdoors?"
+  // when the typed table number exists on several floors)
+  const [floors, setFloors] = React.useState<{ floor: string; tables: string[] }[]>([]);
+  const [floorPick, setFloorPick] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [done, setDone] = React.useState<{
@@ -157,6 +167,53 @@ export function CheckoutDialog({
       setRedeem(0);
     }
   }, [open, defaultCustomer, defaultTable]);
+
+  // r74 — load the restaurant floor plan once per dialog open (PUBLIC
+  // minimal projection — floor names + table numbers, no POS internals).
+  React.useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/wedjat/floors");
+        const data = await res.json();
+        if (!cancelled && data.ok) {
+          setFloors((data.floors ?? []) as { floor: string; tables: string[] }[]);
+        }
+      } catch {
+        // silent — the floor question simply doesn't appear
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  // r74 — when the typed table number exists on SEVERAL floors, ask which
+  // one (the server resolves the NUMERIC table id from label + floor —
+  // the only way the order lands on the right table's POS check).
+  const typedTable = table.trim().toLowerCase();
+  const floorOptions = floors.filter((f) =>
+    f.tables.some((n) => n.trim().toLowerCase() === typedTable)
+  );
+  const showFloorQuestion = floorOptions.length >= 2;
+  React.useEffect(() => {
+    // preselect the guest's check-in answer; a fresh number resets the pick
+    setFloorPick(
+      showFloorQuestion &&
+        !tableTouched &&
+        defaultTableFloor &&
+        floorOptions.some((f) => f.floor === defaultTableFloor)
+        ? defaultTableFloor
+        : ""
+    );
+  }, [typedTable, showFloorQuestion, tableTouched, defaultTableFloor]);
+  const floorLabel = (floor: string) => {
+    const f = floor.toLowerCase();
+    if (f.startsWith("in") || floor.includes("داخلي")) return t("floorIndoors");
+    if (f.startsWith("out") || floor.includes("خارجي")) return t("floorOutdoors");
+    return floor;
+  };
 
   // Debounced loyalty lookup whenever the phone is long enough.
   React.useEffect(() => {
@@ -219,6 +276,7 @@ export function CheckoutDialog({
       phone: phone.trim(),
       table: table.trim(),
       tableId: tableTouched ? null : (defaultTableId ?? null),
+      tableFloor: floorPick || (defaultTableFloor ?? null),
       notes: notes.trim(),
       items,
       subtotal: totals.subtotal,
@@ -555,6 +613,36 @@ export function CheckoutDialog({
                 />
                 {!tableTouched && defaultTableId != null && (
                   <p className="text-xs text-primary">{t("posLinkedNote")}</p>
+                )}
+                {/* r74 — the floor question: this table number exists on
+                    several floors; the answer resolves the right POS check */}
+                {showFloorQuestion && (
+                  <div className="pt-1">
+                    <p className="mb-1.5 text-xs font-semibold text-foreground/80">
+                      {t("floorQuestion")}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {floorOptions.map((f) => {
+                        const active = floorPick === f.floor;
+                        return (
+                          <button
+                            key={f.floor}
+                            type="button"
+                            onClick={() => setFloorPick(active ? "" : f.floor)}
+                            aria-pressed={active}
+                            className={
+                              "flex min-h-10 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-all duration-200 " +
+                              (active
+                                ? "border-primary/50 bg-primary/15 text-primary"
+                                : "border-white/[0.12] bg-white/[0.05] text-foreground/90 hover:border-primary/35")
+                            }
+                          >
+                            {floorLabel(f.floor)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
               </Field>
               <Field

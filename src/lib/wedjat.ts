@@ -24,6 +24,7 @@ import {
   buildRsmCatalogMatrix,
   mapOrderItems,
   type OrderItemJson,
+  type WebhookItem,
 } from "@/lib/rsm-mapping";
 
 const TIMEOUT_MS = 12_000;
@@ -192,10 +193,34 @@ export async function pushOrderToWedjat(order: {
   if (webhookItems.length === 0) {
     return { ok: false, error: "Order has no mappable items" };
   }
+  return pushWebhookItemsToWedjat(order, webhookItems, order.id);
+}
+
+/**
+ * r74 — push PRE-MAPPED webhook lines (an amendment DELTA: only the net
+ * added lines) to the table's check. Same envelope + idempotency contract
+ * as pushOrderToWedjat but the caller controls the externalId (e.g.
+ * "<orderId>:r2" per revision) and the exact lines delivered.
+ */
+export async function pushWebhookItemsToWedjat(
+  order: {
+    customerName: string | null;
+    phone: string | null;
+    table: string | null;
+    wedjatTableId: number | null;
+    notes: string | null;
+  },
+  webhookItems: WebhookItem[],
+  externalId: string
+): Promise<PushOrderResult> {
+  if (!rsmConfigured()) return { ok: false, error: "Wedjat RSM not configured" };
+  if (webhookItems.length === 0 || webhookItems.every((i) => i.quantity <= 0)) {
+    return { ok: false, error: "No items to deliver" };
+  }
 
   const payload: Record<string, unknown> = {
     provider: "mazaj",
-    externalId: order.id,
+    externalId,
     customerName: (order.customerName || "Mazaj guest").slice(0, 60),
     notes: [order.notes ? order.notes.slice(0, 260) : null, "mazaj order"]
       .filter(Boolean)
@@ -231,6 +256,195 @@ export async function pushOrderToWedjat(order: {
       error: err instanceof Error ? err.message : "Could not push to Wedjat",
     };
   }
+}
+
+// ── r74: floor-plan mirror + guest table-label resolution ────────────
+
+/**
+ * Refresh the local WedjatTable mirror from RSM's status feed (called by
+ * the availability Inngest job every 15 min + on-demand). The mirror is
+ * what resolves a guest-typed table NUMBER to the numeric RSM table id —
+ * the only unambiguous reference for the delivery webhook (names repeat
+ * across the restaurant's floors: indoor "5" and outdoor "5" are different
+ * checks). Rows that disappeared from the feed are deleted so resolutions
+ * never use stale tables.
+ */
+export async function syncWedjatTables(): Promise<{
+  ok: boolean;
+  tables: number;
+  error?: string;
+}> {
+  if (!rsmConfigured()) return { ok: false, tables: 0, error: "Wedjat RSM not configured" };
+  try {
+    const feed = await fetchRsmStatus();
+    if (!feed) return { ok: false, tables: 0, error: "RSM status feed unavailable" };
+    const now = new Date();
+    const seen = new Set<number>();
+    for (const t of feed.tables) {
+      if (!Number.isFinite(t.id)) continue;
+      seen.add(t.id);
+      await db.wedjatTable.upsert({
+        where: { id: t.id },
+        create: {
+          id: t.id,
+          name: String(t.name ?? "").trim(),
+          floorName: String(t.floor ?? "Unknown").trim(),
+          status: String(t.status ?? "free"),
+          active: true,
+          syncedAt: now,
+        },
+        update: {
+          name: String(t.name ?? "").trim(),
+          floorName: String(t.floor ?? "Unknown").trim(),
+          status: String(t.status ?? "free"),
+          active: true,
+          syncedAt: now,
+        },
+      });
+    }
+    // drop tables that no longer exist on the RSM side (floor plan edited)
+    const all = await db.wedjatTable.findMany({ select: { id: true } });
+    const gone = all.filter((t) => !seen.has(t.id)).map((t) => t.id);
+    if (gone.length > 0) {
+      await db.wedjatTable.deleteMany({ where: { id: { in: gone } } });
+    }
+    return { ok: true, tables: seen.size };
+  } catch (err) {
+    return {
+      ok: false,
+      tables: 0,
+      error: err instanceof Error ? err.message : "Table mirror sync failed",
+    };
+  }
+}
+
+export interface TableRefResolution {
+  /** the numeric RSM table id — null when it could not be resolved */
+  tableId: number | null;
+  /** the RSM floor the table sits on (when resolved or hinted) */
+  floor: string | null;
+  /** label matches tables on several floors and no usable hint was given */
+  ambiguous: boolean;
+  /** the floor-plan mirror has never synced (fresh deploy / RSM down) */
+  mirrorEmpty: boolean;
+  /** human explanation when tableId is null */
+  reason?: string;
+}
+
+/** "Table 24" / "طاولة 24" / "T24" / " 24 " → "24" (guests type numbers). */
+export function normalizeTableLabel(label: string): string {
+  const raw = label.trim();
+  if (!raw) return "";
+  const m = raw.match(/^(?:table|طاولة|t)\s*[-#.]?\s*(\d+)$/i);
+  if (m) return m[1];
+  return raw;
+}
+
+/** does the RSM floor name match the guest's floor hint ("in"/"out"/full name)? */
+function floorMatches(floorName: string, hint: string): boolean {
+  const f = floorName.trim().toLowerCase();
+  const h = hint.trim().toLowerCase();
+  if (!h) return false;
+  if (f === h || f.includes(h) || h.includes(f)) return true;
+  const hintIndoor = /^(in|indoors?|indoor|داخلي)/.test(h) || h.includes("in door");
+  const hintOutdoor = /^(out|outdoors?|outdoor|خارجي)/.test(h) || h.includes("out door");
+  const floorIndoor = f.startsWith("in") || f.includes("داخلي");
+  const floorOutdoor = f.startsWith("out") || f.includes("خارجي");
+  if (hintIndoor && floorIndoor) return true;
+  if (hintOutdoor && floorOutdoor) return true;
+  return false;
+}
+
+/**
+ * Resolve a guest-typed table label to the numeric RSM table id using the
+ * WedjatTable mirror. Never throws — an unresolved label returns tableId
+ * null with the reason (the order still proceeds; the push will fail with
+ * that reason stored on the order for the sync dashboard).
+ */
+export async function resolveWedjatTableRef(
+  label: string,
+  floorHint?: string | null
+): Promise<TableRefResolution> {
+  const normalized = normalizeTableLabel(label);
+  if (!normalized) {
+    return {
+      tableId: null,
+      floor: null,
+      ambiguous: false,
+      mirrorEmpty: false,
+      reason: "no table reference",
+    };
+  }
+  let rows: { id: number; name: string; floorName: string }[];
+  try {
+    rows = await db.wedjatTable.findMany({
+      where: { active: true },
+      select: { id: true, name: true, floorName: true },
+    });
+  } catch {
+    return {
+      tableId: null,
+      floor: null,
+      ambiguous: false,
+      mirrorEmpty: true,
+      reason: "table mirror unavailable",
+    };
+  }
+  if (rows.length === 0) {
+    return {
+      tableId: null,
+      floor: null,
+      ambiguous: false,
+      mirrorEmpty: true,
+      reason: "RSM floor plan not synced yet — will resolve on retry",
+    };
+  }
+  const wanted = normalized.toLowerCase();
+  const candidates = rows.filter(
+    (r) =>
+      r.name.trim().toLowerCase() === wanted ||
+      r.name.trim().toLowerCase() === `t${wanted}` ||
+      r.name.trim().toLowerCase() === `table ${wanted}`
+  );
+  if (candidates.length === 0) {
+    return {
+      tableId: null,
+      floor: null,
+      ambiguous: false,
+      mirrorEmpty: false,
+      reason: `table "${normalized}" is not in the restaurant's floor plan`,
+    };
+  }
+  if (candidates.length === 1) {
+    return {
+      tableId: candidates[0].id,
+      floor: candidates[0].floorName,
+      ambiguous: false,
+      mirrorEmpty: false,
+    };
+  }
+  // ambiguous across floors — try the guest's floor hint
+  const hint = (floorHint ?? "").trim();
+  if (hint) {
+    const narrowed = candidates.filter((c) => floorMatches(c.floorName, hint));
+    if (narrowed.length === 1) {
+      return {
+        tableId: narrowed[0].id,
+        floor: narrowed[0].floorName,
+        ambiguous: false,
+        mirrorEmpty: false,
+      };
+    }
+  }
+  return {
+    tableId: null,
+    floor: hint || null,
+    ambiguous: true,
+    mirrorEmpty: false,
+    reason: `table "${normalized}" exists on several floors (${candidates
+      .map((c) => c.floorName)
+      .join(" / ")}) — ask the guest indoors or outdoors`,
+  };
 }
 
 // ── WRITE: catalog (types + prices) and availability mirrors ─────────

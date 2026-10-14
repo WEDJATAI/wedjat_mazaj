@@ -41,6 +41,11 @@ export interface GuestSession {
   /** r57 — the branch the guest is sitting at (null = default/legacy) */
   branchId?: string | null;
   branchName?: string | null;
+  /** r74 — the floor the guest said they're on ("In Door داخلي" /
+   * "Out Door خارجي"), answered at check-in when the table number exists
+   * on several floors. Sent with every order so the server resolves the
+   * NUMERIC Wedjat RSM table id (names repeat across floors). */
+  tableFloor?: string | null;
 }
 
 interface SessionState {

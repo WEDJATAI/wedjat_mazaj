@@ -247,10 +247,36 @@ model Order {
   // employee table picker, stored on the order and echoed to the RSM
   // webhook so items land on the RIGHT table's check.
   wedjatTableId    Int?
+  // r74: the RSM floor the guest said they are sitting on ("In Door داخلي" /
+  // "Out Door خارجي") — captured at guest check-in when their table number
+  // exists on several floors; persisted so retries/audit know how the
+  // numeric tableId was resolved.
+  wedjatFloor      String?
+  // r74: the last Wedjat RSM push error (why an order is "failed" — table
+  // label not in the RSM floor plan, auth, RSM down…). Cleared on success.
+  wedjatSyncError  String?
   createdAt        DateTime  @default(now())
 
   branch   Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
   comments OrderComment[]
+}
+
+// r74 — mirror of the Wedjat RSM restaurant floor plan (tables + floors),
+// refreshed from RSM's key-authenticated status feed every 15 minutes by
+// the availability-mirror Inngest job. This is what lets Mazaj resolve a
+// guest-typed table NUMBER to the numeric RSM table id (the only
+// unambiguous reference for the delivery webhook) and tell the guest app
+// when a table number is ambiguous across floors (indoor vs outdoor "5").
+model WedjatTable {
+  id        Int      @id // the NUMERIC RSM table id — the push reference
+  name      String // the table's display name ("5") — what guests type
+  floorName String // "In Door داخلي" | "Out Door خارجي" | …
+  status    String @default("free") // free | occupied | …
+  active    Boolean @default(true)
+  syncedAt  DateTime @default(now())
+
+  @@index([name])
+  @@index([floorName])
 }
 
 model OrderComment {
