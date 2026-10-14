@@ -15,14 +15,32 @@ import { syncWedjatTables } from "@/lib/wedjat";
 // the floor question until the mirror fills (≤15 min via the Inngest job).
 export async function GET() {
   try {
-    const rows = await db.wedjatTable.findMany({
-      where: { active: true },
-      select: { name: true, floorName: true },
-      orderBy: [{ floorName: "asc" }, { name: "asc" }],
-    });
-    if (rows.length === 0) {
-      void syncWedjatTables().catch(() => {});
-      return NextResponse.json({ ok: true, floors: [] });
+    const read = () =>
+      db.wedjatTable.findMany({
+        where: { active: true },
+        select: { name: true, floorName: true },
+        orderBy: [{ floorName: "asc" }, { name: "asc" }],
+      });
+    let rows = await read();
+    const newest = rows.length
+      ? await db.wedjatTable.findFirst({
+          orderBy: { syncedAt: "desc" },
+          select: { syncedAt: true },
+        })
+      : null;
+    const stale =
+      rows.length === 0 ||
+      !newest?.syncedAt ||
+      Date.now() - newest.syncedAt.getTime() > 10 * 60 * 1000;
+    if (stale) {
+      // r74: AWAIT the sync — a fire-and-forget gets suspended by the
+      // serverless runtime right after this response returns, leaving a
+      // 2-row partial mirror (observed on the first production hit). The
+      // status fetch is typically sub-second; the Inngest */15 job remains
+      // the scheduled refresher — this TTL heal covers partial mirrors too
+      // (e.g. a suspended bootstrap) and keeps the floor question honest.
+      await syncWedjatTables().catch(() => {});
+      rows = await read();
     }
     const byFloor = new Map<string, string[]>();
     for (const r of rows) {
