@@ -1,0 +1,756 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { pushToGuest } from "@/lib/push";
+import {
+  MOLASSES_GRAMS,
+  SUPPLIES,
+  SELLABLE_ADDONS,
+  computeOrderCogs,
+  computeProfit,
+  getBrand,
+  getSupply,
+  recomputeOrderTotals,
+  serverComponentGrams,
+  supplyConsumption,
+} from "@/lib/catalog";
+import { pointsEarnedOn, tierForLifetime } from "@/lib/loyalty";
+import { applyCatalogOverrides } from "@/lib/platform-settings";
+import { StockShortError } from "@/lib/stock-guard";
+import { sessionEmployee } from "@/lib/auth";
+import { pushWebhookItemsToWedjat } from "@/lib/wedjat";
+import { mapOrderItems, type OrderItemJson, type WebhookItem } from "@/lib/rsm-mapping";
+import {
+  clientIp,
+  GUEST_LIMITS,
+  guestRateLimitResponse,
+  hitGuestRateLimit,
+} from "@/lib/rate-limit";
+
+/**
+ * ─────────────────────────────────────────────────────────────────
+ *  r58 — LIVING ORDERS · POST /api/orders/[id]/amend
+ * ─────────────────────────────────────────────────────────────────
+ *  An order stays a LIVING document until it is served: guests and
+ *  staff can modify items (add / remove / change qty, full mix
+ *  configs, BYO, add-ons) even after the order was confirmed.
+ *
+ *  Everything is recomputed server-side and inventory is reconciled
+ *  to the NET delta:
+ *    • added bowls   → stock deducted (validated first)
+ *    • removed bowls → grams returned to the branch jars
+ *    • loyalty earn  → adjusted with an audit ledger entry
+ *    • the diff      → written into the order's comment thread
+ *    • the guest     → receives a push that their order changed
+ *
+ *  Locked once status === "done" (served).
+ * ─────────────────────────────────────────────────────────────────
+ */
+
+const ComponentSchema = z.object({
+  brandId: z.string(),
+  brandName: z.string(),
+  flavorName: z.string(),
+  grams: z.number().positive(),
+  emoji: z.string().default(""),
+});
+
+const CartItemSchema = z.object({
+  id: z.string(),
+  primaryBrandId: z.string(),
+  primaryBrandName: z.string(),
+  emoji: z.string().default(""),
+  accent: z.string().default(""),
+  flavor: z.enum(["fruits", "fruits-mix", "flat"]),
+  flavorLabel: z.string(),
+  // r67 — empty allowed for own-molasses shishas
+  components: z.array(ComponentSchema),
+  molassesGrams: z.number().default(MOLASSES_GRAMS),
+  unitPrice: z.number().nonnegative(),
+  qty: z.number().int().positive().max(99),
+  /** r67 — pipe type (amy = premium flat price) */
+  hookahType: z.enum(["regular", "amy"]).optional().nullable(),
+  /** r67 — per-shisha BYO answer */
+  ownType: z.enum(["hookah", "molasses"]).optional().nullable(),
+  /** r67 — who this shisha is for */
+  forName: z.string().trim().max(60).optional().nullable(),
+});
+
+const AmendSchema = z.object({
+  items: z.array(CartItemSchema).min(1, "Order must keep at least one bowl"),
+  ownType: z.enum(["hookah", "molasses"]).optional().nullable(),
+  addons: z.array(z.string()).default([]),
+  notes: z.string().trim().max(400).optional().nullable(),
+  table: z.string().trim().max(40).optional().nullable(),
+  actorName: z.string().trim().max(80).optional().nullable(),
+  actorId: z.string().optional().nullable(),
+  /** r72 — optimistic concurrency: the order revision this edit started
+   *  from. When present and stale, the save is rejected (409) instead of
+   *  silently discarding the other editor's changes. */
+  baseRevision: z.number().int().nonnegative().optional().nullable(),
+});
+
+type ParsedItem = z.infer<typeof CartItemSchema>;
+
+/** r72 — another editor committed a change while this amend was in
+ *  flight; nothing was written (the whole transaction rolls back). */
+class OrderChangedError extends Error {}
+
+const ORDER_CHANGED_MESSAGE =
+  "This order was just changed by someone else — reopen it to see the latest version, then save again.";
+
+/* ── human-readable diff between two item sets ───────────────────── */
+
+function itemLabel(it: {
+  primaryBrandName: string;
+  flavorLabel: string;
+  components: { flavorName: string }[];
+}): string {
+  const mix =
+    it.components.length > 1
+      ? ` (${it.components.map((c) => c.flavorName).join("+")})`
+      : it.components.length === 1
+        ? ` · ${it.components[0].flavorName}`
+        : "";
+  return `${it.primaryBrandName} ${it.flavorLabel}${mix}`;
+}
+
+function buildDiff(
+  oldItems: ParsedItem[],
+  newItems: ParsedItem[],
+  oldTotal: number,
+  newTotal: number
+): string {
+  const qtyByKey = (items: ParsedItem[]) => {
+    const m = new Map<string, { label: string; qty: number }>();
+    for (const it of items) {
+      const label = itemLabel(it);
+      m.set(label, { label, qty: (m.get(label)?.qty ?? 0) + it.qty });
+    }
+    return m;
+  };
+  const before = qtyByKey(oldItems);
+  const after = qtyByKey(newItems);
+  const lines: string[] = [];
+
+  for (const [label, { qty }] of after) {
+    const oldQty = before.get(label)?.qty ?? 0;
+    if (oldQty === 0) lines.push(`+ ${qty}× ${label}`);
+    else if (qty !== oldQty) lines.push(`± ${label}: ${oldQty} → ${qty}`);
+  }
+  for (const [label, { qty }] of before) {
+    if (!after.has(label)) lines.push(`− ${qty}× ${label}`);
+  }
+  if (lines.length === 0) lines.push("No item changes");
+  if (Math.abs(oldTotal - newTotal) > 0.001) {
+    lines.push(`Total: ${Math.round(oldTotal)} → ${Math.round(newTotal)} EGP`);
+  }
+  return lines.join("\n");
+}
+
+/* ── consumption maps ─────────────────────────────────────────────── */
+
+function gramsMaps(items: ParsedItem[]) {
+  const flavor = new Map<string, number>(); // `${brandId}|${flavorName}`
+  const brand = new Map<string, number>();
+  for (const it of items) {
+    for (const c of it.components) {
+      const fk = `${c.brandId}|${c.flavorName}`;
+      flavor.set(fk, (flavor.get(fk) ?? 0) + c.grams * it.qty);
+      brand.set(c.brandId, (brand.get(c.brandId) ?? 0) + c.grams * it.qty);
+    }
+  }
+  return { flavor, brand };
+}
+
+function addonCounts(addons: string[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const k of addons) m.set(k, (m.get(k) ?? 0) + 1);
+  return m;
+}
+
+/* ── the route ────────────────────────────────────────────────────── */
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    // r71 — the amend endpoint is intentionally cookie-free (guests amend
+    // their own cuid-keyed orders), so it gets the per-IP guest limit;
+    // a signed-in staff member amending from the dashboard bypasses it.
+    const caller = await sessionEmployee(req);
+    if (!caller) {
+      const limit = await hitGuestRateLimit(
+        `amend:${clientIp(req.headers)}`,
+        GUEST_LIMITS.amend.max,
+        GUEST_LIMITS.amend.windowMs
+      );
+      if (!limit.ok) return guestRateLimitResponse(limit);
+    }
+    const body = await req.json();
+    const parsed = AmendSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: parsed.error.issues[0]?.message ?? "Invalid amendment data",
+        },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
+
+    const order = await db.order.findUnique({ where: { id } });
+    if (!order) {
+      return NextResponse.json(
+        { ok: false, error: "Order not found" },
+        { status: 404 }
+      );
+    }
+    if (order.status === "done") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "This order is already served — it can no longer be modified.",
+        },
+        { status: 409 }
+      );
+    }
+
+    // r72 — client-side staleness guard: the editor pins the revision it
+    // loaded; if the order moved on since (kitchen amend, the other
+    // side of the table, the guest tracker…), refuse instead of letting
+    // the stale save silently discard the newer changes.
+    if (
+      data.baseRevision != null &&
+      data.baseRevision !== order.revision
+    ) {
+      return NextResponse.json(
+        { ok: false, error: ORDER_CHANGED_MESSAGE },
+        { status: 409 }
+      );
+    }
+
+    // ── validate + sanitize the new items (never trust the client) ──
+    for (const it of data.items) {
+      // r67 — own-molasses shishas carry no components
+      if (it.components.length === 0 && it.ownType !== "molasses") {
+        return NextResponse.json(
+          { ok: false, error: "A shisha needs flavors unless you bring your own molasses" },
+          { status: 400 }
+        );
+      }
+      for (const c of it.components) {
+        if (!getBrand(c.brandId)) {
+          return NextResponse.json(
+            { ok: false, error: `Unknown molasses brand: ${c.brandId}` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+    // r61: apply live platform menu-price overrides before recomputing.
+    await applyCatalogOverrides();
+    const sanitized: ParsedItem[] = data.items.map((it) => {
+      const grams = serverComponentGrams(it.components.length);
+      return {
+        ...it,
+        components: it.components.map((c, i) => ({ ...c, grams: grams[i] })),
+      };
+    });
+
+    // ── old state ────────────────────────────────────────────────────
+    let oldItems: ParsedItem[] = [];
+    try {
+      const arr = JSON.parse(order.itemsJson);
+      if (Array.isArray(arr)) oldItems = arr;
+    } catch {
+      oldItems = [];
+    }
+    let oldAddons: string[] = [];
+    try {
+      const arr = JSON.parse(order.addonsJson ?? "[]");
+      if (Array.isArray(arr)) oldAddons = arr;
+    } catch {
+      oldAddons = [];
+    }
+
+    // ── new totals (server-authoritative) ───────────────────────────
+    const newOwnType = data.ownType ?? null;
+    const totals = recomputeOrderTotals(sanitized, newOwnType);
+    const validAddons = data.addons.filter((k) =>
+      SELLABLE_ADDONS.some((s) => s.key === k)
+    );
+    const addonRevenue = validAddons.reduce(
+      (sum, k) => sum + (getSupply(k)?.sellPrice ?? 0),
+      0
+    );
+    const addonCost = validAddons.reduce(
+      (sum, k) => sum + (getSupply(k)?.cost ?? 0),
+      0
+    );
+    // loyalty redemption stays as originally applied; earn re-adjusts below
+    const grandTotal =
+      Math.round((totals.total + addonRevenue - order.loyaltyDiscount) * 100) /
+      100;
+    const finalSubtotal =
+      Math.round((totals.subtotal + addonRevenue) * 100) / 100;
+
+    // ── net consumption deltas (new − old) ──────────────────────────
+    const oldMaps = gramsMaps(oldItems);
+    const newMaps = gramsMaps(sanitized);
+    const flavorDelta = new Map<string, number>();
+    for (const k of new Set([...oldMaps.flavor.keys(), ...newMaps.flavor.keys()])) {
+      flavorDelta.set(
+        k,
+        (newMaps.flavor.get(k) ?? 0) - (oldMaps.flavor.get(k) ?? 0)
+      );
+    }
+    const brandDelta = new Map<string, number>();
+    for (const k of new Set([...oldMaps.brand.keys(), ...newMaps.brand.keys()])) {
+      brandDelta.set(
+        k,
+        (newMaps.brand.get(k) ?? 0) - (oldMaps.brand.get(k) ?? 0)
+      );
+    }
+
+    // supplies: per-hookah consumption from the NEW vs OLD hookah counts
+    const oldSupplies = supplyConsumption(order.itemCount);
+    const newSupplies = supplyConsumption(totals.totalQty);
+    const supplyDelta = new Map<string, number>();
+    for (const s of newSupplies) {
+      const old = oldSupplies.find((o) => o.key === s.key)?.amount ?? 0;
+      supplyDelta.set(s.key, s.amount - old);
+    }
+
+    // add-on stock deltas (count per key)
+    const oldAddonCounts = addonCounts(oldAddons);
+    const newAddonCounts = addonCounts(validAddons);
+    const addonDelta = new Map<string, number>();
+    for (const k of new Set([...oldAddonCounts.keys(), ...newAddonCounts.keys()])) {
+      addonDelta.set(
+        k,
+        (newAddonCounts.get(k) ?? 0) - (oldAddonCounts.get(k) ?? 0)
+      );
+    }
+
+    // r69 — the branch scope for every stock read/delta below
+    const branchId = order.branchId;
+
+    // ── profitability (server-side) ──────────────────────────────────
+    const cogs = computeOrderCogs(sanitized);
+    const finalCogs = Math.round((cogs.totalCogs + addonCost) * 100) / 100;
+    const profit = computeProfit(grandTotal, finalCogs);
+
+    const diff = buildDiff(oldItems, sanitized, order.total, grandTotal);
+    const actorName = data.actorName?.trim() || "Mazaj";
+    const revision = order.revision + 1;
+
+    // ── commit: reconcile stock + adjust loyalty + update order ─────
+    const updated = await db.$transaction(async (tx) => {
+      // ── r69 (audit ⑤): net-increase validation — INSIDE the transaction
+      // (the reads used to happen before it, leaving an oversell race
+      // between validation and the delta writes). Consumption deltas are
+      // applied with conditional decrements, so even a race lost
+      // mid-transaction aborts the whole amendment atomically.
+      const brandRows = await tx.inventoryItem.findMany({
+        where: {
+          brandId: {
+            in: [...brandDelta.keys()].filter((b) => (brandDelta.get(b) ?? 0) > 0),
+          },
+          branchId,
+        },
+      });
+      const shortBrands: string[] = [];
+      for (const row of brandRows) {
+        const need = brandDelta.get(row.brandId) ?? 0;
+        if (need > row.stockGrams + 0.001) {
+          shortBrands.push(
+            `${row.brandName} (need ${Math.round(need)}g more, have ${Math.round(row.stockGrams)}g)`
+          );
+        }
+      }
+
+      const flavorKeys = [...flavorDelta.keys()].filter(
+        (k) => (flavorDelta.get(k) ?? 0) > 0
+      );
+      // r67 — guard: own-molasses-only amendments touch no flavor jars
+      const flavorRows =
+        flavorKeys.length > 0
+          ? await tx.flavorStock.findMany({
+              where: {
+                OR: flavorKeys.map((k) => {
+                  const [brandIdRaw, flavorName] = k.split("|");
+                  return { brandIdRaw, flavorName };
+                }),
+                brand: { branchId },
+              },
+            })
+          : [];
+      const shortFlavors: string[] = [];
+      for (const k of flavorKeys) {
+        const [brandIdRaw, flavorName] = k.split("|");
+        const need = flavorDelta.get(k) ?? 0;
+        const row = flavorRows.find(
+          (r) => r.brandIdRaw === brandIdRaw && r.flavorName === flavorName
+        );
+        const have = row?.stockGrams ?? 0;
+        if (need > have + 0.001) {
+          shortFlavors.push(
+            `${getBrand(brandIdRaw)?.name ?? brandIdRaw} · ${flavorName} (need ${Math.round(need)}g more, have ${Math.round(have)}g)`
+          );
+        }
+      }
+
+      const supplyRows = await tx.supplyItem.findMany({
+        where: {
+          key: {
+            in: [...supplyDelta.keys(), ...addonDelta.keys()].filter(
+              (k) => (supplyDelta.get(k) ?? 0) + (addonDelta.get(k) ?? 0) > 0
+            ),
+          },
+          branchId,
+        },
+      });
+      const shortSupplies: string[] = [];
+      for (const k of new Set([...supplyDelta.keys(), ...addonDelta.keys()])) {
+        const net = (supplyDelta.get(k) ?? 0) + (addonDelta.get(k) ?? 0);
+        if (net <= 0) continue;
+        const row = supplyRows.find((r) => r.key === k);
+        const have = row?.stock ?? 0;
+        if (net > have + 0.001) {
+          const def = SUPPLIES.find((s) => s.key === k);
+          shortSupplies.push(
+            `${def?.name ?? k} (need ${net}, have ${Math.round(have)})`
+          );
+        }
+      }
+
+      const allShort = [...shortBrands, ...shortFlavors, ...shortSupplies];
+      if (allShort.length > 0) {
+        throw new StockShortError(
+          `Not enough stock to add: ${allShort.join("; ")}`
+        );
+      }
+
+      // molasses: brand totals (increment returns, decrement consumption)
+      for (const [brandId, delta] of brandDelta) {
+        if (Math.abs(delta) < 0.001) continue;
+        const row = brandRows.find((r) => r.brandId === brandId);
+        if (delta > 0) {
+          // r69 — atomic conditional decrement: a race lost mid-transaction
+          // matches zero rows and aborts the whole amendment
+          const existing =
+            row ??
+            (await tx.inventoryItem.findFirst({
+              where: { brandId, branchId },
+            }));
+          if (!existing) continue;
+          const res = await tx.inventoryItem.updateMany({
+            where: { id: existing.id, stockGrams: { gte: delta } },
+            data: { stockGrams: { decrement: delta } },
+          });
+          if (res.count === 0) {
+            throw new StockShortError(
+              `Not enough stock to add: ${existing.brandName} (need ${Math.round(delta)}g more, have 0g)`
+            );
+          }
+        } else if (row) {
+          await tx.inventoryItem.update({
+            where: { id: row.id },
+            data: { stockGrams: { increment: -delta } },
+          });
+        }
+      }
+
+      // molasses: per-flavor subtypes
+      for (const [key, delta] of flavorDelta) {
+        if (Math.abs(delta) < 0.001) continue;
+        const [brandIdRaw, flavorName] = key.split("|");
+        const row = flavorRows.find(
+          (r) => r.brandIdRaw === brandIdRaw && r.flavorName === flavorName
+        );
+        if (delta > 0 && row) {
+          // r69 — atomic conditional decrement (race-loss abort)
+          const res = await tx.flavorStock.updateMany({
+            where: { id: row.id, stockGrams: { gte: delta } },
+            data: { stockGrams: { decrement: delta } },
+          });
+          if (res.count === 0) {
+            throw new StockShortError(
+              `Not enough stock to add: ${getBrand(brandIdRaw)?.name ?? brandIdRaw} · ${flavorName} (need ${Math.round(delta)}g more, have 0g)`
+            );
+          }
+        } else if (row) {
+          await tx.flavorStock.update({
+            where: { id: row.id },
+            data: { stockGrams: { increment: -delta } },
+          });
+        }
+      }
+
+      // supplies + add-on units
+      for (const key of new Set([...supplyDelta.keys(), ...addonDelta.keys()])) {
+        const delta = (supplyDelta.get(key) ?? 0) + (addonDelta.get(key) ?? 0);
+        if (Math.abs(delta) < 0.001) continue;
+        const row = supplyRows.find((r) => r.key === key);
+        if (delta > 0 && row) {
+          // r69 — atomic conditional decrement (race-loss abort)
+          const res = await tx.supplyItem.updateMany({
+            where: { id: row.id, stock: { gte: delta } },
+            data: { stock: { decrement: delta } },
+          });
+          if (res.count === 0) {
+            const def = SUPPLIES.find((s) => s.key === key);
+            throw new StockShortError(
+              `Not enough stock to add: ${def?.name ?? key} (need ${delta}, have 0)`
+            );
+          }
+        } else if (row) {
+          await tx.supplyItem.update({
+            where: { id: row.id },
+            data: { stock: { increment: -delta } },
+          });
+        }
+      }
+
+      // loyalty earn adjustment (audit-logged, clamped to the balance)
+      let pointsEarnedFinal = order.pointsEarned;
+      if (order.loyaltyMemberId) {
+        const member = await tx.loyaltyMember.findUnique({
+          where: { id: order.loyaltyMemberId },
+        });
+        if (member) {
+          const newEarn = pointsEarnedOn(grandTotal, member.tier);
+          let delta = newEarn - order.pointsEarned;
+          if (delta < 0 && member.points < -delta) {
+            delta = -member.points; // can't take back what they already spent
+          }
+          if (delta !== 0) {
+            const points = member.points + delta;
+            const lifetime = Math.max(0, member.lifetimePoints + delta);
+            await tx.loyaltyMember.update({
+              where: { id: member.id },
+              data: {
+                points,
+                lifetimePoints: lifetime,
+                tier: tierForLifetime(lifetime).key,
+              },
+            });
+            await tx.pointsLedger.create({
+              data: {
+                memberId: member.id,
+                orderId: order.id,
+                delta,
+                reason: "adjustment",
+              },
+            });
+            pointsEarnedFinal = order.pointsEarned + delta;
+          }
+        }
+      }
+
+      // r72 — optimistic lock on revision: if another amendment
+      // committed between our read of `order` and this write, the
+      // conditional update matches ZERO rows and we abort — rolling
+      // back the stock deltas, the loyalty adjustment and the comment
+      // with it. Without this, two racing amends both computed their
+      // deltas against the same stale state and double-decremented jars
+      // (or returned grams twice) while only one itemsJson survived.
+      const commit = await tx.order.updateMany({
+        where: { id: order.id, revision: order.revision },
+        data: {
+          itemsJson: JSON.stringify(sanitized),
+          addonsJson: JSON.stringify(validAddons),
+          subtotal: finalSubtotal,
+          discount: totals.discount + order.loyaltyDiscount,
+          total: grandTotal,
+          bogo: totals.bogo,
+          ownType: newOwnType,
+          itemCount: totals.totalQty,
+          cogs: finalCogs,
+          molassesCost: cogs.molassesCost,
+          suppliesCost: Math.round((cogs.suppliesCost + addonCost) * 100) / 100,
+          netProfit: profit.netProfit,
+          marginPct: profit.marginPct,
+          pointsEarned: pointsEarnedFinal,
+          notes: data.notes !== undefined ? data.notes || null : order.notes,
+          table: data.table !== undefined ? data.table || null : order.table,
+          revision,
+          amendedAt: new Date(),
+          amendedByName: actorName,
+        },
+      });
+      if (commit.count === 0) {
+        throw new OrderChangedError();
+      }
+      const saved = await tx.order.findUnique({ where: { id: order.id } });
+      if (!saved) throw new OrderChangedError(); // unreachable: the conditional update just matched this row
+
+      // the amendment diff lands in the staff comment thread
+      await tx.orderComment.create({
+        data: {
+          orderId: order.id,
+          author: `${actorName} · amendment #${revision}`,
+          body: diff,
+        },
+      });
+
+      return saved;
+    });
+
+    // ── r74 — keep the restaurant POS check in sync with the amendment ──
+    // The RSM webhook can only ADD lines to a check (no update/void op),
+    // so: net-ADDED lines are delivered as an amendment delta (a fresh
+    // idempotent externalId "<orderId>:r<revision>" that lands on the same
+    // table's open check — or a new check if it was already closed); net
+    // REMOVED lines cannot be retracted — the staff gets a comment telling
+    // them to void those lines in the POS. Deltas are computed on the
+    // MAPPED check lines (bogo-aware), so a 2-for-1 qty bump never
+    // double-charges.
+    try {
+      const aggregate = (lines: WebhookItem[]) => {
+        const m = new Map<string, WebhookItem>();
+        for (const l of lines) {
+          const cur = m.get(l.sku);
+          if (cur) cur.quantity += l.quantity;
+          else m.set(l.sku, { ...l });
+        }
+        return m;
+      };
+      const oldLines = aggregate(
+        mapOrderItems(oldItems as unknown as OrderItemJson[], order.bogo, oldAddons)
+      );
+      const newLines = aggregate(
+        mapOrderItems(sanitized as unknown as OrderItemJson[], updated.bogo, validAddons)
+      );
+      const added: WebhookItem[] = [];
+      const removedNames: string[] = [];
+      for (const [sku, line] of newLines) {
+        const oldQty = oldLines.get(sku)?.quantity ?? 0;
+        if (line.quantity > oldQty) {
+          added.push({ ...line, quantity: line.quantity - oldQty });
+        } else if (line.quantity < oldQty) {
+          removedNames.push(`${line.name}: ${oldQty} → ${line.quantity}`);
+        }
+      }
+      for (const [sku, line] of oldLines) {
+        if (!newLines.has(sku)) removedNames.push(`${line.name}: ${line.quantity} → 0`);
+      }
+
+      let removalStamp: string | null = null;
+      if (removedNames.length > 0) {
+        removalStamp =
+          `amend r${revision}: removed items still on the POS check — void manually (${removedNames
+            .join(" · ")
+            .slice(0, 180)})`;
+        await db.orderComment.create({
+          data: {
+            orderId: order.id,
+            author: "Wedjat sync",
+            body:
+              `⚠ Amendment r${revision} removed lines that are already on the restaurant check — ` +
+              `void them in the Wedjat POS: ${removedNames.join(" · ")}`,
+          },
+        });
+        await db.order
+          .update({
+            where: { id: order.id },
+            data: { wedjatSyncError: removalStamp },
+          })
+          .catch(() => {});
+      }
+
+      if (added.length > 0 && updated.wedjatSyncStatus === "synced") {
+        // pre-stamp so a suspended serverless runtime can't lose the fact
+        // that a delta delivery is in flight
+        await db.order
+          .update({
+            where: { id: order.id },
+            data: { wedjatSyncError: `amend r${revision}: delivering ${added.length} added line(s)…` },
+          })
+          .catch(() => {});
+        void (async () => {
+          const result = await pushWebhookItemsToWedjat(
+            {
+              customerName: updated.customerName,
+              phone: updated.phone,
+              table: updated.table,
+              wedjatTableId: updated.wedjatTableId,
+              notes: `amendment r${revision}: ${added
+                .map((a) => `+${a.quantity}× ${a.name}`)
+                .join(", ")}`,
+            },
+            added,
+            `${order.id}:r${revision}`
+          );
+          if (result.ok) {
+            console.log(
+              `[rsm sync] amend r${revision} delta delivered, wedjat id:`,
+              result.wedjatOrderId
+            );
+            // clear — or restore the removal warning when one was stamped
+            await db.order
+              .update({
+                where: { id: order.id },
+                data: { wedjatSyncError: removalStamp },
+              })
+              .catch(() => {});
+          } else {
+            console.warn(`[rsm sync] amend r${revision} delta failed:`, result.error);
+            await db.order
+              .update({
+                where: { id: order.id },
+                data: {
+                  wedjatSyncError: `amend r${revision} delta not delivered: ${(
+                    result.error ?? "push failed"
+                  ).slice(0, 200)}`,
+                },
+              })
+              .catch(() => {});
+          }
+        })().catch(() => {});
+      }
+    } catch (deltaErr) {
+      console.warn("[rsm sync] amend delta computation failed:", deltaErr);
+    }
+
+    // Cloud → phone: tell the guest their order changed (best-effort).
+    const guestName = updated.customerName?.trim();
+    if (guestName) {
+      void pushToGuest(guestName, {
+        title: "Your order was updated",
+        body: `Revision ${revision}: ${updated.itemCount} bowl${updated.itemCount > 1 ? "s" : ""} · ${Math.round(updated.total)} EGP`,
+        url: `/?track=${updated.id}`,
+        tag: `order-${updated.id}`,
+      }).catch(() => {});
+    }
+
+    return NextResponse.json({ ok: true, order: updated, revision });
+  } catch (err) {
+    if (err instanceof StockShortError) {
+      // r69 — validation lost the race mid-transaction: nothing was
+      // written (rolled back); surface the same 409 as pre-r69.
+      return NextResponse.json(
+        { ok: false, error: err.message },
+        { status: 409 }
+      );
+    }
+    if (err instanceof OrderChangedError) {
+      // r72 — a concurrent amendment won the commit race: this save
+      // (and its stock/loyalty side effects) rolled back entirely.
+      return NextResponse.json(
+        { ok: false, error: ORDER_CHANGED_MESSAGE },
+        { status: 409 }
+      );
+    }
+    console.error("amend order error", err);
+    return NextResponse.json(
+      { ok: false, error: "Could not update the order" },
+      { status: 500 }
+    );
+  }
+}

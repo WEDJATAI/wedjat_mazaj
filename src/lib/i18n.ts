@@ -1,0 +1,3232 @@
+// Full bilingual dictionary for the Mazaj platform (EN + AR).
+// Used by the language store (src/store/i18n.ts) to toggle EN ↔ AR.
+// r54: EN dictionary completed for every key (previously EN had only the PWA
+// section, so English UI showed raw camelCase keys) + guest-surface wiring.
+
+export type Lang = "en" | "ar";
+
+export interface Translations {
+  // Sign-in
+  mazaj: string;
+  hookahLounge: string;
+  imStaff: string;
+  imStaffDesc: string;
+  imGuest: string;
+  imGuestDesc: string;
+  justBrowsing: string;
+  staffPins: string;
+  enterPin: string;
+  guestCheckIn: string;
+  yourName: string;
+  tableOptional: string;
+  /** r65: guest check-in — table number (the only required field) */
+  tableNumberLabel: string;
+  tableNumberPlaceholder: string;
+  /** r65: guest express confirm card */
+  confirmOrderCta: string;
+  confirmOrderTitle: string;
+  confirmOrderDesc: string;
+  tableNeeded: string;
+  startOrdering: string;
+  back: string;
+  cancel: string;
+  delete: string;
+  checking: string;
+  welcome: string;
+  namePlaceholder: string;
+  tablePlaceholder: string;
+  invalidPin: string;
+  couldNotSignIn: string;
+  linkedPosNote: string;
+
+  // Dashboard tabs
+  queue: string;
+  new: string;
+  inventory: string;
+  requests: string;
+  staff: string;
+  buy: string;
+  profit: string;
+  sync: string;
+  analytics: string;
+  loyalty: string;
+  track: string;
+  noAccess: string;
+  noAccessDesc: string;
+  signOut: string;
+
+  // r70 — employee dashboard shell tabs
+  tabQueue: string;
+  tabNew: string;
+  tabEdit: string;
+  tabInventory: string;
+  tabRequests: string;
+  tabStaff: string;
+  tabBuy: string;
+  tabProfit: string;
+  tabRsm: string;
+  tabStats: string;
+  tabMazajPlus: string;
+  tabSync: string;
+  // r70 — dashboard FAB tooltips
+  showQr: string;
+  sommelierTip: string;
+  openActions: string;
+  closeActions: string;
+
+  // Bowl builder
+  bowlBuilder: string;
+  build: string;
+  buildBowl: string;
+  customer: string;
+  tableNumber: string;
+  tableRequired: string;
+  tableRequiredDesc: string;
+  quickPresets: string;
+  thisOrder: string;
+  noBowlsYet: string;
+  noBowlsDesc: string;
+  clearAll: string;
+  chooseShisha: string;
+  chooseShishaDesc: string;
+  regularShisha: string;
+  amyShisha: string;
+  changeCategory: string;
+  /** r66 — corner order card + guest stock availability */
+  orderCardModify: string;
+  orderCardDelete: string;
+  orderCardConfirm: string;
+  orderCardDeleted: string;
+  stockNote: string;
+  noStockCategory: string;
+  /* r68-audit — honest empty states + the BYO escape hatch */
+  wizNoStockTitle: string;
+  wizNoStockDesc: string;
+  wizNoStockByo: string;
+  wizNoStockByoDesc: string;
+  wizNoStockCall: string;
+
+  /* ── r68-audit: staff-surface i18n (requests / builder / loyalty /
+   * purchases were English-locked; Arabic-first staff need AR too) ── */
+  reqTitle: string;
+  reqSubtitle: string;
+  reqNewBadge: string;
+  reqEmptyTitle: string;
+  reqEmptyDesc: string;
+  reqPending: string;
+  reqInProgress: string;
+  reqDone: string;
+  reqAck: string;
+  reqMarkDone: string;
+  reqUpdateFail: string;
+  reqStepRequested: string;
+  reqStepAcknowledged: string;
+  reqStepDone: string;
+  reqCoal: string;
+  reqCall: string;
+  reqAutoRefresh: string;
+  timeJustNow: string;
+  timeMinAgoSuffix: string;
+  timeHourAgoSuffix: string;
+  queueValue: string;
+  legacyItems: string;
+  opHookahs: string;
+  opWaiting: string;
+  opLate: string;
+  bbChooseType: string;
+  bbSubtitleSuffix: string;
+  bbThisOrder: string;
+  bbBowls: string;
+  bbClearAll: string;
+  bbNoBowls: string;
+  bbNoBowlsDesc: string;
+  bbAddFlavor: string;
+  bbAddAnotherFlavor: string;
+  bbAddToOrder: string;
+  bbCancel: string;
+  bbChange: string;
+  bbSend: string;
+  bbTablePlaceholder: string;
+  bbTableRequired: string;
+  bbTableRequiredDesc: string;
+  bbQtyLess: string;
+  bbQtyMore: string;
+  bbFlatWord: string;
+  loyTitle: string;
+  loySubtitle: string;
+  loyEmptyTitle: string;
+  loyEmptyDesc: string;
+  loyNoMatch: string;
+  purTitle: string;
+  purSubtitle: string;
+  purEmptyTitle: string;
+  purEmptyDesc: string;
+
+  // ── r67: the guided order wizard (guest ritual flow) ──────────────
+  wizTitle: string;
+  wizSubtitle: string;
+  wizStepWho: string;
+  wizStepSetup: string;
+  wizStepPipe: string;
+  wizStepMolasses: string;
+  wizStepFlavors: string;
+  wizStepReview: string;
+  wizForWhomTitle: string;
+  wizForWhomDesc: string;
+  wizForWhomPlaceholder: string;
+  wizShishaNum: string;
+  wizSetupTitle: string;
+  wizSetupDesc: string;
+  wizOwnMolasses: string;
+  wizOwnMolassesDesc: string;
+  wizOwnHookah: string;
+  wizOwnHookahDesc: string;
+  wizFromMenu: string;
+  wizFromMenuDesc: string;
+  wizByoBadge: string;
+  wizPipeTitle: string;
+  wizPipeDesc: string;
+  wizPipeRegular: string;
+  wizPipeRegularDesc: string;
+  wizPipeAmy: string;
+  wizPipeAmyDesc: string;
+  wizMolassesTitle: string;
+  wizMolassesDesc: string;
+  wizFlavorsTitle: string;
+  wizFlavorsDesc: string;
+  wizOwnMolassesNote: string;
+  wizQtyTitle: string;
+  wizReviewTitle: string;
+  wizReviewFor: string;
+  wizReviewSetup: string;
+  wizReviewPipe: string;
+  wizReviewMolasses: string;
+  wizAddCta: string;
+  wizContinue: string;
+  wizAddAnother: string;
+  wizAddAnotherDesc: string;
+  /** r69 (audit ③) — empty-state copy: sold out vs not stocked, plus the
+   * two escapes (own molasses / call staff). */
+  wizSoldOutTitle: string;
+  wizSoldOutDesc: string;
+  wizNotStockedTitle: string;
+  wizNotStockedDesc: string;
+  wizCallStaff: string;
+  wizStaffCallNote: string;
+  wizBrandSoldOut: string;
+  wizBackToBrands: string;
+  wizSendTable: string;
+  wizAddedToast: string;
+  wizOwnMolassesTag: string;
+  wizOwnHookahTag: string;
+  wizAmyPipeTag: string;
+  wizRegularPipeTag: string;
+  wizTableOrder: string;
+  wizShishaCount: string;
+  wizEditShisha: string;
+  wizRemoveShisha: string;
+  wizEmptyTable: string;
+  wizQuickPicks: string;
+  wizQuickPicksDesc: string;
+  wizOwnMolassesSaved: string;
+  wizScanFound: string;
+  wizAmyNoBudget: string;
+  wizPriceFlatNote: string;
+  wizBogoYou: string;
+  wizBogoYouDesc: string;
+  change: string;
+  brands: string;
+  popularBowls: string;
+  oneTapAdd: string;
+  sendOrder: string;
+  orderSent: string;
+  orderSentDesc: string;
+  newOrder: string;
+  from: string;
+  inCart: string;
+  revenue: string;
+  netProfit: string;
+  margin: string;
+  byo: string;
+  bowl: string;
+  bowls: string;
+  for2for1: string;
+
+  // Config sheet
+  pickFlavor: string;
+  fruits: string;
+  mix: string;
+  type: string;
+  quantity: string;
+  lineTotal: string;
+  addToCart: string;
+  addFlavor: string;
+  addAnotherFlavor: string;
+  mixFlavors: string;
+  mixMatch: string;
+  noFlavorsYet: string;
+  grams20Note: string;
+  standardSession: string;
+  flatNote: string;
+  mixAcrossBrands: string;
+  mixEmpty: string;
+  selectedWord: string;
+  closeBtn: string;
+  flavorsOf: string;
+
+  // Cart
+  cart: string;
+  yourOrder: string;
+  currentOrder: string;
+  subtotal: string;
+  total: string;
+  byoSaving: string;
+  addons: string;
+  checkout: string;
+  emptyCart: string;
+  emptyCartDesc: string;
+  each20g: string;
+  byoTitle: string;
+  byoDesc: string;
+  loungeSetup: string;
+  loungeSetupDesc: string;
+  ownHookahLabel: string;
+  ownHookahDesc: string;
+  ownMolassesLabel: string;
+  ownMolassesDesc: string;
+  personalHose: string;
+  freeWord: string;
+  chargedWord: string;
+
+  // Checkout
+  customerName: string;
+  customerNameOptional: string;
+  phone: string;
+  phoneOptional: string;
+  tableRoom: string;
+  notes: string;
+  notesOptional: string;
+  placeOrder: string;
+  placingOrder: string;
+  orderPlaced: string;
+  orderId: string;
+  done: string;
+  nameOrTableHint: string;
+  checkingPlus: string;
+  loyaltyPhonePlaceholder: string;
+  tablePlaceholder2: string;
+  notesPlaceholder: string;
+  newToMazajPlus: string;
+  bonusPtsPrefix: string;
+  ptsOnOrder: string;
+  posLinkedNote: string;
+  orderSavedOfflineTitle: string;
+  orderSavedOfflineDesc: string;
+  sessionQueued: string;
+  welcomeMazajPlus: string;
+  ptsEarned: string;
+  ptsRedeemed: string;
+  orderSavedDeviceToast: string;
+  willSyncToast: string;
+  sessionQueuedToast: string;
+
+  // Order screen (guest browse)
+  guestOrderTitle: string;
+  scan: string;
+  cartBtn: string;
+  egyptianLounge: string;
+  heroLine1: string;
+  heroLine2: string;
+  heroBody: string;
+  promoByoTitle: string;
+  promoByoBody: string;
+  promoMolassesTitle: string;
+  promoMolassesBody: string;
+  promoMixTitle: string;
+  promoMixBody: string;
+  oneTapFav: string;
+  tapBrandHint: string;
+  viewCart: string;
+  bogoOn: string;
+  footerLine: string;
+  searchMenu: string;
+  searchPlaceholder: string;
+  searchNoResults: string;
+  searchMatches: string;
+  addBtn: string;
+  legendFruits: string;
+  legendMix: string;
+  legendAmy: string;
+  legendSpecial: string;
+  legendFlatSub: string;
+  priceList: string;
+
+  // Guest tracking
+  trackOrders: string;
+  trackDesc: string;
+  noOrders48: string;
+  allServed: string;
+  stepPlaced: string;
+  stepPreparing: string;
+  stepServed: string;
+  inQueue: string;
+  minutesShort: string;
+  longerUsual: string;
+  preparingNow: string;
+  ptsOrderNote: string;
+  pingTitle: string;
+  notifOn: string;
+  notifOnDesc: string;
+  notifOffDesc: string;
+  notifUnsupportedDesc: string;
+  notifyMe: string;
+  howWasSession: string;
+  lovedIt: string;
+  goodRating: string;
+  doBetter: string;
+  feedbackPlaceholder: string;
+  sendFeedback: string;
+  thanksRating: string;
+  rateStarsFirst: string;
+  justNow: string;
+  mAgo: string;
+  hAgo: string;
+  pingOnToast: string;
+  pingOnToastDesc: string;
+  blockedToast: string;
+  blockedToastDesc: string;
+  installAppToast: string;
+  installAppToastDesc: string;
+  thanksFeedbackToast: string;
+  helpsServe: string;
+
+  // Guest order header + dialogs
+  aiBtn: string;
+  favorites: string;
+  coal: string;
+  call: string;
+  welcomeBackName: string;
+  yourUsual: string;
+  reorderBtn: string;
+  nameLabel: string;
+  tableLabel: string;
+  callDescShort: string;
+  coalDescShort: string;
+  needHelpPlaceholder: string;
+  coalNoteRegular: string;
+  coalNoteCubed: string;
+  shishaManToast: string;
+  shishaManToastDesc: string;
+  coalToast: string;
+  cubedOnWay: string;
+  regularOnWay: string;
+  browseSkipToast: string;
+
+  // r57 — resilient request queue
+  requestQueued: string;
+  requestQueuedDesc: string;
+
+  // r57 — multi-branch platform
+  chooseBranch: string;
+  chooseBranchDesc: string;
+  allBranches: string;
+  allBranchesDesc: string;
+  chooseBranchGuest: string;
+  branchLabel: string;
+  branchChip: string;
+  // r74 — guest floor question (table number exists on several floors)
+  floorQuestion: string;
+  floorIndoors: string;
+  floorOutdoors: string;
+  floorOther: string;
+
+  // r57 — inventory matrix (venue admins)
+  invTotalAll: string;
+  invByBranch: string;
+  invMatrixHint: string;
+
+  // r57 — platform super-admin console
+  platformConsole: string;
+  platformConsoleDesc: string;
+  venues: string;
+  venuesDesc: string;
+  addVenue: string;
+  addVenueDesc: string;
+  venueName: string;
+  venueNameAr: string;
+  venueKind: string;
+  kindHookah: string;
+  kindCafe: string;
+  kindRestaurant: string;
+  flagshipBranch: string;
+  flagshipBranchHint: string;
+  adminName: string;
+  adminPin: string;
+  connectVenue: string;
+  suspendVenue: string;
+  activateVenue: string;
+  venuePending: string;
+  venueActive: string;
+  venueSuspended: string;
+  addBranch: string;
+  branchName: string;
+  branchAddedToast: string;
+  venueOnboardedToast: string;
+  venueOnboardedToastDesc: string;
+  todayOrders: string;
+  todayRevenue: string;
+  platformVenuesActive: string;
+  platformBranches: string;
+  openVenue: string;
+  branchesOf: string;
+  statusLabel: string;
+  noVenues: string;
+  noVenuesDesc: string;
+  venueStatusUpdated: string;
+
+  // Favorites sheet
+  favTitle: string;
+  favDesc: string;
+  saveCurrentMix: string;
+  favPlaceholder: string;
+  saveBtn: string;
+  favHint: string;
+  noFavs: string;
+  favRemoved: string;
+  favAdded: string;
+
+  // AI Sommelier
+  aiSommelier: string;
+  sommelierTagline: string;
+  sommelierGreeting: string;
+  askPlaceholder: string;
+  thinking: string;
+  quickAdd: string;
+  somethingSweet: string;
+  strongClassic: string;
+  mintyFresh: string;
+  surpriseMe: string;
+  aiBadge: string;
+  engineBadge: string;
+  clearChat: string;
+  sendBtn: string;
+  addedToCart: string;
+  // r58 living orders — amend after confirming
+  amendAction: string;
+  amendEditingTitle: string;
+  amendEditingDesc: string;
+  amendBarTitle: string;
+  amendBarCta: string;
+  amendSaveChanges: string;
+  amendSaving: string;
+  amendCancelEdit: string;
+  amendCancelled: string;
+  amendNoChanges: string;
+  amendChangesChip: string;
+  amendFooterNote: string;
+  amendUpdatedToast: string;
+  amendUpdatedDesc: string;
+  amendRevWord: string;
+  amendGuestButton: string;
+  amendGuestStartDesc: string;
+  amendStartDesc: string;
+  amendStaffTitle: string;
+  amendStaffSubtitle: string;
+  amendEmptyTitle: string;
+  amendEmptyDesc: string;
+  amendLegacyError: string;
+  backToQueue: string;
+  sommelierError: string;
+
+  // AI brief (manager analytics)
+  aiBrief: string;
+  generateBrief: string;
+  briefLoading: string;
+  briefTitle: string;
+  analyticsLoadError: string;
+  tryAgain: string;
+
+  // Inventory
+  molasses: string;
+  supplies: string;
+  coalFoil: string;
+  inStock: string;
+  low: string;
+  restock: string;
+  flavorStock: string;
+  flavors: string;
+  brandsTracked: string;
+  totalMolasses: string;
+  totalHookahsLeft: string;
+  lowStock: string;
+  hookahsLeft: string;
+  stock: string;
+  min: string;
+  reusable: string;
+  notAutoDeducted: string;
+  medicalHose: string;
+  regularCoal: string;
+  cubedCoal: string;
+  foil: string;
+
+  // Orders panel
+  orderQueue: string;
+  activeSessions: string;
+  incoming: string;
+  tapToConfirm: string;
+  confirmTake: string;
+  myOrders: string;
+  otherActive: string;
+  doneOrders: string;
+  walkIn: string;
+  guestSelfOrder: string;
+  assigned: string;
+  comments: string;
+  orderComments: string;
+  noCommentsYet: string;
+  addComment: string;
+  author: string;
+  comment: string;
+  startPreparing: string;
+  backToPending: string;
+  markDone: string;
+  noOrdersYet: string;
+  noOrdersDesc: string;
+
+  // Requests
+  requestsTitle: string;
+  guestCalls: string;
+  callShishaMan: string;
+  callShishaManDesc: string;
+  sendRequest: string;
+  sending: string;
+  requestCoal: string;
+  requestCoalDesc: string;
+  regularCoalType: string;
+  cubedCoalType: string;
+  quickLight: string;
+  longerBurn: string;
+  coalRequestSent: string;
+  shishaManOnWay: string;
+  pending: string;
+  inProgress: string;
+  acknowledged: string;
+  noRequestsYet: string;
+  noRequestsDesc: string;
+  autoRefresh: string;
+  /** r69 (audit ②) — staff surfaces i18n: requests-panel, orders-panel
+   * (queue), bowl-builder, loyalty-panel, purchases-panel were built
+   * English-locked. Keys below complete their dictionary. */
+  refresh: string;
+  updateFailed: string;
+  preparingLabel: string;
+  markedPreparingToast: string;
+  markedDoneToast: string;
+  waitingLabel: string;
+  lateLabel: string;
+  hookahSingle: string;
+  hookahPlural: string;
+  loadOrdersFail: string;
+  orderConfirmedToast: string;
+  nowPreparingFor: string;
+  couldNotClaim: string;
+  legacyItemsNoEdit: string;
+  guestScanLabel: string;
+  guestCallLabel: string;
+  employeeLabel: string;
+  autoRefresh10: string;
+  queueValueLabel: string;
+  statusWord: string;
+  commentAddedToast: string;
+  couldNotComment: string;
+  commentPlaceholder: string;
+  noCommentsHint: string;
+  reqNewCount: string;
+  acknowledgeLabel: string;
+  stepRequested: string;
+  coalRequestTitle: string;
+  reqLoadFail: string;
+  reqAckToast: string;
+  reqDoneToast: string;
+  requestsCount: string;
+  chooseShishaType: string;
+  changeWord: string;
+  bowlsWord: string;
+  profitLiveNote: string;
+  flatSessionPrice: string;
+  /** r69 — bowl-builder (staff New tab) */
+  bbTitle: string;
+  bbSubtitle: string;
+  customerOptional: string;
+  customerAria: string;
+  tableNumberStar: string;
+  tableRequiredAria: string;
+  pickFromTables: string;
+  pickFromWedjatTables: string;
+  loyaltyPhoneOptional: string;
+  newMemberNote: string;
+  tableRequiredToast: string;
+  tableRequiredToastDesc: string;
+  orderSavedOffline: string;
+  orderSentKitchen: string;
+  syncedToRsm: string;
+  ptsForMember: string;
+  couldNotSend: string;
+  bowlSingle: string;
+  amyFlatChip: string;
+  noFlavors: string;
+  removeBowlAria: string;
+  sendOrderCta: string;
+  addFlavorsFill: string;
+  flavorSingle: string;
+  flavorPlural: string;
+  addAFlavor: string;
+  decreaseQty: string;
+  increaseQty: string;
+  addToOrderCta: string;
+  closeFlavorPicker: string;
+  savedOfflineBadge: string;
+  standardWord: string;
+  tableWord: string;
+  /** r69 — loyalty-panel */
+  loyaltyTitleFull: string;
+  rewardsMembersSub: string;
+  membersLabel: string;
+  searchMembersPh: string;
+  searchMembersAria: string;
+  noMembersYet: string;
+  noMembersMatch: string;
+  membersAutoJoin: string;
+  enrollWord: string;
+  enrollReq: string;
+  couldNotEnroll: string;
+  enrollMember: string;
+  nameExample: string;
+  ptsWord: string;
+  ptsToWord: string;
+  /** r69 — purchases-panel */
+  purchasesLoadFail: string;
+  noPurchasesYet: string;
+  noPurchasesDesc: string;
+  purchaseRecorded: string;
+  couldNotRecord: string;
+  procurementWord: string;
+  quantityPacks: string;
+  totalCost: string;
+  decreaseWord: string;
+  increaseWord: string;
+  /** r69 — loyalty-panel supplemental */
+  pointsOutstanding: string;
+  redeemableBalance: string;
+  pointsEarnedWord: string;
+  allTimeWord: string;
+  pointsRedeemedWord: string;
+  givenBack: string;
+  howMazajWorks: string;
+  lifetimePtsEarn: string;
+  loyaltyRules: string;
+  enrollDesc: string;
+  fullName: string;
+  phoneLoyaltyId: string;
+  enrollingWord: string;
+  buyWord: string;
+  purchasesSub: string;
+  historyWord: string;
+
+  // Employees
+  employees: string;
+  manageStaff: string;
+  addEmployee: string;
+  editEmployee: string;
+  role: string;
+  superAdmin: string;
+  admin: string;
+  employee: string;
+  tabAccess: string;
+  permissions: string;
+  createEmployee: string;
+  saveChanges: string;
+  deactivate: string;
+  activate: string;
+  remove: string;
+  pin: string;
+  pinDigits: string;
+
+  // Purchases
+  purchases: string;
+  buyMolasses: string;
+  buyStock: string;
+  buyDesc: string;
+  totalSpent: string;
+  lastPurchase: string;
+  buyAndRestock: string;
+  molassesPacks: string;
+  procurementSpend: string;
+
+  // Profit
+  profitTitle: string;
+  revenueCostMargin: string;
+  cogs: string;
+  molassesCost: string;
+  suppliesCost: string;
+  profitByBrand: string;
+  recentOrders: string;
+  cost: string;
+  hookahsSold: string;
+
+  // Sync
+  wedjatSync: string;
+  connectionHealth: string;
+  connected: string;
+  disconnected: string;
+  connectedToWedjat: string;
+  checkRevocations: string;
+  checkRevocationsDesc: string;
+  syncPrices: string;
+  syncPricesDesc: string;
+  synced: string;
+  revoked: string;
+  failed: string;
+  revokedByWedjat: string;
+  revokedBy: string;
+  fromWedjat: string;
+  noSyncedOrders: string;
+  noSyncedDesc: string;
+
+  // Misc
+  egp: string;
+  perHookah: string;
+  flame: string;
+
+  // PWA — get the app / install / two-way sync
+  getApp: string;
+  getAppDesc: string;
+  scanToInstall: string;
+  scanHint: string;
+  installNow: string;
+  installing: string;
+  landingTagline: string;
+  installMeta: string;
+  installFree: string;
+  preparingDownload: string;
+  preparingHint: string;
+  installAndroidIntro: string;
+  installFallbackTitle: string;
+  retry: string;
+  installIosTitle: string;
+  installIosIntro: string;
+  iosInstallNote: string;
+  openInSafariTitle: string;
+  openInSafariDesc: string;
+  openInSafariStep: string;
+  installSuccessTitle: string;
+  installSuccessDesc: string;
+  startUsing: string;
+  continueInBrowser: string;
+  scanWithPhone: string;
+  howTo: string;
+  youHaveApp: string;
+  iosStep1: string;
+  iosStep2: string;
+  iosStep3: string;
+  installFromMenu: string;
+  apkButton: string;
+  apkSub: string;
+  apkStarted: string;
+  apkAfterTitle: string;
+  apkStep1: string;
+  apkStep2: string;
+  apkStep3: string;
+  orDivider: string;
+  instantAdd: string;
+  iosNoStore: string;
+  sheetApk: string;
+  syncTitle: string;
+  syncDesc1: string;
+  syncDesc2: string;
+  featTracking: string;
+  featLoyalty: string;
+  featOffline: string;
+  installBanner: string;
+  installBannerDesc: string;
+  later: string;
+  offlineMode: string;
+  queuedOrders: string;
+  syncingOrders: string;
+  ordersSynced: string;
+
+  // Landing — cinematic home experience
+  landKicker: string;
+  landHeroTitleA: string;
+  landHeroTitleB: string;
+  landHeroSub: string;
+  landHeroMeta: string;
+  landCtaOrder: string;
+  landScroll: string;
+  landNavPlatform: string;
+  landNavExperience: string;
+  landNavApp: string;
+  landRitualKicker: string;
+  landRitualTitle: string;
+  landRitual1T: string;
+  landRitual1D: string;
+  landRitual2T: string;
+  landRitual2D: string;
+  landRitual3T: string;
+  landRitual3D: string;
+  landFeatKicker: string;
+  landFeatTitle: string;
+  landFeatAiT: string;
+  landFeatAiD: string;
+  landFeatTrackT: string;
+  landFeatTrackD: string;
+  landFeatOfflineT: string;
+  landFeatOfflineD: string;
+  landFeatLoyaltyT: string;
+  landFeatLoyaltyD: string;
+  landStatHouses: string;
+  landStatFlavors: string;
+  landStatBowl: string;
+  landStatBogo: string;
+  landAppKicker: string;
+  landAppTitle: string;
+  landAppDesc: string;
+  landAppB1: string;
+  landAppB2: string;
+  landAppB3: string;
+  landAppB4: string;
+  landFooterCraft: string;
+  landFooterTagline: string;
+  landFooterRights: string;
+  landEnter: string;
+  landMenuPeek: string;
+  landMenuPeekSub: string;
+  // ── r59: WEDJAT RSM revenue share ─────────────────────────────
+  rsmTitle: string;
+  rsmSubtitle: string;
+  rsmRangeToday: string;
+  rsmRange7: string;
+  rsmRange30: string;
+  rsmRangeAll: string;
+  rsmShishaRevenue: string;
+  rsmShishaRevenueSub: string;
+  rsmCommission: string;
+  rsmCommissionSub: string;
+  rsmWedjatGross: string;
+  rsmWedjatGrossSub: string;
+  rsmPartnerShare: string;
+  rsmEffective: string;
+  rsmFormula: string;
+  rsmTaxNote: string;
+  rsmSeparationNote: string;
+  rsmGrossSales: string;
+  rsmDiscounts: string;
+  rsmOrders: string;
+  rsmHookahs: string;
+  rsmByBranch: string;
+  rsmByVenue: string;
+  rsmDailyTrend: string;
+  rsmSyncTitle: string;
+  rsmSynced: string;
+  rsmPending: string;
+  rsmFailed: string;
+  rsmRevoked: string;
+  rsmNoData: string;
+  rsmPlatformSection: string;
+  rsmPlatformSectionDesc: string;
+  rsmThBranch: string;
+  rsmThVenue: string;
+  rsmThRevenue: string;
+  rsmThCommission: string;
+  rsmThOurs: string;
+  rsmViewFull: string;
+
+  /* r61 — Platform Control Center */
+  pccActiveVenues: string;
+  pccActivityTitle: string;
+  pccAddPerson: string;
+  pccAddPersonDesc: string;
+  pccAlertsTitle: string;
+  pccAllStatuses: string;
+  pccAllVenues: string;
+  pccBranchesShort: string;
+  pccBrandsShort: string;
+  pccByBranchTitle: string;
+  pccCommissionHint: string;
+  pccCommissionPct: string;
+  pccCommissionToday: string;
+  pccCreatePerson: string;
+  pccCustom: string;
+  pccDays: string;
+  pccDbUp: string;
+  pccDefaultLabel: string;
+  pccDisablePerson: string;
+  pccEditPricing: string;
+  pccEditPricingDesc: string;
+  pccEffectiveTake: string;
+  pccEnablePerson: string;
+  pccFilterStatus: string;
+  pccFilterVenue: string;
+  pccFlat: string;
+  pccFlavors: string;
+  pccFruits: string;
+  pccFruitsMix: string;
+  pccHookahsShort: string;
+  pccIdentityDesc: string;
+  pccIdentityTitle: string;
+  pccLive: string;
+  pccLoadMore: string;
+  pccLowStockChip: string;
+  pccMenuDesc: string;
+  pccMenuOverridden: string;
+  pccMenuPublishDesc: string;
+  pccMenuResetToast: string;
+  pccMenuSavedToast: string;
+  pccMenuTitle: string;
+  pccNoActivity: string;
+  pccNoActivityDesc: string;
+  pccNoOrders: string;
+  pccNoOrdersDesc: string;
+  pccNoPeople: string;
+  pccNoPeopleDesc: string;
+  pccNoStock: string;
+  pccNoVenue: string;
+  pccOrdersDesc: string;
+  pccOrdersTitle: string;
+  pccPaletteEmpty: string;
+  pccPaletteLabel: string;
+  pccPaletteNavigate: string;
+  pccPalettePlaceholder: string;
+  pccPaletteRun: string;
+  pccPaletteShort: string;
+  pccPartnerGets: string;
+  pccPendingReqChip: string;
+  pccPeopleDesc: string;
+  pccPeopleTitle: string;
+  pccPersonAddedToast: string;
+  pccPersonDisabled: string;
+  pccPersonEnabled: string;
+  pccOnline: string;
+  pccOnlineTitle: string;
+  pccRevokeSessions: string;
+  pccBackupsTitle: string;
+  pccBackupsDesc: string;
+  pccBackupRunNow: string;
+  pccBackupRunning: string;
+  pccBackupDoneToast: string;
+  pccBackupSuccess: string;
+  pccBackupPartial: string;
+  pccBackupFailed: string;
+  pccBackupRows: string;
+  pccBackupOffsite: string;
+  pccBackupOffsiteNo: string;
+  pccBackupLastNever: string;
+  pccBackupCron: string;
+  pccBackupManual: string;
+  pccBackupCronHint: string;
+  pccBackupAgoNow: string;
+  pccBackupAgoMin: string;
+  pccBackupAgoHour: string;
+  pccBackupAgoDay: string;
+  pccRevokeTitle: string;
+  pccRevokeDesc: string;
+  pccRevokeConfirm: string;
+  pccSessionsRevoked: string;
+  pccPersonName: string;
+  pccPlatformName: string;
+  pccPublishPrices: string;
+  pccRefreshAll: string;
+  pccResetToDefault: string;
+  pccRole: string;
+  pccRoleAdmin: string;
+  pccRoleEmployee: string;
+  pccRolePlatform: string;
+  pccRoleSuper: string;
+  pccRoleVenueAdmin: string;
+  pccRsmEngineDesc: string;
+  pccRsmEngineTitle: string;
+  pccRsmSavedDesc: string;
+  pccSaveEngine: string;
+  pccScopePlatform: string;
+  pccSearchPeople: string;
+  pccSettingsSavedToast: string;
+  pccShareHint: string;
+  pccSharePct: string;
+  pccStockTitle: string;
+  pccStockTotal: string;
+  pccSubtitle: string;
+  pccSuppliesShort: string;
+  pccTabFinance: string;
+  pccTabInventory: string;
+  pccTabMenu: string;
+  pccTabOrders: string;
+  pccTabPeople: string;
+  pccTabPulse: string;
+  pccTabSettings: string;
+  pccTabVenues: string;
+  pccTitle: string;
+  pccToggleLanguage: string;
+  pccTrendDesc: string;
+  pccTrendRevenue: string;
+  pccTrendTitle: string;
+  pccUnassigned: string;
+  pccVenueOptional: string;
+  pccWedjatChip: string;
+  pccYou: string;
+}
+
+export const translations: Record<Lang, Partial<Translations>> = {
+  en: {
+    // Sign-in
+    mazaj: "Mazaj",
+    hookahLounge: "Hookah Lounge · Ordering System",
+    imStaff: "I'm staff",
+    imStaffDesc: "Sign in with your PIN to take orders",
+    imGuest: "I'm a guest",
+    imGuestDesc: "Order from your table or call for help",
+    justBrowsing: "Just browsing — skip sign-in",
+    staffPins: "Staff PINs",
+    enterPin: "Enter your 4-digit PIN",
+    guestCheckIn: "Guest check-in",
+    yourName: "Your name",
+    tableOptional: "Table number (optional)",
+    tableNumberLabel: "Table number",
+    tableNumberPlaceholder: "e.g. 5",
+    confirmOrderCta: "Confirm my order",
+    confirmOrderTitle: "Confirm your order",
+    confirmOrderDesc: "One tap and the lounge gets to work",
+    tableNeeded: "Please enter your table number",
+    startOrdering: "Start ordering",
+    back: "Back",
+    cancel: "Cancel",
+    delete: "Delete",
+    checking: "Checking…",
+    welcome: "Welcome,",
+    namePlaceholder: "e.g. Sara",
+    tablePlaceholder: "e.g. Table 5",
+    invalidPin: "Invalid PIN",
+    couldNotSignIn: "Could not sign in",
+    linkedPosNote: "Linked to the table's check from the restaurant POS",
+
+    // Dashboard tabs
+    queue: "Queue",
+    new: "New",
+    inventory: "Inventory",
+    requests: "Requests",
+    staff: "Staff",
+    buy: "Buy",
+    profit: "Profit",
+    sync: "Sync",
+    analytics: "Analytics",
+    loyalty: "Mazaj+",
+    track: "Track",
+    noAccess: "No access",
+    noAccessDesc:
+      "You don't have permission to access any section. Ask a super admin to assign you a role.",
+    signOut: "Sign out",
+
+    // r70 — employee dashboard shell tabs
+    tabQueue: "Queue",
+    tabNew: "New",
+    tabEdit: "Edit",
+    tabInventory: "Inventory",
+    tabRequests: "Requests",
+    tabStaff: "Staff",
+    tabBuy: "Buy",
+    tabProfit: "Profit",
+    tabRsm: "RSM",
+    tabStats: "Stats",
+    tabMazajPlus: "Mazaj+",
+    tabSync: "Sync",
+    showQr: "Show the guest download QR",
+    sommelierTip: "AI Sommelier — recommend a bowl for a guest",
+    openActions: "Open actions — AI sommelier, QR, alerts, language",
+    closeActions: "Close actions",
+
+    // Bowl builder
+    bowlBuilder: "Bowl builder",
+    build: "Build",
+    buildBowl: "Build a bowl",
+    customer: "Customer",
+    tableNumber: "Table number",
+    tableRequired: "Table number required",
+    tableRequiredDesc: "Enter the table number before sending the order.",
+    quickPresets: "Quick presets",
+    thisOrder: "This order",
+    noBowlsYet: "No bowls yet",
+    noBowlsDesc: "Tap a brand below or a quick preset to start.",
+    clearAll: "Clear all",
+    chooseShisha: "Choose your shisha",
+    chooseShishaDesc: "Select a category to see available brands.",
+    regularShisha: "Regular shisha",
+    amyShisha: "Amy shisha",
+    changeCategory: "Change category",
+    orderCardModify: "Modify",
+    orderCardDelete: "Delete",
+    orderCardConfirm: "Confirm",
+    orderCardDeleted: "Bowl removed",
+    stockNote: "Showing only what's available at this branch",
+    noStockCategory: "Nothing available here right now — try the other category",
+    /* r68-audit — honest empty states + the BYO escape hatch */
+    wizNoStockTitle: "Menu molasses isn't stocked here yet",
+    wizNoStockDesc:
+      "This branch can't pour menu molasses right now — but you can still smoke.",
+    wizNoStockByo: "I brought my own molasses",
+    wizNoStockByoDesc: "2-for-1 · we prepare the pipe & service",
+    wizNoStockCall: "Or tap “Call the shisha man” up top — we'll help you out.",
+
+    /* ── r68-audit: staff-surface i18n (EN) ─────────────────────────── */
+    reqTitle: "Requests",
+    reqSubtitle: "Guest calls for the shisha man",
+    reqNewBadge: "new",
+    reqEmptyTitle: "No requests yet",
+    reqEmptyDesc: "When a guest calls the shisha man, it shows up here.",
+    reqPending: "Pending",
+    reqInProgress: "In progress",
+    reqDone: "Done",
+    reqAck: "Acknowledge",
+    reqMarkDone: "Mark done",
+    reqUpdateFail: "Update failed",
+    reqStepRequested: "Requested",
+    reqStepAcknowledged: "Acknowledged",
+    reqStepDone: "Done",
+    reqCoal: "Coal request",
+    reqCall: "Call the shisha man",
+    reqAutoRefresh: "Auto-refreshes every 15 seconds",
+    timeJustNow: "just now",
+    timeMinAgoSuffix: "m ago",
+    timeHourAgoSuffix: "h ago",
+    queueValue: "Queue value",
+    legacyItems: "This order can't be edited (legacy items)",
+    opHookahs: "hookahs",
+    opWaiting: "Waiting",
+    opLate: "Late",
+    bbSubtitleSuffix: "· build & send",
+    bbChooseType: "Choose shisha type",
+    bbThisOrder: "This order",
+    bbBowls: "bowls",
+    bbClearAll: "Clear all",
+    bbNoBowls: "No bowls yet",
+    bbNoBowlsDesc: "Tap a brand below or a preset above to start.",
+    bbAddFlavor: "Add a flavor",
+    bbAddAnotherFlavor: "Add another flavor",
+    bbAddToOrder: "Add to order",
+    bbCancel: "Cancel",
+    bbChange: "Change",
+    bbSend: "Send order",
+    bbTablePlaceholder: "Table number *",
+    bbTableRequired: "Table number is required",
+    bbTableRequiredDesc: "Enter the table number before sending the order.",
+    bbQtyLess: "Decrease quantity",
+    bbQtyMore: "Increase quantity",
+    bbFlatWord: "flat",
+    loyTitle: "Mazaj+ Loyalty",
+    loySubtitle: "Rewards members, points & tiers",
+    loyEmptyTitle: "No members yet",
+    loyEmptyDesc:
+      "Guests join automatically when ordering with a phone number, or enroll them manually.",
+    loyNoMatch: "No members match your search.",
+    purTitle: "Purchases",
+    purSubtitle: "Molasses packs & supplies",
+    purEmptyTitle: "No purchases yet",
+    purEmptyDesc: "Tap “Buy” to purchase molasses packs or supplies.",
+
+    // ── r67: the guided order wizard ─────────────────────────────────
+    wizTitle: "Order a shisha",
+    wizSubtitle: "A few quick steps — we'll take it from there",
+    wizStepWho: "You",
+    wizStepSetup: "Setup",
+    wizStepPipe: "Pipe",
+    wizStepMolasses: "Molasses",
+    wizStepFlavors: "Flavors",
+    wizStepReview: "Review",
+    wizForWhomTitle: "Who's this shisha for?",
+    wizForWhomDesc: "Someone else at the table can order their own right after — each shisha gets its own setup.",
+    wizForWhomPlaceholder: "Name or seat (optional)",
+    wizShishaNum: "Shisha",
+    wizSetupTitle: "Did you bring your own?",
+    wizSetupDesc: "Your setup decides what we prepare for you — and unlocks the 2-for-1.",
+    wizOwnMolasses: "My own molasses",
+    wizOwnMolassesDesc: "You bring the tobacco — we prepare the pipe & service",
+    wizOwnHookah: "My own hookah",
+    wizOwnHookahDesc: "You bring the pipe — we pour our molasses",
+    wizFromMenu: "From the menu",
+    wizFromMenuDesc: "Our pipe, our molasses — the full experience",
+    wizByoBadge: "2-for-1",
+    wizPipeTitle: "Choose your pipe",
+    wizPipeDesc: "The Amy pipe is our premium rig — flat price on any premium molasses.",
+    wizPipeRegular: "Regular",
+    wizPipeRegularDesc: "The classic lounge pipe",
+    wizPipeAmy: "Amy",
+    wizPipeAmyDesc: "Premium pipe · 180 EGP flat · premium molasses only",
+    wizMolassesTitle: "Choose your molasses",
+    wizMolassesDesc: "Only what this branch can pour right now.",
+    wizFlavorsTitle: "Pick your flavors",
+    wizFlavorsDesc: "One flavor or a mix — 20g per bowl either way.",
+    wizOwnMolassesNote: "Your own molasses — no flavor pick needed. We'll prep the pipe and coals.",
+    wizQtyTitle: "How many?",
+    wizReviewTitle: "Your shisha",
+    wizReviewFor: "For",
+    wizReviewSetup: "Setup",
+    wizReviewPipe: "Pipe",
+    wizReviewMolasses: "Molasses",
+    wizAddCta: "Add to table order",
+    wizContinue: "Continue",
+    wizAddAnother: "Add another shisha",
+    wizAddAnotherDesc: "For someone else at the table",
+    wizSoldOutTitle: "Everything's sold out right now",
+    wizSoldOutDesc:
+      "The jars at this branch just ran dry. Bring your own molasses and we'll pack it for you (2-for-1), or call the staff for help.",
+    wizNotStockedTitle: "This branch isn't stocked yet",
+    wizNotStockedDesc:
+      "The molasses shelf here is still being set up. Bring your own molasses and enjoy it 2-for-1, or call the staff for help.",
+    wizCallStaff: "Call staff",
+    wizStaffCallNote: "Guest needs help — no molasses available",
+    wizBrandSoldOut: "This brand just sold out — pick another",
+    wizBackToBrands: "Back to brands",
+    wizSendTable: "Send table order",
+    wizAddedToast: "Shisha added to your table order",
+    wizOwnMolassesTag: "own molasses",
+    wizOwnHookahTag: "own hookah",
+    wizAmyPipeTag: "Amy pipe",
+    wizRegularPipeTag: "Regular pipe",
+    wizTableOrder: "Table order",
+    wizShishaCount: "shisha",
+    wizEditShisha: "Edit",
+    wizRemoveShisha: "Remove",
+    wizEmptyTable: "No shishas yet — start the ritual above",
+    wizQuickPicks: "Quick picks",
+    wizQuickPicksDesc: "One tap, straight to review",
+    wizOwnMolassesSaved: "Own molasses — you save every 2nd one",
+    wizScanFound: "Molasses found",
+    wizAmyNoBudget: "Not on the Amy pipe — pick a premium brand",
+    wizPriceFlatNote: "flat — any molasses",
+    wizBogoYou: "2-for-1 unlocked",
+    wizBogoYouDesc: "You brought your own — every second shisha is free",
+    change: "Change",
+    brands: "brands",
+    popularBowls: "Popular bowls",
+    oneTapAdd: "One tap to add a house favourite",
+    sendOrder: "Send order",
+    orderSent: "Order sent!",
+    orderSentDesc: "Synced with Wedjat RSM",
+    newOrder: "New order",
+    from: "from",
+    inCart: "packed",
+    revenue: "Revenue",
+    netProfit: "Net profit",
+    margin: "Margin",
+    byo: "BYO",
+    bowl: "bowl",
+    bowls: "bowls",
+    for2for1: "2-for-1",
+
+    // Config sheet
+    pickFlavor: "Pick a flavor",
+    fruits: "Fruits",
+    mix: "Mix",
+    type: "Type",
+    quantity: "Quantity",
+    lineTotal: "Line total",
+    addToCart: "Pack my Shisha",
+    addFlavor: "Add a flavor",
+    addAnotherFlavor: "Add another flavor",
+    mixFlavors: "Mix flavors",
+    mixMatch: "mix & match",
+    noFlavorsYet: "No flavors yet",
+    grams20Note: "20g molasses per hookah",
+    standardSession: "Standard session",
+    flatNote: "Flat price",
+    mixAcrossBrands:
+      "Combine flavors from this or any other brand. The 20g splits evenly; price is the highest mix price among chosen brands.",
+    mixEmpty: 'No flavors yet. Tap "Add a flavor" to start your mix.',
+    selectedWord: "selected",
+    closeBtn: "Close",
+    flavorsOf: "flavors:",
+
+    // Cart
+    cart: "Cart",
+    yourOrder: "Your order",
+    currentOrder: "My packed shisha",
+    subtotal: "Subtotal",
+    total: "Total",
+    byoSaving: "BYO 2-for-1 saving",
+    addons: "Add-ons",
+    checkout: "Checkout",
+    emptyCart: "No shisha packed yet",
+    emptyCartDesc: "Pick a brand to start a session.",
+    each20g: "Each hookah is 20g of molasses.",
+    byoTitle: "Bring Your Own · 2 for 1",
+    byoDesc: "Customer brings own hookah or molasses → 2 hookahs for the price of 1.",
+    loungeSetup: "Use lounge setup",
+    loungeSetupDesc: "Standard pricing, no promo.",
+    ownHookahLabel: "Bring my own hookah",
+    ownHookahDesc: "Customer brings the device, we bring the molasses.",
+    ownMolassesLabel: "Bring my own molasses",
+    ownMolassesDesc: "Customer brings the molasses, we bring the setup.",
+    personalHose: "Personal hose",
+    freeWord: "free",
+    chargedWord: "charged",
+
+    // Checkout
+    customerName: "Customer name",
+    customerNameOptional: "Customer name (optional)",
+    phone: "Phone",
+    phoneOptional: "Phone (optional)",
+    tableRoom: "Table / room",
+    notes: "Notes",
+    notesOptional: "Notes (optional)",
+    placeOrder: "Place order",
+    placingOrder: "Placing order…",
+    orderPlaced: "Order placed!",
+    orderId: "Order ID",
+    done: "Done",
+    nameOrTableHint: "Add your name or table so we know where to bring it",
+    checkingPlus: "Checking Mazaj+…",
+    loyaltyPhonePlaceholder: "01xxxxxxxxx — earn & redeem points",
+    tablePlaceholder2: "e.g. Table 7",
+    notesPlaceholder: "Extra coal, flavor requests…",
+    newToMazajPlus: "New here? This phone joins Mazaj+ automatically",
+    bonusPtsPrefix: "50 bonus pts +",
+    ptsOnOrder: "pts on this order",
+    posLinkedNote: "✓ linked to the table's check (restaurant POS)",
+    orderSavedOfflineTitle: "Order saved offline",
+    orderSavedOfflineDesc:
+      "You're offline — this order will sync to the lounge automatically the moment you reconnect.",
+    sessionQueued: "The hookah session is queued for preparation.",
+    welcomeMazajPlus: "Welcome to Mazaj+!",
+    ptsEarned: "pts earned",
+    ptsRedeemed: "pts redeemed",
+    orderSavedDeviceToast: "Order saved on this device",
+    willSyncToast: "It will sync to the lounge automatically when you reconnect.",
+    sessionQueuedToast: "Session added to the queue.",
+
+    // Order screen
+    guestOrderTitle: "Guest order",
+    scan: "Scan",
+    cartBtn: "My Shisha",
+    egyptianLounge: "Egyptian market · lounge pricing",
+    heroLine1: "Build your perfect",
+    heroLine2: "hookah session",
+    heroBody:
+      "Pick your molasses brand and flavor. Every hookah is 20g of molasses, mixed fresh.",
+    promoByoTitle: "Bring your own hookah",
+    promoByoBody: "Get 2 hookahs for the price of 1.",
+    promoMolassesTitle: "Bring your own molasses",
+    promoMolassesBody: "Same 2-for-1 deal applies.",
+    promoMixTitle: "Mix & match flavors",
+    promoMixBody: "Cross-brand mixes, one bowl.",
+    oneTapFav: "One tap to add a house favourite",
+    tapBrandHint: "Tap a brand to set flavor & quantity.",
+    viewCart: "View my shisha",
+    bogoOn: "2-for-1 on",
+    footerLine: "20g molasses per hookah · Prices in EGP · Egyptian market",
+    searchMenu: "Search the menu",
+    searchPlaceholder: "Search flavors, brands, presets…",
+    searchNoResults: 'No matches — try "mint" or "apple"',
+    searchMatches: "Matches",
+    addBtn: "Add",
+    legendFruits: "Regular fruits",
+    legendMix: "Fruits mix",
+    legendAmy: "Amy pipe (premium)",
+    legendSpecial: "Salom / Kass",
+    legendFlatSub: "Everyday flat price",
+    priceList: "The price list",
+
+    // Guest tracking
+    trackOrders: "Track my orders",
+    trackDesc: "Live status of your hookah sessions · updates every 10 seconds",
+    noOrders48: "No orders in the last 48 hours. Place an order to see it here live!",
+    allServed: "All your sessions are served. Enjoy!",
+    stepPlaced: "Order placed",
+    stepPreparing: "Preparing",
+    stepServed: "Served",
+    inQueue: "In the queue · est.",
+    minutesShort: "min",
+    longerUsual: "(a little longer than usual)",
+    preparingNow: "Your shisha man is preparing it right now",
+    ptsOrderNote: "Mazaj+ points earned on this order",
+    pingTitle: "Ping me when it's ready",
+    notifOn: "Notifications on",
+    notifOnDesc:
+      "We'll notify you when your hookah is prepared and served — even with the app closed.",
+    notifOffDesc: "Get a notification on this phone when your hookah is prepared and served.",
+    notifUnsupportedDesc:
+      "On iPhone: install the app first (Add to Home Screen), then come back to enable pings.",
+    notifyMe: "Notify me",
+    howWasSession: "How was your session?",
+    lovedIt: "Loved it!",
+    goodRating: "Good",
+    doBetter: "We'll do better",
+    feedbackPlaceholder: "Anything to tell the team? (optional)",
+    sendFeedback: "Send feedback",
+    thanksRating: "Thanks for rating!",
+    rateStarsFirst: "Tap the stars to rate first",
+    justNow: "just now",
+    mAgo: "m ago",
+    hAgo: "h ago",
+    pingOnToast: "You'll get a ping when it's ready 🔔",
+    pingOnToastDesc: "We'll notify you the moment your hookah is served.",
+    blockedToast: "Notifications are blocked",
+    blockedToastDesc: "Enable them for Mazaj in your browser/site settings to get updates.",
+    installAppToast: "Install the app to get notifications",
+    installAppToastDesc:
+      "On iPhone, add Mazaj to your home screen first — then this button turns on pings.",
+    thanksFeedbackToast: "Thanks for your feedback!",
+    helpsServe: "It helps us serve you better 🙏",
+
+    // Guest order header + dialogs
+    aiBtn: "AI",
+    favorites: "Favorites",
+    coal: "Coal",
+    call: "Call",
+    welcomeBackName: "Welcome back,",
+    yourUsual: "Your usual:",
+    reorderBtn: "Re-order",
+    nameLabel: "Name:",
+    tableLabel: "Table:",
+    callDescShort: "A request will be sent to the staff. Add a note if you like.",
+    coalDescShort: "Choose your coal type and a request goes straight to the shisha man.",
+    needHelpPlaceholder: "e.g. Need help choosing flavors",
+    coalNoteRegular: "Regular coal please",
+    coalNoteCubed: "Cubed coal please",
+    shishaManToast: "The shisha man is on the way!",
+    shishaManToastDesc: "They'll be with you shortly.",
+    coalToast: "Coal request sent!",
+    cubedOnWay: "Cubed coal on the way",
+    regularOnWay: "Regular coal on the way",
+    browseSkipToast: "Welcome! Browse and order when ready.",
+
+    // r57 — resilient request queue
+    requestQueued: "Request saved — it will reach the lounge the moment we reconnect",
+    requestQueuedDesc: "We keep retrying automatically. Your coal is on its way.",
+
+    // r57 — multi-branch platform
+    chooseBranch: "Choose your branch",
+    chooseBranchDesc: "Where are you working tonight?",
+    allBranches: "All branches",
+    allBranchesDesc: "Venue-wide view · total inventory",
+    chooseBranchGuest: "Which branch are you at?",
+    branchLabel: "Branch",
+    branchChip: "Branch",
+    floorQuestion: "Where are you sitting?",
+    floorIndoors: "Indoors",
+    floorOutdoors: "Outdoors",
+    floorOther: "Other floor",
+
+    // r57 — inventory matrix (venue admins)
+    invTotalAll: "Total · all branches",
+    invByBranch: "Stock by branch",
+    invMatrixHint: "Each branch keeps its own stock — this is the venue-wide total.",
+
+    // r57 — platform super-admin console
+    platformConsole: "Platform Console",
+    platformConsoleDesc: "Every venue, every branch — one command center",
+    venues: "Venues",
+    venuesDesc: "Cafés & restaurants connected to Mazaj Platform",
+    addVenue: "Onboard a venue",
+    addVenueDesc: "Add a café or restaurant and connect it to the platform",
+    venueName: "Venue name",
+    venueNameAr: "Arabic name (optional)",
+    venueKind: "Venue type",
+    kindHookah: "Hookah lounge",
+    kindCafe: "Café",
+    kindRestaurant: "Restaurant",
+    flagshipBranch: "First branch name",
+    flagshipBranchHint: "e.g. Downtown · Corniche · Maadi",
+    adminName: "Branch admin name",
+    adminPin: "Admin PIN (4 digits)",
+    connectVenue: "Connect venue",
+    suspendVenue: "Suspend",
+    activateVenue: "Activate",
+    venuePending: "Pending",
+    venueActive: "Active",
+    venueSuspended: "Suspended",
+    addBranch: "Add branch",
+    branchName: "Branch name",
+    branchAddedToast: "Branch added!",
+    venueOnboardedToast: "Venue onboarded!",
+    venueOnboardedToastDesc: "Connected with its first branch and its admin.",
+    todayOrders: "Orders today",
+    todayRevenue: "Revenue today",
+    platformVenuesActive: "Active venues",
+    platformBranches: "Branches",
+    openVenue: "View branches",
+    branchesOf: "Branches",
+    statusLabel: "Status",
+    noVenues: "No venues yet",
+    noVenuesDesc: "Onboard the first café or restaurant to grow the platform.",
+    venueStatusUpdated: "Venue status updated",
+
+    // Favorites sheet
+    favTitle: "Your favorite mixes",
+    favDesc: "Save your go-to bowl and re-order it in one tap",
+    saveCurrentMix: "Save your current mix",
+    favPlaceholder: "e.g. My Blueberry Mint",
+    saveBtn: "Save",
+    favHint: "Add a Fruits Mix to your cart first, then save it here.",
+    noFavs: "No favorites yet. Save your first mix above.",
+    favRemoved: "Favorite removed",
+    favAdded: "Added",
+
+    // AI Sommelier
+    aiSommelier: "AI Sommelier",
+    sommelierTagline: "Your shisha concierge — mood to bowl in seconds",
+    sommelierGreeting:
+      "Ahlan! I'm Mazaj's sommelier 🌿 Tell me your mood — sweet, minty, strong — and I'll match the perfect bowl with prices.",
+    askPlaceholder: "e.g. Something sweet and light…",
+    thinking: "Thinking…",
+    quickAdd: "Quick add",
+    somethingSweet: "Something sweet",
+    strongClassic: "Strong & classic",
+    mintyFresh: "Minty & fresh",
+    surpriseMe: "Surprise me",
+    aiBadge: "Mazaj AI",
+    engineBadge: "Smart match",
+    clearChat: "Clear",
+    sendBtn: "Send",
+    addedToCart: "Shisha packed",
+    // r58 living orders — amend after confirming
+    amendAction: "Edit order",
+    amendEditingTitle: "Editing order",
+    amendEditingDesc: "Change anything — the kitchen updates instantly.",
+    amendBarTitle: "Editing order",
+    amendBarCta: "Review changes",
+    amendSaveChanges: "Save changes",
+    amendSaving: "Saving…",
+    amendCancelEdit: "Stop editing",
+    amendCancelled: "Editing cancelled — the order stays as it was",
+    amendNoChanges: "No changes yet",
+    amendChangesChip: "Your changes",
+    amendFooterNote: "Saving updates the kitchen queue and stock instantly.",
+    amendUpdatedToast: "Order updated",
+    amendUpdatedDesc: "The kitchen sees your revision instantly.",
+    amendRevWord: "Rev",
+    amendGuestButton: "Modify my order",
+    amendGuestStartDesc: "Browse the menu and change your bowls — then save.",
+    amendStartDesc: "Browse the menu, change the bowls, then save the revision.",
+    amendStaffTitle: "Edit Order",
+    amendStaffSubtitle: "Modify a placed order — the queue updates on save",
+    amendEmptyTitle: "Nothing left in this order",
+    amendEmptyDesc: "Add at least one bowl, or stop editing to keep it as it was.",
+    amendLegacyError: "This order can't be edited (older format)",
+    backToQueue: "Back to queue",
+    sommelierError: "The sommelier is resting — try again",
+
+    // AI brief
+    aiBrief: "AI Brief",
+    generateBrief: "Generate AI brief",
+    briefLoading: "Reading your numbers…",
+    briefTitle: "Today's executive brief",
+    analyticsLoadError: "Couldn't load analytics.",
+    tryAgain: "Try again",
+
+    // Inventory
+    molasses: "Molasses",
+    supplies: "Supplies",
+    coalFoil: "Coal · Foil",
+    inStock: "In stock",
+    low: "Low",
+    restock: "Restock",
+    flavorStock: "Flavor stock",
+    flavors: "Flavors",
+    brandsTracked: "Brands tracked",
+    totalMolasses: "Total molasses",
+    totalHookahsLeft: "Total hookahs left",
+    lowStock: "Low stock",
+    hookahsLeft: "hookahs left",
+    stock: "Stock",
+    min: "Min",
+    reusable: "Reusable",
+    notAutoDeducted: "Not auto-deducted per order",
+    medicalHose: "Medical hose",
+    regularCoal: "Regular coal",
+    cubedCoal: "Cubed coal",
+    foil: "Foil",
+
+    // Orders panel
+    orderQueue: "Order queue",
+    activeSessions: "Active sessions & history",
+    incoming: "Incoming",
+    tapToConfirm: "Tap to confirm",
+    confirmTake: "Confirm & take",
+    myOrders: "My orders",
+    otherActive: "Other active",
+    doneOrders: "Done",
+    walkIn: "Walk-in",
+    guestSelfOrder: "Guest self-order",
+    assigned: "Assigned",
+    comments: "Comments",
+    orderComments: "Order comments",
+    noCommentsYet: "No comments yet.",
+    addComment: "Add a comment",
+    author: "Author",
+    comment: "Comment",
+    startPreparing: "Start preparing",
+    backToPending: "Back to pending",
+    markDone: "Mark done",
+    noOrdersYet: "No orders yet",
+    noOrdersDesc: "Orders appear here once placed.",
+
+    // Requests
+    requestsTitle: "Requests",
+    guestCalls: "Guest calls for the shisha man",
+    callShishaMan: "Call the shisha man",
+    callShishaManDesc: "A request will be sent to the staff. Add a note if you like.",
+    sendRequest: "Send request",
+    sending: "Sending…",
+    requestCoal: "Request coal",
+    requestCoalDesc: "Choose your coal type and a request goes straight to the shisha man.",
+    regularCoalType: "Regular coal",
+    cubedCoalType: "Cubed coal",
+    quickLight: "Quick light",
+    longerBurn: "Longer burn",
+    coalRequestSent: "Coal request sent!",
+    shishaManOnWay: "The shisha man is on the way!",
+    pending: "Pending",
+    inProgress: "In progress",
+    acknowledged: "Acknowledged",
+    noRequestsYet: "No requests yet",
+    noRequestsDesc: "When a guest calls the shisha man, it shows here.",
+    autoRefresh: "Auto-refreshes every 15 seconds",
+    refresh: "Refresh",
+    updateFailed: "Update failed",
+    preparingLabel: "Preparing",
+    markedPreparingToast: "Marked preparing",
+    markedDoneToast: "Marked done",
+    waitingLabel: "Waiting",
+    lateLabel: "Late",
+    hookahSingle: "hookah",
+    hookahPlural: "hookahs",
+    loadOrdersFail: "Could not load orders",
+    orderConfirmedToast: "Order confirmed",
+    nowPreparingFor: "Now preparing for {name}",
+    couldNotClaim: "Could not claim order",
+    legacyItemsNoEdit: "This order can't be edited (legacy items)",
+    guestScanLabel: "Guest scan",
+    guestCallLabel: "Guest call",
+    employeeLabel: "Employee",
+    autoRefresh10: "Auto-refreshes every 10 seconds",
+    queueValueLabel: "Queue value",
+    statusWord: "Status",
+    commentAddedToast: "Comment added",
+    couldNotComment: "Could not add comment",
+    commentPlaceholder: "Add a comment — e.g. needs extra coal, customer wants less heat…",
+    noCommentsHint: "No comments yet. Add the first one below.",
+    reqNewCount: "{n} new",
+    acknowledgeLabel: "Acknowledge",
+    stepRequested: "Requested",
+    coalRequestTitle: "Coal request",
+    reqLoadFail: "Could not load requests",
+    reqAckToast: "Request acknowledged",
+    reqDoneToast: "Request marked done",
+    requestsCount: "{n} requests",
+    chooseShishaType: "Choose shisha type",
+    changeWord: "Change",
+    bowlsWord: "bowls",
+    profitLiveNote: "20g per bowl · Profit shown live as you build",
+    flatSessionPrice: "{p} EGP flat",
+    bbTitle: "Bowl builder",
+    bbSubtitle: "build & send",
+    customerOptional: "Customer (optional)",
+    customerAria: "Customer name",
+    tableNumberStar: "Table number *",
+    tableRequiredAria: "Table number (required)",
+    pickFromTables: "📋 Pick",
+    pickFromWedjatTables: "Pick from Wedjat tables",
+    loyaltyPhoneOptional: "📱 Loyalty phone (optional — earn points for the customer)",
+    newMemberNote: "New member — joins Mazaj+ automatically (50 bonus pts)",
+    tableRequiredToast: "Table number is required",
+    tableRequiredToastDesc: "Enter the table number before sending the order.",
+    orderSavedOffline: "Order saved offline",
+    orderSentKitchen: "Order sent to kitchen!",
+    syncedToRsm: "synced to Wedjat RSM",
+    ptsForMember: "+{n} pts for {name}",
+    couldNotSend: "Could not send order",
+    bowlSingle: "bowl",
+    amyFlatChip: "Amy pipe · 180 flat",
+    noFlavors: "No flavors",
+    removeBowlAria: "Remove bowl",
+    sendOrderCta: "Send order",
+    addFlavorsFill: "Add flavors to fill the bowl",
+    flavorSingle: "flavor",
+    flavorPlural: "flavors",
+    addAFlavor: "Add a flavor",
+    decreaseQty: "Decrease quantity",
+    increaseQty: "Increase quantity",
+    addToOrderCta: "Add to order",
+    closeFlavorPicker: "Close flavor picker",
+    savedOfflineBadge: "Saved offline — syncs to the kitchen when you reconnect",
+    standardWord: "Standard",
+    tableWord: "Table",
+    loyaltyTitleFull: "Mazaj+ Loyalty",
+    rewardsMembersSub: "Rewards members, points & tiers",
+    membersLabel: "Members",
+    searchMembersPh: "Search name / phone…",
+    searchMembersAria: "Search members",
+    noMembersYet: "No members yet",
+    noMembersMatch: "No members match your search.",
+    membersAutoJoin:
+      "Guests join automatically when ordering with a phone number, or enroll them manually.",
+    enrollWord: "Enroll",
+    enrollReq: "Name and a phone number (5+ digits) are required",
+    couldNotEnroll: "Could not enroll",
+    enrollMember: "Enroll member",
+    nameExample: "e.g. Ahmed Hassan",
+    ptsWord: "pts",
+    ptsToWord: "pts to",
+    purchasesLoadFail: "Could not load purchases",
+    noPurchasesYet: "No purchases yet",
+    noPurchasesDesc: "Tap “Buy” to purchase molasses packs or supplies.",
+    purchaseRecorded: "Purchase recorded",
+    couldNotRecord: "Could not record purchase",
+    procurementWord: "Procurement",
+    quantityPacks: "Quantity (packs)",
+    totalCost: "Total cost",
+    decreaseWord: "Decrease",
+    increaseWord: "Increase",
+    pointsOutstanding: "Points outstanding",
+    redeemableBalance: "redeemable balance",
+    pointsEarnedWord: "Points earned",
+    allTimeWord: "all-time",
+    pointsRedeemedWord: "Points redeemed",
+    givenBack: "≈ {v} given back",
+    howMazajWorks: "How Mazaj+ works",
+    lifetimePtsEarn: "{min}+ lifetime pts · ×{m} earn",
+    loyaltyRules:
+      "1 pt per 1 EGP · 100 pts = {v} off · new members get a 50-pt welcome bonus. Guests join automatically when they order with a phone number.",
+    enrollDesc: "They start with a 50-point welcome bonus (100 pts = {v} off).",
+    fullName: "Full name",
+    phoneLoyaltyId: "Phone number (their loyalty ID)",
+    enrollingWord: "Enrolling…",
+    buyWord: "Buy",
+    purchasesSub: "Buy molasses packs & supplies",
+    historyWord: "History",
+
+    // Employees
+    employees: "Employees",
+    manageStaff: "Manage staff & permissions",
+    addEmployee: "Add employee",
+    editEmployee: "Edit employee",
+    role: "Role",
+    superAdmin: "Super admin",
+    admin: "Admin",
+    employee: "Employee",
+    tabAccess: "Tab access",
+    permissions: "Permissions",
+    createEmployee: "Create employee",
+    saveChanges: "Save changes",
+    deactivate: "Deactivate",
+    activate: "Activate",
+    remove: "Remove",
+    pin: "PIN",
+    pinDigits: "4 digits",
+
+    // Purchases
+    purchases: "Purchases",
+    buyMolasses: "Buy molasses packs",
+    buyStock: "Buy stock",
+    buyDesc: "Buying auto-restocks inventory and logs the cost.",
+    totalSpent: "Total spent",
+    lastPurchase: "Last purchase",
+    buyAndRestock: "Buy & restock",
+    molassesPacks: "Molasses packs",
+    procurementSpend: "Procurement spend",
+
+    // Profit
+    profitTitle: "Profit",
+    revenueCostMargin: "Revenue, costs & net margin",
+    cogs: "Cost of goods",
+    molassesCost: "Molasses cost",
+    suppliesCost: "Supplies cost",
+    profitByBrand: "Profit by brand",
+    recentOrders: "Recent orders",
+    cost: "Cost",
+    hookahsSold: "hookahs sold",
+
+    // Sync
+    wedjatSync: "Wedjat RSM Sync",
+    connectionHealth: "Connection health & order sync",
+    connected: "Connected",
+    disconnected: "Disconnected",
+    connectedToWedjat: "Connected to Wedjat RSM",
+    checkRevocations: "Check revocations",
+    checkRevocationsDesc: "Query cancelled orders in Wedjat",
+    syncPrices: "Sync prices →",
+    syncPricesDesc: "Push Mazaj prices to Wedjat",
+    synced: "Synced",
+    revoked: "Revoked",
+    failed: "Failed",
+    revokedByWedjat: "Revoked by Wedjat RSM",
+    revokedBy: "Revoked by",
+    fromWedjat: "from Wedjat RSM",
+    noSyncedOrders: "No synced orders yet",
+    noSyncedDesc: "Orders with a table number sync to Wedjat RSM automatically.",
+
+    // Misc
+    egp: "EGP",
+    perHookah: "per hookah",
+    flame: "🔥",
+
+    // PWA
+    getApp: "Get the app",
+    getAppDesc:
+      "The full Mazaj platform on your phone — install in seconds, no app store needed.",
+    scanToInstall: "Scan to install",
+    scanHint:
+      "Point any phone camera at the code — it opens a full install screen. Works on iPhone & Android.",
+    installNow: "Install now",
+    installing: "Installing…",
+    landingTagline: "The full lounge in your pocket — order, track, earn.",
+    installMeta: "Free · 2–4 MB · installs in seconds",
+    installFree: "Install — Free",
+    preparingDownload: "Preparing download…",
+    preparingHint: "One moment — getting Mazaj ready for your phone.",
+    installAndroidIntro:
+      "The APK is the full app in one file — your phone installs it directly and it lands on your home screen with the Mazaj icon.",
+    installFallbackTitle: "One more step",
+    retry: "Try again",
+    installIosTitle: "Install on iPhone",
+    installIosIntro:
+      "Apple installs full-screen apps from Safari — it takes 5 seconds:",
+    iosInstallNote:
+      "Mazaj then works like any app — full screen, offline, on your home screen.",
+    openInSafariTitle: "Open in Safari to install",
+    openInSafariDesc:
+      "You're viewing this inside another app, which can't install apps. Open it in Safari and the install guide appears.",
+    openInSafariStep: "Tap the Share icon, then choose “Open in Safari”",
+    installSuccessTitle: "Mazaj is installing ✓",
+    installSuccessDesc:
+      "The download is on its way — Mazaj will appear on your home screen in a moment.",
+    startUsing: "Start using Mazaj",
+    continueInBrowser: "Continue in browser",
+    scanWithPhone: "Scan with your phone",
+    howTo: "How to",
+    youHaveApp: "You're using the installed app",
+    iosStep1: "Open Mazaj in Safari, then tap the Share button",
+    iosStep2: "Scroll down and tap “Add to Home Screen”",
+    iosStep3: "Open Mazaj from your home screen — enjoy!",
+    installFromMenu:
+      "Not showing? Open your browser menu (⋮) and choose “Install app”.",
+    apkButton: "Download the app",
+    apkSub: "Direct APK file — no Play Store",
+    apkStarted:
+      "Mazaj.apk is downloading — watch your browser's download bar",
+    apkAfterTitle: "When the download finishes",
+    apkStep1: "Tap “Open” in the downloads bar",
+    apkStep2: "Allow from this source — first time only",
+    apkStep3: "Tap “Install” — that's it, you're done",
+    orDivider: "or",
+    instantAdd: "Add instantly from this browser",
+    iosNoStore: "100% App-Store-free — Apple's official install path",
+    sheetApk: "Download the app file (APK) · no Play Store",
+    syncTitle: "Always in sync — two-way",
+    syncDesc1:
+      "Orders placed offline are saved on your phone and sync to the lounge the moment you reconnect.",
+    syncDesc2:
+      "Live status, Mazaj+ points and the queue stay in step on every device — phone, staff screens and the platform.",
+    featTracking: "Live order tracking",
+    featLoyalty: "Mazaj+ rewards",
+    featOffline: "Works offline",
+    installBanner: "Install Mazaj on your phone",
+    installBannerDesc: "Full app · two-way sync · works offline",
+    later: "Later",
+    offlineMode: "Offline",
+    queuedOrders: "orders waiting to sync",
+    syncingOrders: "Syncing orders…",
+    ordersSynced: "Back online — orders synced ✓",
+
+    // Landing — cinematic home experience
+    landKicker: "Mazaj · Shisha Atelier",
+    landHeroTitleA: "Where Smoke",
+    landHeroTitleB: "Becomes Poetry",
+    landHeroSub:
+      "Seven legendary molasses houses. One bowl crafted to order, tracked live to your table — and a full app that lives on your phone.",
+    landHeroMeta: "7 Houses · 30+ Flavors · Crafted Bowls",
+    landCtaOrder: "Order Now",
+    landScroll: "Scroll",
+    landNavPlatform: "Platform",
+    landNavExperience: "Experience",
+    landNavApp: "The App",
+    landRitualKicker: "The Experience",
+    landRitualTitle: "The Ritual, Perfected",
+    landRitual1T: "Choose your house",
+    landRitual1D:
+      "Seven molasses houses — from timeless Egyptian classics to Amy's premium line. Or let the AI sommelier read your mood.",
+    landRitual2T: "Crafted to order",
+    landRitual2D:
+      "Every bowl packed to order — 20 grams, your mix, your way. Bring your own hookah or molasses and two bowls cost one.",
+    landRitual3T: "Tracked to your table",
+    landRitual3D:
+      "Watch it live — from coal to cloud. A gentle ping the moment it's served, and points with every bowl.",
+    landFeatKicker: "The Platform",
+    landFeatTitle: "A lounge that thinks",
+    landFeatAiT: "AI Sommelier",
+    landFeatAiD:
+      "Tell it your mood — sweet, minty, strong — and it crafts your perfect bowl from the live menu.",
+    landFeatTrackT: "Live Tracking",
+    landFeatTrackD: "From “preparing” to “served” — every stage streaming live to your phone.",
+    landFeatOfflineT: "Works Offline",
+    landFeatOfflineD: "Order in airplane mode. It syncs itself the moment you're back.",
+    landFeatLoyaltyT: "Mazaj+ Rewards",
+    landFeatLoyaltyD: "Every bowl earns. Climb tiers, unlock free mixes.",
+    landStatHouses: "Molasses Houses",
+    landStatFlavors: "Flavors",
+    landStatBowl: "Per Bowl",
+    landStatBogo: "Bring Your Own",
+    landAppKicker: "The App",
+    landAppTitle: "Carry the whole lounge",
+    landAppDesc:
+      "No app store needed. Scan the code, tap install — the full platform lives on your home screen, works offline, and stays in perfect sync with the lounge.",
+    landAppB1: "Installs in seconds",
+    landAppB2: "Works offline",
+    landAppB3: "Pings you when ready",
+    landAppB4: "Earns Mazaj+ points",
+    landFooterCraft: "Crafted in Cairo",
+    landFooterTagline: "Order · Track · Earn",
+    landFooterRights: "All rights reserved",
+    landEnter: "Enter the lounge",
+    landMenuPeek: "Tonight's houses",
+    landMenuPeekSub: "Tap to open the full menu",
+    // ── r59: WEDJAT RSM revenue share ──
+    rsmTitle: "RSM · Revenue share",
+    rsmSubtitle: "WEDJAT gross profit on shisha",
+    rsmRangeToday: "Today",
+    rsmRange7: "7 days",
+    rsmRange30: "30 days",
+    rsmRangeAll: "All time",
+    rsmShishaRevenue: "Shisha revenue",
+    rsmShishaRevenueSub: "charged · after discounts",
+    rsmCommission: "Commission 12%",
+    rsmCommissionSub: "on shisha only",
+    rsmWedjatGross: "WEDJAT gross 40%",
+    rsmWedjatGrossSub: "our share of the commission",
+    rsmPartnerShare: "Partner share 60%",
+    rsmEffective: "Effective 4.8% of shisha sales",
+    rsmFormula: "Gross profit = shisha revenue × 12% × 40%",
+    rsmTaxNote:
+      "Tax & VAT are paid by the venue (the rented shisha corner) — never deducted from WEDJAT's share.",
+    rsmSeparationNote:
+      "The 12% is calculated on shisha, apart from the café/restaurant's other orders — food & beverages carry no shisha commission.",
+    rsmGrossSales: "Gross menu sales",
+    rsmDiscounts: "Discounts (BYO · loyalty)",
+    rsmOrders: "orders",
+    rsmHookahs: "hookahs",
+    rsmByBranch: "By branch",
+    rsmByVenue: "By venue",
+    rsmDailyTrend: "Daily trend",
+    rsmSyncTitle: "Wedjat RSM sync",
+    rsmSynced: "on checks",
+    rsmPending: "pending",
+    rsmFailed: "failed",
+    rsmRevoked: "revoked",
+    rsmNoData: "No shisha sales in this range yet.",
+    rsmPlatformSection: "RSM revenue share",
+    rsmPlatformSectionDesc: "WEDJAT gross today — 12% on shisha × our 40%",
+    rsmThBranch: "Branch",
+    rsmThVenue: "Venue",
+    rsmThRevenue: "Revenue",
+    rsmThCommission: "12%",
+    rsmThOurs: "Our 40%",
+    rsmViewFull: "Open the RSM dashboard",
+
+    /* r61 — Platform Control Center */
+    pccActiveVenues: "Active venues",
+    pccActivityTitle: "Live activity",
+    pccAddPerson: "Add person",
+    pccAddPersonDesc: "Create a platform or venue-scoped account.",
+    pccAlertsTitle: "Low-stock alerts",
+    pccAllStatuses: "All statuses",
+    pccAllVenues: "All venues",
+    pccBranchesShort: "branches",
+    pccBrandsShort: "brands",
+    pccByBranchTitle: "By branch",
+    pccCommissionHint: "Applied to shisha revenue only",
+    pccCommissionPct: "Commission on shisha (%)",
+    pccCommissionToday: "Commission today",
+    pccCreatePerson: "Create account",
+    pccCustom: "Custom",
+    pccDays: "{count}d",
+    pccDbUp: "Database live",
+    pccDefaultLabel: "default",
+    pccDisablePerson: "Disable account",
+    pccEditPricing: "Edit pricing",
+    pccEditPricingDesc: "Publishing updates every client instantly — guests and staff see the new prices on their next sync.",
+    pccEffectiveTake: "Effective take",
+    pccEnablePerson: "Enable account",
+    pccFilterStatus: "Filter by status",
+    pccFilterVenue: "Filter by venue",
+    pccFlat: "Flat price",
+    pccFlavors: "flavors",
+    pccFruits: "Fruits",
+    pccFruitsMix: "Fruits mix",
+    pccHookahsShort: "hookahs",
+    pccIdentityDesc: "How the platform presents itself.",
+    pccIdentityTitle: "Platform identity",
+    pccLive: "LIVE",
+    pccLoadMore: "Load more",
+    pccLowStockChip: "{count} low stock",
+    pccMenuDesc: "The platform's own menu — publish prices to every app instantly.",
+    pccMenuOverridden: "{count} custom prices",
+    pccMenuPublishDesc: "Every app picks them up automatically.",
+    pccMenuResetToast: "Prices reset to default",
+    pccMenuSavedToast: "Prices published",
+    pccMenuTitle: "Shisha menu",
+    pccNoActivity: "No orders yet",
+    pccNoActivityDesc: "The moment a guest packs a shisha, it lights up here.",
+    pccNoOrders: "No orders match",
+    pccNoOrdersDesc: "Try widening the filters.",
+    pccNoPeople: "No one matches",
+    pccNoPeopleDesc: "Try a different search.",
+    pccNoStock: "No stock tracked at this branch yet.",
+    pccNoVenue: "No venue (floats)",
+    pccOrdersDesc: "Every shisha order across every venue — your corners' full story.",
+    pccOrdersTitle: "Order explorer",
+    pccPaletteEmpty: "Nothing matches",
+    pccPaletteLabel: "Command palette",
+    pccPaletteNavigate: "navigate",
+    pccPalettePlaceholder: "Jump to a tab or run an action…",
+    pccPaletteRun: "run",
+    pccPaletteShort: "Command",
+    pccPartnerGets: "partner gets",
+    pccPendingReqChip: "{count} open requests",
+    pccPeopleDesc: "Every account on the platform — roles, scopes, lifecycle.",
+    pccPeopleTitle: "People",
+    pccPersonAddedToast: "Account created",
+    pccPersonDisabled: "Account disabled",
+    pccPersonEnabled: "Account enabled",
+    pccOnline: "online",
+    pccOnlineTitle: "{n} active session(s)",
+    pccRevokeSessions: "Sign out all devices",
+    pccRevokeTitle: "Revoke sessions",
+    pccRevokeDesc:
+      "This signs {name} out of every device immediately. They can sign back in with their PIN.",
+    pccRevokeConfirm: "Sign out everywhere",
+    pccSessionsRevoked: "Signed {name} out of {n} session(s)",
+    pccPersonName: "Name",
+    pccPlatformName: "Platform display name",
+    pccBackupsTitle: "Off-site backups",
+    pccBackupsDesc:
+      "A nightly snapshot of every table, pushed to a private backup repository. You can also run one on demand.",
+    pccBackupRunNow: "Back up now",
+    pccBackupRunning: "Backing up…",
+    pccBackupDoneToast: "Backup complete",
+    pccBackupSuccess: "Success",
+    pccBackupPartial: "Snapshot OK, off-site copy failed",
+    pccBackupFailed: "Failed",
+    pccBackupRows: "rows",
+    pccBackupOffsite: "Off-site copy ✓",
+    pccBackupOffsiteNo: "DB-only",
+    pccBackupLastNever: "No backup has run yet.",
+    pccBackupCron: "Nightly",
+    pccBackupManual: "Manual",
+    pccBackupCronHint:
+      "Runs automatically every night at ~3 AM Cairo time. The newest 30 snapshots are kept.",
+    pccBackupAgoNow: "just now",
+    pccBackupAgoMin: "{n}m ago",
+    pccBackupAgoHour: "{n}h ago",
+    pccBackupAgoDay: "{n}d ago",
+    pccPublishPrices: "Publish prices",
+    pccRefreshAll: "Refresh everything",
+    pccResetToDefault: "Reset to default",
+    pccRole: "Role",
+    pccRoleAdmin: "Admin",
+    pccRoleEmployee: "Employee",
+    pccRolePlatform: "Platform owner",
+    pccRoleSuper: "Super admin",
+    pccRoleVenueAdmin: "Venue admin",
+    pccRsmEngineDesc: "The percentages every dashboard computes with. Defaults: 12% × 40%.",
+    pccRsmEngineTitle: "Revenue-share engine",
+    pccRsmSavedDesc: "All dashboards recompute on their next refresh.",
+    pccSaveEngine: "Save engine",
+    pccScopePlatform: "Platform-wide",
+    pccSearchPeople: "Search people or venues…",
+    pccSettingsSavedToast: "Settings saved",
+    pccShareHint: "Your share of the commission",
+    pccSharePct: "WEDJAT share of commission (%)",
+    pccStockTitle: "Platform stock",
+    pccStockTotal: "{grams} g total",
+    pccSubtitle: "Your platform — every lever in one place",
+    pccSuppliesShort: "supplies",
+    pccTabFinance: "Finance",
+    pccTabInventory: "Stock",
+    pccTabMenu: "Menu",
+    pccTabOrders: "Orders",
+    pccTabPeople: "People",
+    pccTabPulse: "Pulse",
+    pccTabSettings: "Settings",
+    pccTabVenues: "Venues",
+    pccTitle: "Platform Control Center",
+    pccToggleLanguage: "Toggle language",
+    pccTrendDesc: "Shisha revenue across every venue",
+    pccTrendRevenue: "Revenue",
+    pccTrendTitle: "7-day pulse",
+    pccUnassigned: "Unassigned",
+    pccVenueOptional: "Venue (optional)",
+    pccWedjatChip: "Wedjat: {synced} synced · {pending} pending",
+    pccYou: "You",
+  },
+  ar: {
+    mazaj: "مزاج",
+    hookahLounge: "صالة شيشة · نظام الطلبات",
+    imStaff: "أنا موظف",
+    imStaffDesc: "سجل برمز PIN لاستقبال الطلبات",
+    imGuest: "أنا ضيف",
+    imGuestDesc: "اطلب من طاولتك أو اطلب رجل الشيشة",
+    justBrowsing: "تصفح فقط — تخطي تسجيل الدخول",
+    staffPins: "رموز الموظفين",
+    enterPin: "أدخل رمز PIN المكون من 4 أرقام",
+    guestCheckIn: "تسجيل الضيف",
+    yourName: "اسمك",
+    tableOptional: "رقم الطاولة (اختياري)",
+    tableNumberLabel: "رقم الطاولة",
+    tableNumberPlaceholder: "مثلاً: ٥",
+    confirmOrderCta: "أكّد طلبي",
+    confirmOrderTitle: "أكّد طلبك",
+    confirmOrderDesc: "لمسة واحدة ويبدأ الصالة العمل",
+    tableNeeded: "من فضلك اكتب رقم الطاولة",
+    startOrdering: "ابدأ الطلب",
+    back: "رجوع",
+    cancel: "إلغاء",
+    delete: "حذف",
+    checking: "جارٍ التحقق...",
+    welcome: "أهلاً،",
+    namePlaceholder: "مثلاً: سارة",
+    tablePlaceholder: "مثلاً: طاولة ٥",
+    invalidPin: "رمز PIN غير صحيح",
+    couldNotSignIn: "تعذر تسجيل الدخول",
+    linkedPosNote: "مرتبط بفاتورة الطاولة من نظام المطعم",
+
+    queue: "الطابور",
+    new: "جديد",
+    inventory: "المخزون",
+    requests: "الطلبات",
+    staff: "الموظفون",
+    buy: "شراء",
+    profit: "الأرباح",
+    sync: "المزامنة",
+    analytics: "الإحصائيات",
+    loyalty: "مزاج+",
+    track: "تتبع",
+    noAccess: "لا يوجد وصول",
+    noAccessDesc:
+      "لا تملك صلاحية الوصول إلى أي قسم. اطلب من المدير الأعلى تعيين دور لك.",
+    signOut: "تسجيل الخروج",
+
+    // r70 — employee dashboard shell tabs
+    tabQueue: "الطلبات",
+    tabNew: "جديد",
+    tabEdit: "تعديل",
+    tabInventory: "المخزون",
+    tabRequests: "الطلبات الخاصة",
+    tabStaff: "الفريق",
+    tabBuy: "الشراء",
+    tabProfit: "الأرباح",
+    tabRsm: "RSM",
+    tabStats: "الإحصائيات",
+    tabMazajPlus: "مزاج+",
+    tabSync: "المزامنة",
+    showQr: "اعرض رمز تحميل تطبيق الضيوف",
+    sommelierTip: "السوميلييه الذكي — اقترح جبلة لضيف",
+    openActions: "افتح الإجراءات — السوميلييه، الرمز، التنبيهات، اللغة",
+    closeActions: "إغلاق الإجراءات",
+
+    bowlBuilder: "بناء الجبلة",
+    build: "بناء",
+    buildBowl: "بناء جبلة",
+    customer: "العميل",
+    tableNumber: "رقم الطاولة",
+    tableRequired: "رقم الطاولة مطلوب",
+    tableRequiredDesc: "أدخل رقم الطاولة قبل إرسال الطلب.",
+    quickPresets: "خيارات سريعة",
+    thisOrder: "هذا الطلب",
+    noBowlsYet: "لا توجد جبلات بعد",
+    noBowlsDesc: "اضغط على علامة تجارية بالأسفل أو خيار سريع للبدء.",
+    clearAll: "مسح الكل",
+    chooseShisha: "اختر نوع الشيشة",
+    chooseShishaDesc: "اختر فئة لعرض العلامات التجارية المتاحة.",
+    regularShisha: "شيشة عادية",
+    amyShisha: "شيشة أمي",
+    changeCategory: "تغيير الفئة",
+    orderCardModify: "تعديل",
+    orderCardDelete: "حذف",
+    orderCardConfirm: "تأكيد",
+    orderCardDeleted: "تم حذف الجبلة",
+    stockNote: "نعرض فقط المتوفر في هذا الفرع",
+    noStockCategory: "لا يوجد متوفر الآن — جرّب الفئة الأخرى",
+    /* r68-audit — honest empty states + the BYO escape hatch */
+    wizNoStockTitle: "المعسل مش متوفر في الفرع ده لسه",
+    wizNoStockDesc: "الفرع ده مش بيصبّ معسل المنُيو دلوقتي — لكن تقدر تدخّن برضه.",
+    wizNoStockByo: "معايا معسلي الخاص",
+    wizNoStockByoDesc: "٢ جبلة بواحدة · هنجهز الأنبوب والخدمة",
+    wizNoStockCall: "أو دوس «نادّي الرجل الشيشة» فوق — هنظبطك.",
+
+    /* ── r68-audit: staff-surface i18n (AR) ─────────────────────────── */
+    reqTitle: "الطلبات",
+    reqSubtitle: "نداءات الضيوف لرجل الشيشة",
+    reqNewBadge: "جديد",
+    reqEmptyTitle: "لا توجد طلبات بعد",
+    reqEmptyDesc: "لما الضيف ينادّي رجل الشيشة، هيظهر الطلب هنا.",
+    reqPending: "قيد الانتظار",
+    reqInProgress: "جاري التنفيذ",
+    reqDone: "تم",
+    reqAck: "تم الاستلام",
+    reqMarkDone: "إنهاء الطلب",
+    reqUpdateFail: "فشل التحديث",
+    reqStepRequested: "مطلوب",
+    reqStepAcknowledged: "مستلم",
+    reqStepDone: "تم",
+    reqCoal: "طلب فحم",
+    reqCall: "نادّي رجل الشيشة",
+    reqAutoRefresh: "يتحدث تلقائيًا كل ١٥ ثانية",
+    timeJustNow: "الآن",
+    timeMinAgoSuffix: " د",
+    timeHourAgoSuffix: " س",
+    queueValue: "قيمة الطابور",
+    legacyItems: "الأوردر ده ماينفعش يتعمل عليه تعديل (بيانات قديمة)",
+    opHookahs: "شيشة",
+    opWaiting: "استنى",
+    opLate: "متأخر",
+    bbSubtitleSuffix: "· جهّز وابعث",
+    bbChooseType: "اختار نوع الشيشة",
+    bbThisOrder: "الأوردر ده",
+    bbBowls: "جبلة",
+    bbClearAll: "مسح الكل",
+    bbNoBowls: "مفيش جبلات لسه",
+    bbNoBowlsDesc: "دوس على ماركة تحت أو تركيبة جاهزة فوق عشان تبدأ.",
+    bbAddFlavor: "ضيف نكهة",
+    bbAddAnotherFlavor: "ضيف نكهة تانية",
+    bbAddToOrder: "ضيف للأوردر",
+    bbCancel: "إلغاء",
+    bbChange: "تغيير",
+    bbSend: "ابعث الأوردر",
+    bbTablePlaceholder: "رقم الطاولة *",
+    bbTableRequired: "رقم الطاولة مطلوب",
+    bbTableRequiredDesc: "اكتب رقم الطاولة قبل إرسال الأوردر.",
+    bbQtyLess: "قلل الكمية",
+    bbQtyMore: "زد الكمية",
+    bbFlatWord: "ثابت",
+    loyTitle: "مزاج بلس",
+    loySubtitle: "أعضاء المكافآت والنقط والمستويات",
+    loyEmptyTitle: "مفيش أعضاء لسه",
+    loyEmptyDesc:
+      "الضيوف بينضموا تلقائيًا لما يطلبوا برقم موبايل، أو سجّلهم بنفسك.",
+    loyNoMatch: "مفيش أعضاء مطابقين للبحث.",
+    purTitle: "المشتريات",
+    purSubtitle: "عبوات المعسل والمستلزمات",
+    purEmptyTitle: "مفيش مشتريات لسه",
+    purEmptyDesc: "دوس «اشتري» عشان تشتري عبوات معسل أو مستلزمات.",
+
+    // ── r67: the guided order wizard ─────────────────────────────────
+    wizTitle: "اطلب شيشة",
+    wizSubtitle: "خطوات سريعة — والباقي علينا",
+    wizStepWho: "أنت",
+    wizStepSetup: "التحضير",
+    wizStepPipe: "الأنبوب",
+    wizStepMolasses: "المعسل",
+    wizStepFlavors: "النكهات",
+    wizStepReview: "مراجعة",
+    wizForWhomTitle: "لمن هذه الشيشة؟",
+    wizForWhomDesc: "أي شخص آخر على الطاولة يمكنه طلب شيشته الخاصة بعد ذلك — لكل شيشة تحضيرها الخاص.",
+    wizForWhomPlaceholder: "الاسم أو المقعد (اختياري)",
+    wizShishaNum: "شيشة",
+    wizSetupTitle: "هل أحضرت معك؟",
+    wizSetupDesc: "إجابتك تحدد ما سنحضّره لك — وتفتح عرض 2 بسعر 1.",
+    wizOwnMolasses: "معسلي الخاص",
+    wizOwnMolassesDesc: "أنت تحضر المعسل — ونحن نجهّز الأنبوب والخدمة",
+    wizOwnHookah: "شيشتي الخاصة",
+    wizOwnHookahDesc: "أنت تحضر الأنبوب — ونحن نضع معسلنا",
+    wizFromMenu: "من المنيو",
+    wizFromMenuDesc: "آنابوبنا ومعسلنا — التجربة الكاملة",
+    wizByoBadge: "2 بسعر 1",
+    wizPipeTitle: "اختر الأنبوب",
+    wizPipeDesc: "أنبوب Amy هو جهازنا الفاخر — سعر ثابت مع أي معسل فاخر.",
+    wizPipeRegular: "عادي",
+    wizPipeRegularDesc: "الأنبوب الكلاسيكي",
+    wizPipeAmy: "Amy",
+    wizPipeAmyDesc: "أنبوب فاخر · 180 جنيه ثابت · معسل فاخر فقط",
+    wizMolassesTitle: "اختر المعسل",
+    wizMolassesDesc: "فقط ما يمكن صبّه في هذا الفرع الآن.",
+    wizFlavorsTitle: "اختر نكهاتك",
+    wizFlavorsDesc: "نكهة واحدة أو مزيج — 20 جرام للجبلة.",
+    wizOwnMolassesNote: "معسلك الخاص — لا حاجة لاختيار نكهة. سنجهّز الأنبوب والفحم.",
+    wizQtyTitle: "كم عدد؟",
+    wizReviewTitle: "شيشتك",
+    wizReviewFor: "لـ",
+    wizReviewSetup: "التحضير",
+    wizReviewPipe: "الأنبوب",
+    wizReviewMolasses: "المعسل",
+    wizAddCta: "أضف لطلب الطاولة",
+    wizContinue: "متابعة",
+    wizAddAnother: "أضف شيشة أخرى",
+    wizAddAnotherDesc: "لشخص آخر على الطاولة",
+    wizSoldOutTitle: "كل المعسلات خلصت حاليًا",
+    wizSoldOutDesc:
+      "جرارا هذا الفرع خلصت للتو. أحضر معسلك الخاص وسنجهزه لك (٢ بسعر ١)، أو نادِ الموظف للمساعدة.",
+    wizNotStockedTitle: "هذا الفرع لم يُجهّز بعد",
+    wizNotStockedDesc:
+      "رف المعسل هنا لسه بيتجهز. أحضر معسلك الخاص واستمتع بعرض ٢ بسعر ١، أو نادِ الموظف للمساعدة.",
+    wizCallStaff: "نادِ الموظف",
+    wizStaffCallNote: "الضيف يحتاج مساعدة — لا يوجد معسل متاح",
+    wizBrandSoldOut: "هذه الماركة خلصت للتو — اختر غيرها",
+    wizBackToBrands: "رجوع للماركات",
+    wizSendTable: "أرسل طلب الطاولة",
+    wizAddedToast: "تمت إضافة الشيشة لطلب طاولتك",
+    wizOwnMolassesTag: "معسل خاص",
+    wizOwnHookahTag: "شيشة خاصة",
+    wizAmyPipeTag: "أنبوب Amy",
+    wizRegularPipeTag: "أنبوب عادي",
+    wizTableOrder: "طلب الطاولة",
+    wizShishaCount: "شيشة",
+    wizEditShisha: "تعديل",
+    wizRemoveShisha: "إزالة",
+    wizEmptyTable: "لا شيشات بعد — ابدأ من الأعلى",
+    wizQuickPicks: "اختيارات سريعة",
+    wizQuickPicksDesc: "ضغطة واحدة، مباشرة للمراجعة",
+    wizOwnMolassesSaved: "معسل خاص — كل ثانية شيشة مجانية",
+    wizScanFound: "تم العثور على المعسل",
+    wizAmyNoBudget: "غير متاح على أنبوب Amy — اختر علامة فاخرة",
+    wizPriceFlatNote: "ثابت — أي معسل",
+    wizBogoYou: "تم تفعيل 2 بسعر 1",
+    wizBogoYouDesc: "أحضرت معك — كل شيشة ثانية مجانية",
+    change: "تغيير",
+    brands: "علامة تجارية",
+    popularBowls: "جبلات شائعة",
+    oneTapAdd: "اضغط مرة واحدة للإضافة",
+    sendOrder: "إرسال الطلب",
+    orderSent: "تم إرسال الطلب!",
+    orderSentDesc: "تمت مزامنته مع Wedjat RSM",
+    newOrder: "طلب جديد",
+    from: "من",
+    inCart: "مجهّزة",
+    revenue: "الإيرادات",
+    netProfit: "صافي الربح",
+    margin: "الهامش",
+    byo: "جلب معداتك",
+    bowl: "جبلة",
+    bowls: "جبلات",
+    for2for1: "2 مقابل 1",
+
+    pickFlavor: "اختر نكهة",
+    fruits: "فواكه",
+    mix: "مكس",
+    type: "النوع",
+    quantity: "الكمية",
+    lineTotal: "إجمالي السطر",
+    addToCart: "جهّز شيشتي",
+    addFlavor: "أضف نكهة",
+    addAnotherFlavor: "أضف نكهة أخرى",
+    mixFlavors: "نكهات مختلطة",
+    mixMatch: "مكس آند ماتش",
+    noFlavorsYet: "لا توجد نكهات بعد",
+    grams20Note: "٢٠ جرام معسل للجبلة",
+    standardSession: "جلسة عادية",
+    flatNote: "سعر ثابت",
+    mixAcrossBrands:
+      "امزج نكهات من نفس العلامة أو أي علامة تانية. الـ٢٠ جرام بتتقسم بالتساوي؛ السعر هو أغلى سعر مكس بين العلامات المختارة.",
+    mixEmpty: "مفيش نكهات لسه. اضغط «أضف نكهة» لبدء المكس.",
+    selectedWord: "مختارة",
+    closeBtn: "إغلاق",
+    flavorsOf: "النكهات:",
+
+    cart: "السلة",
+    yourOrder: "طلبك",
+    currentOrder: "شيشتي المجهّزة",
+    subtotal: "المجموع الفرعي",
+    total: "الإجمالي",
+    byoSaving: "وفّر 2 مقابل 1",
+    addons: "إضافات",
+    checkout: "الدفع",
+    emptyCart: "لسه مفيش شيشة",
+    emptyCartDesc: "اختر علامة تجارية لبدء الجلسة.",
+    each20g: "كل جبلة ٢٠ جرام معسل.",
+    byoTitle: "اجيب معاك · ٢ مقابل ١",
+    byoDesc: "العميل يجيب شيشته أو معسله ← جبلتين بسعر واحدة.",
+    loungeSetup: "استخدم معدات الصالة",
+    loungeSetupDesc: "السعر العادي، بدون عرض.",
+    ownHookahLabel: "هجيب شيشتي معايا",
+    ownHookahDesc: "العميل يجيب الشيشة، وإحنا المعسل.",
+    ownMolassesLabel: "هجيب معسلي معايا",
+    ownMolassesDesc: "العميل يجيب المعسل، وإحنا التجهيز.",
+    personalHose: "خرطوم شخصي",
+    freeWord: "مجاناً",
+    chargedWord: "مدفوعة",
+
+    customerName: "اسم العميل",
+    customerNameOptional: "اسم العميل (اختياري)",
+    phone: "الهاتف",
+    phoneOptional: "الهاتف (اختياري)",
+    tableRoom: "الطاولة / الغرفة",
+    notes: "ملاحظات",
+    notesOptional: "ملاحظات (اختياري)",
+    placeOrder: "تأكيد الطلب",
+    placingOrder: "جارٍ إرسال الطلب...",
+    orderPlaced: "تم تأكيد الطلب!",
+    orderId: "رقم الطلب",
+    done: "تم",
+    nameOrTableHint: "اكتب اسمك أو رقم الطاولة عشان نعرف نجيبها فين",
+    checkingPlus: "بندور في مزاج+…",
+    loyaltyPhonePlaceholder: "٠١xxxxxxxxx — اكسب واستبدل نقاط",
+    tablePlaceholder2: "مثلاً: طاولة ٧",
+    notesPlaceholder: "فحم إضافي، طلبات نكهات…",
+    newToMazajPlus: "أول مرة؟ الرقم ده هينضم لمزاج+ تلقائياً",
+    bonusPtsPrefix: "٥٠ نقطة ترحيبية +",
+    ptsOnOrder: "نقطة على الطلب ده",
+    posLinkedNote: "✓ مرتبط بفاتورة الطاولة (من نظام المطعم)",
+    orderSavedOfflineTitle: "الطلب اتحفظ أوفلاين",
+    orderSavedOfflineDesc:
+      "أنت أوفلاين — الطلب هيتزامن مع الصالة تلقائياً أول ما يرجع النت.",
+    sessionQueued: "الجلسة دخلت طابور التحضير.",
+    welcomeMazajPlus: "أهلاً بك في مزاج+!",
+    ptsEarned: "نقطة اكتُسبت",
+    ptsRedeemed: "نقطة استُبدلت",
+    orderSavedDeviceToast: "الطلب اتحفظ على الجهاز",
+    willSyncToast: "هيتزامن مع الصالة تلقائياً أول ما يرجع النت.",
+    sessionQueuedToast: "الجلسة اتضافت للطابور.",
+
+    guestOrderTitle: "طلب الضيف",
+    scan: "امسح",
+    cartBtn: "شيشتي",
+    egyptianLounge: "السوق المصري · أسعار الصالة",
+    heroLine1: "اصنع جلستك المثالية",
+    heroLine2: "بالظبط على ذوقك",
+    heroBody: "اختر علامة المعسل والنكهة. كل جبلة ٢٠ جرام معسل، بتتحضّر طازة.",
+    promoByoTitle: "اجيب شيشتك معاك",
+    promoByoBody: "٢ جبلة بسعر واحدة.",
+    promoMolassesTitle: "اجيب معسلك معاك",
+    promoMolassesBody: "نفس عرض ٢ مقابل ١.",
+    promoMixTitle: "امزج النكهات",
+    promoMixBody: "مكس بين العلامات في جبلة واحدة.",
+    oneTapFav: "ضغطة واحدة تضيف أفضل جبلاتنا",
+    tapBrandHint: "اضغط على علامة لاختيار النكهة والكمية.",
+    viewCart: "شوف شيشتك",
+    bogoOn: "عرض ٢×١ شغّال",
+    footerLine: "٢٠ جرام معسل للجبلة · الأسعار بالجنيه المصري · السوق المصري",
+    searchMenu: "ابحث في المنيو",
+    searchPlaceholder: "ابحث عن نكهة أو علامة…",
+    searchNoResults: "مفيش نتائج — جرب «نعناع» أو «تفاح»",
+    searchMatches: "النتائج",
+    addBtn: "أضف",
+    legendFruits: "فواكه عادية",
+    legendMix: "مكس فواكه",
+    legendAmy: "أنبوب أمي (بريميوم)",
+    legendSpecial: "سلوم / كاس",
+    legendFlatSub: "سعر ثابت يومي",
+    priceList: "قائمة الأسعار",
+
+    trackOrders: "تتبع طلباتي",
+    trackDesc: "حالة جلساتك مباشرة · بتتحدث كل ١٠ ثواني",
+    noOrders48: "مفيش طلبات آخر ٤٨ ساعة. اطلب حاجة وشوفها هنا لحظة بلحظة!",
+    allServed: "كل جلساتك وصلت. بالهنا والشفا!",
+    stepPlaced: "تم الطلب",
+    stepPreparing: "قيد التحضير",
+    stepServed: "تم التقديم",
+    inQueue: "في الطابور · متوقع",
+    minutesShort: "دقيقة",
+    longerUsual: "(أطول من المعتاد شوية)",
+    preparingNow: "رجل الشيشة بيجهّزها دلوقتي",
+    ptsOrderNote: "نقاط مزاج+ على الطلب ده",
+    pingTitle: "نبّهني لما تجهز",
+    notifOn: "التنبيهات شغّالة",
+    notifOnDesc: "هننبّهك لما الشيشة تتجهّز وتوصل — حتى لو التطبيق مقفول.",
+    notifOffDesc: "هيوصلك تنبيه على الموبايل لما الشيشة تتجهّز وتوصل.",
+    notifUnsupportedDesc:
+      "على الآيفون: ثبّت التطبيق الأول (إضافة للشاشة الرئيسية) وارجع فعّل التنبيهات.",
+    notifyMe: "نبّهني",
+    howWasSession: "الجلسة كانت عامل إيه؟",
+    lovedIt: "حبيتها!",
+    goodRating: "حلوة",
+    doBetter: "هنحسّن",
+    feedbackPlaceholder: "عايز تقول حاجة للفريق؟ (اختياري)",
+    sendFeedback: "ابعت التقييم",
+    thanksRating: "شكراً على التقييم!",
+    rateStarsFirst: "اضغط النجوم الأول",
+    justNow: "دلوقتي",
+    mAgo: " د",
+    hAgo: " س",
+    pingOnToast: "هننبّهك لما تجهز 🔔",
+    pingOnToastDesc: "هننبّهك أول ما الشيشة توصل.",
+    blockedToast: "التنبيهات محجوبة",
+    blockedToastDesc: "فعّلها لمزاج من إعدادات المتصفح عشان يوصلك التحديثات.",
+    installAppToast: "ثبّت التطبيق عشان يوصلك تنبيه",
+    installAppToastDesc:
+      "على الآيفون، ضيف مزاج للشاشة الرئيسية الأول — وبعدين الزرار ده يفعّل التنبيهات.",
+    thanksFeedbackToast: "شكراً على ملاحظاتك!",
+    helpsServe: "بتساعدنا نخدمك أحسن 🙏",
+
+    aiBtn: "ذكي",
+    favorites: "المفضلة",
+    coal: "فحم",
+    call: "استدعاء",
+    welcomeBackName: "أهلاً بعودتك،",
+    yourUsual: "المعتاد بتاعك:",
+    reorderBtn: "اطبق المعتاد",
+    nameLabel: "الاسم:",
+    tableLabel: "الطاولة:",
+    callDescShort: "هيوصلك طلب للفريق. ضيف ملاحظة لو حابب.",
+    coalDescShort: "اختر نوع الفحم والطلب هيوصل لرجل الشيشة على طول.",
+    needHelpPlaceholder: "مثلاً: محتاج مساعدة في اختيار النكهات",
+    coalNoteRegular: "فحم عادي لو سمحت",
+    coalNoteCubed: "فحم مكعبات لو سمحت",
+    shishaManToast: "رجل الشيشة في الطريق!",
+    shishaManToastDesc: "هيوصلك في ثواني.",
+    coalToast: "طلب الفحم اتبعت!",
+    cubedOnWay: "فحم مكعبات في الطريق",
+    regularOnWay: "فحم عادي في الطريق",
+    browseSkipToast: "أهلاً! اتفرج واطلب لما تجهز.",
+
+    // r57 — resilient request queue
+    requestQueued: "تم حفظ الطلب — هيوصل للمكان أول ما يرجع الاتصال",
+    requestQueuedDesc: "بنعيد المحاولة تلقائياً. الفحم في الطريق.",
+
+    // r57 — multi-branch platform
+    chooseBranch: "اختر الفرع",
+    chooseBranchDesc: "شتغل فين الليلة؟",
+    allBranches: "كل الفروع",
+    allBranchesDesc: "عرض شامل · إجمالي المخزون",
+    chooseBranchGuest: "أنت في أي فرع؟",
+    branchLabel: "الفرع",
+    branchChip: "فرع",
+    floorQuestion: "قاعد فين؟",
+    floorIndoors: "داخلي",
+    floorOutdoors: "خارجي",
+    floorOther: "دور آخر",
+
+    // r57 — inventory matrix (venue admins)
+    invTotalAll: "الإجمالي · كل الفروع",
+    invByBranch: "المخزون حسب الفرع",
+    invMatrixHint: "كل فرع له مخزونه الخاص — ده الإجمالي على مستوى المكان كله.",
+
+    // r57 — platform super-admin console
+    platformConsole: "لوحة المنصة",
+    platformConsoleDesc: "كل الأماكن وكل الفروع — مركز تحكم واحد",
+    venues: "الأماكن",
+    venuesDesc: "كافيهات ومطاعم متوصلة بمنصة مزاج",
+    addVenue: "إضافة مكان",
+    addVenueDesc: "أضف كافيه أو مطعم ووصّله بالمنصة",
+    venueName: "اسم المكان",
+    venueNameAr: "الاسم بالعربي (اختياري)",
+    venueKind: "نوع المكان",
+    kindHookah: "صالة شيشة",
+    kindCafe: "كافيه",
+    kindRestaurant: "مطعم",
+    flagshipBranch: "اسم الفرع الأول",
+    flagshipBranchHint: "مثلاً: وسط البلد · الكورنيش · المعادي",
+    adminName: "اسم مسؤول الفرع",
+    adminPin: "رقم سري للمسؤول (4 أرقام)",
+    connectVenue: "توصيل المكان",
+    suspendVenue: "إيقاف مؤقت",
+    activateVenue: "تنشيط",
+    venuePending: "قيد الربط",
+    venueActive: "نشط",
+    venueSuspended: "موقوف",
+    addBranch: "إضافة فرع",
+    branchName: "اسم الفرع",
+    branchAddedToast: "تمت إضافة الفرع!",
+    venueOnboardedToast: "تمت إضافة المكان!",
+    venueOnboardedToastDesc: "اتربط بأول فرع ومسؤول خاص بيه.",
+    todayOrders: "طلبات اليوم",
+    todayRevenue: "إيراد اليوم",
+    platformVenuesActive: "أماكن نشطة",
+    platformBranches: "الفروع",
+    openVenue: "عرض الفروع",
+    branchesOf: "الفروع",
+    statusLabel: "الحالة",
+    noVenues: "لا توجد أماكن بعد",
+    noVenuesDesc: "أضف أول كافيه أو مطعم لتنمية المنصة.",
+    venueStatusUpdated: "تم تحديث حالة المكان",
+
+    // Favorites sheet
+    favTitle: "مكساتك المفضلة",
+    favDesc: "احفظ جبلتك المعتادة واطلبها بضغطة واحدة",
+    saveCurrentMix: "احفظ المكس الحالي",
+    favPlaceholder: "مثلاً: التوت نعناع بتاعي",
+    saveBtn: "حفظ",
+    favHint: "ضيف مكس فواكه للسلة الأول، وبعدين احفظه هنا.",
+    noFavs: "مفيش مفضلات لسه. احفظ أول مكس فوق.",
+    favRemoved: "اتشالت من المفضلة",
+    favAdded: "تمت إضافة",
+
+    aiSommelier: "السوميلييه الذكي",
+    sommelierTagline: "كونسيرج الشيشة — من المزاج للجبلة في ثواني",
+    sommelierGreeting:
+      "أهلاً! أنا سوميلييه مزاج 🌿 قول لي مزاجك — حلو، نعناع، قوي — وهرشحلك الجبلة المثالية بالأسعار.",
+    askPlaceholder: "مثلاً: حاجة حلوة وخفيفة…",
+    thinking: "بفكر…",
+    quickAdd: "إضافة سريعة",
+    somethingSweet: "حاجة حلوة",
+    strongClassic: "قوية وكلاسيكية",
+    mintyFresh: "نعناع ومنعشة",
+    surpriseMe: "فاجئني",
+    aiBadge: "ذكاء مزاج",
+    engineBadge: "ترشيح ذكي",
+    clearChat: "مسح",
+    sendBtn: "إرسال",
+    addedToCart: "الشيشة اتجهازت",
+    // r58 living orders — amend after confirming
+    amendAction: "تعديل الطلب",
+    amendEditingTitle: "تعديل الطلب",
+    amendEditingDesc: "غيّر أي حاجة — المطبخ هيتحدث فورًا.",
+    amendBarTitle: "تعديل الطلب",
+    amendBarCta: "راجع التعديلات",
+    amendSaveChanges: "احفظ التعديلات",
+    amendSaving: "جاري الحفظ…",
+    amendCancelEdit: "إيقاف التعديل",
+    amendCancelled: "اتلغى التعديل — الطلب زي ما كان",
+    amendNoChanges: "مفيش تغيير لسه",
+    amendChangesChip: "تعديلاتك",
+    amendFooterNote: "الحفظ يحدّث طابور المطبخ والمخزون فورًا.",
+    amendUpdatedToast: "تم تحديث الطلب",
+    amendUpdatedDesc: "المطبخ شاف التعديل فورًا.",
+    amendRevWord: "نسخة",
+    amendGuestButton: "عدّل طلبي",
+    amendGuestStartDesc: "اتفرج على المنيو وغيّر الشيشن — وبعدين احفظ.",
+    amendStartDesc: "اتفرج على المنيو وغيّر الشيشن — وبعدين احفظ النسخة الجديدة.",
+    amendStaffTitle: "تعديل الطلب",
+    amendStaffSubtitle: "عدّل طلب موجود — الطابور يتحدث مع الحفظ",
+    amendEmptyTitle: "الطلب فضي خلاص",
+    amendEmptyDesc: "ضيف شيشة واحدة على الأقل، أو أوقف التعديل لتركيه زي ما كان.",
+    amendLegacyError: "الطلب ده ما ينفعش يتعدل (صيغة قديمة)",
+    backToQueue: "رجوع للطابور",
+    sommelierError: "السوميلييه رايح يستريح — جرب تاني",
+
+    aiBrief: "ملخص ذكي",
+    generateBrief: "ولّد الملخص الذكي",
+    briefLoading: "بقرا أرقامك…",
+    briefTitle: "الملخص التنفيذي لليوم",
+    analyticsLoadError: "تعذر تحميل الإحصائيات.",
+    tryAgain: "حاول تاني",
+
+    molasses: "المعسل",
+    supplies: "المستلزمات",
+    coalFoil: "فحم · ورق",
+    inStock: "متوفر",
+    low: "منخفض",
+    restock: "إعادة تخزين",
+    flavorStock: "مخزون النكهات",
+    flavors: "نكهات",
+    brandsTracked: "العلامات المتتبعة",
+    totalMolasses: "إجمالي المعسل",
+    totalHookahsLeft: "إجمالي الجبلات المتبقية",
+    lowStock: "مخزون منخفض",
+    hookahsLeft: "جبلة متبقية",
+    stock: "المخزون",
+    min: "الحد الأدنى",
+    reusable: "قابل لإعادة الاستخدام",
+    notAutoDeducted: "لا يُخصم تلقائياً مع كل طلب",
+    medicalHose: "خرطوم طبي",
+    regularCoal: "فحم عادي",
+    cubedCoal: "فحم مكعبات",
+    foil: "ورق",
+
+    orderQueue: "طابور الطلبات",
+    activeSessions: "الجلسات النشطة والسجل",
+    incoming: "وارد",
+    tapToConfirm: "اضغط للتأكيد",
+    confirmTake: "تأكيد واستلام",
+    myOrders: "طلباتي",
+    otherActive: "أخرى نشطة",
+    doneOrders: "مكتملة",
+    walkIn: "عميل بدون اسم",
+    guestSelfOrder: "طلب ضيف ذاتي",
+    assigned: "مُسند",
+    comments: "تعليقات",
+    orderComments: "تعليقات الطلب",
+    noCommentsYet: "لا توجد تعليقات بعد.",
+    addComment: "أضف تعليقاً",
+    author: "الكاتب",
+    comment: "تعليق",
+    startPreparing: "ابدأ التحضير",
+    backToPending: "العودة للمعلق",
+    markDone: "تم الانتهاء",
+    noOrdersYet: "لا توجد طلبات بعد",
+    noOrdersDesc: "تظهر الطلبات هنا عند وضعها.",
+
+    requestsTitle: "الطلبات",
+    guestCalls: "طلبات الضيوف لرجل الشيشة",
+    callShishaMan: "استدعاء رجل الشيشة",
+    callShishaManDesc: "سيتم إرسال طلب للموظفين. أضف ملاحظة إن أردت.",
+    sendRequest: "إرسال الطلب",
+    sending: "جارٍ الإرسال...",
+    requestCoal: "طلب فحم",
+    requestCoalDesc: "اختر نوع الفحم ليصل الطلب مباشرة لرجل الشيشة.",
+    regularCoalType: "فحم عادي",
+    cubedCoalType: "فحم مكعبات",
+    quickLight: "إشعال سريع",
+    longerBurn: "حرق أطول",
+    coalRequestSent: "تم إرسال طلب الفحم!",
+    shishaManOnWay: "رجل الشيشة في الطريق!",
+    pending: "معلق",
+    inProgress: "قيد التنفيذ",
+    acknowledged: "تم الاستلام",
+    noRequestsYet: "لا توجد طلبات بعد",
+    noRequestsDesc: "عند استدعاء الضيف لرجل الشيشة، يظهر هنا.",
+    autoRefresh: "يتحدث تلقائياً كل 15 ثانية",
+    refresh: "تحديث",
+    updateFailed: "فشل التحديث",
+    preparingLabel: "قيد التحضير",
+    markedPreparingToast: "أصبحت قيد التحضير",
+    markedDoneToast: "تم إنهاء الطلب",
+    waitingLabel: "منتظرة",
+    lateLabel: "متأخرة",
+    hookahSingle: "شيشة",
+    hookahPlural: "شيشة",
+    loadOrdersFail: "تعذر تحميل الطلبات",
+    orderConfirmedToast: "تم تأكيد الطلب",
+    nowPreparingFor: "يُحضَّر الآن لـ {name}",
+    couldNotClaim: "تعذر استلام الطلب",
+    legacyItemsNoEdit: "لا يمكن تعديل هذا الطلب (عناصر قديمة)",
+    guestScanLabel: "مسح من الضيف",
+    guestCallLabel: "نداء الضيف",
+    employeeLabel: "موظف",
+    autoRefresh10: "يتحدث تلقائياً كل 10 ثوانٍ",
+    queueValueLabel: "قيمة الطابور",
+    statusWord: "الحالة",
+    commentAddedToast: "تمت إضافة التعليق",
+    couldNotComment: "تعذر إضافة التعليق",
+    commentPlaceholder: "أضف تعليقًا — مثلًا: يحتاج فحمًا إضافيًا، العميل يريد حرارة أقل…",
+    noCommentsHint: "لا توجد تعليقات بعد. أضف أول تعليق بالأسفل.",
+    reqNewCount: "{n} جديد",
+    acknowledgeLabel: "استلام",
+    stepRequested: "تم الطلب",
+    coalRequestTitle: "طلب فحم",
+    reqLoadFail: "تعذر تحميل طلبات الخدمة",
+    reqAckToast: "تم استلام الطلب",
+    reqDoneToast: "تم تنفيذ الطلب",
+    requestsCount: "{n} طلبات",
+    chooseShishaType: "اختر نوع الشيشة",
+    changeWord: "تغيير",
+    bowlsWord: "أطباق",
+    profitLiveNote: "٢٠ جرام للطبق · الربح يظهر مباشرة أثناء التجهيز",
+    flatSessionPrice: "{p} جنيه ثابت",
+    bbTitle: "بناء الطبق",
+    bbSubtitle: "ابنِ وأرسل",
+    customerOptional: "العميل (اختياري)",
+    customerAria: "اسم العميل",
+    tableNumberStar: "رقم الطاولة *",
+    tableRequiredAria: "رقم الطاولة (مطلوب)",
+    pickFromTables: "📋 اختر",
+    pickFromWedjatTables: "اختر من طاولات Wedjat",
+    loyaltyPhoneOptional: "📱 هاتف الولاء (اختياري — اجمع نقاط العميل)",
+    newMemberNote: "عضو جديد — ينضم لمزاج+ تلقائيًا (٥٠ نقطة مكافأة)",
+    tableRequiredToast: "رقم الطاولة مطلوب",
+    tableRequiredToastDesc: "أدخل رقم الطاولة قبل إرسال الطلب.",
+    orderSavedOffline: "تم حفظ الطلب أوفلاين",
+    orderSentKitchen: "تم إرسال الطلب للمطبخ!",
+    syncedToRsm: "تمت مزامنته مع Wedjat RSM",
+    ptsForMember: "+{n} نقطة لـ {name}",
+    couldNotSend: "تعذر إرسال الطلب",
+    bowlSingle: "طبق",
+    amyFlatChip: "أنبوب أمي · ١٨٠ ثابت",
+    noFlavors: "لا نكهات",
+    removeBowlAria: "إزالة الطبق",
+    sendOrderCta: "إرسال الطلب",
+    addFlavorsFill: "أضف نكهات لتعبئة الطبق",
+    flavorSingle: "نكهة",
+    flavorPlural: "نكهات",
+    addAFlavor: "أضف نكهة",
+    decreaseQty: "تقليل الكمية",
+    increaseQty: "زيادة الكمية",
+    addToOrderCta: "أضف للطلب",
+    closeFlavorPicker: "إغلاق منتقي النكهات",
+    savedOfflineBadge: "محفوظ أوفلاين — سيتزامن مع المطبخ عند إعادة الاتصال",
+    standardWord: "قياسي",
+    tableWord: "طاولة",
+    loyaltyTitleFull: "ولاء مزاج+",
+    rewardsMembersSub: "أعضاء المكافآت والنقاط والمستويات",
+    membersLabel: "الأعضاء",
+    searchMembersPh: "ابحث بالاسم / الهاتف…",
+    searchMembersAria: "البحث في الأعضاء",
+    noMembersYet: "لا يوجد أعضاء بعد",
+    noMembersMatch: "لا يوجد أعضاء مطابقون للبحث.",
+    membersAutoJoin: "ينضم الضيوف تلقائيًا عند الطلب برقم هاتف، أو سجّلهم يدويًا.",
+    enrollWord: "تسجيل",
+    enrollReq: "الاسم ورقم هاتف (٥+ أرقام) مطلوبان",
+    couldNotEnroll: "تعذر التسجيل",
+    enrollMember: "تسجيل عضو",
+    nameExample: "مثلًا: أحمد حسن",
+    ptsWord: "نقطة",
+    ptsToWord: "نقطة للوصول إلى",
+    purchasesLoadFail: "تعذر تحميل المشتريات",
+    noPurchasesYet: "لا توجد مشتريات بعد",
+    noPurchasesDesc: "اضغط على «شراء» لشراء عبوات المعسل أو المستلزمات.",
+    purchaseRecorded: "تم تسجيل الشراء",
+    couldNotRecord: "تعذر تسجيل الشراء",
+    procurementWord: "المشتريات",
+    quantityPacks: "الكمية (عبوات)",
+    totalCost: "إجمالي التكلفة",
+    decreaseWord: "تقليل",
+    increaseWord: "زيادة",
+    pointsOutstanding: "نقاط قائمة",
+    redeemableBalance: "الرصيد القابل للاستبدال",
+    pointsEarnedWord: "نقاط مكتسبة",
+    allTimeWord: "إجمالي كل الفترات",
+    pointsRedeemedWord: "نقاط مستبدلة",
+    givenBack: "≈ {v} مُستردة",
+    howMazajWorks: "كيف يعمل مزاج+",
+    lifetimePtsEarn: "{min}+ نقطة إجمالية · ×{m} كسب",
+    loyaltyRules:
+      "نقطة لكل 1 جنيه · ١٠٠ نقطة = خصم {v} · الأعضاء الجدد يحصلون على ٥٠ نقطة ترحيبية. ينضم الضيوف تلقائيًا عند الطلب برقم هاتف.",
+    enrollDesc: "يبدأون بمكافأة ترحيبية ٥٠ نقطة (١٠٠ نقطة = خصم {v}).",
+    fullName: "الاسم الكامل",
+    phoneLoyaltyId: "رقم الهاتف (معرّف الولاء)",
+    enrollingWord: "جارٍ التسجيل…",
+    buyWord: "شراء",
+    purchasesSub: "شراء عبوات المعسل والمستلزمات",
+    historyWord: "السجل",
+
+    employees: "الموظفون",
+    manageStaff: "إدارة الموظفين والصلاحيات",
+    addEmployee: "إضافة موظف",
+    editEmployee: "تعديل موظف",
+    role: "الدور",
+    superAdmin: "مدير عام",
+    admin: "مدير",
+    employee: "موظف",
+    tabAccess: "وصول التبويبات",
+    permissions: "الصلاحيات",
+    createEmployee: "إنشاء موظف",
+    saveChanges: "حفظ التغييرات",
+    deactivate: "إلغاء التنشيط",
+    activate: "تنشيط",
+    remove: "إزالة",
+    pin: "الرمز",
+    pinDigits: "4 أرقام",
+
+    purchases: "المشتريات",
+    buyMolasses: "شراء عبوات المعسل",
+    buyStock: "شراء مخزون",
+    buyDesc: "الشراء يعيد تخزين المخزون تلقائياً ويسجل التكلفة.",
+    totalSpent: "إجمالي المنفق",
+    lastPurchase: "آخر شراء",
+    buyAndRestock: "شراء وإعادة تخزين",
+    molassesPacks: "عبوات المعسل",
+    procurementSpend: "إنفاق المشتريات",
+
+    profitTitle: "الأرباح",
+    revenueCostMargin: "الإيرادات والتكاليف وصافي الهامش",
+    cogs: "تكلفة البضاعة",
+    molassesCost: "تكلفة المعسل",
+    suppliesCost: "تكلفة المستلزمات",
+    profitByBrand: "الأرباح حسب العلامة التجارية",
+    recentOrders: "أحدث الطلبات",
+    cost: "التكلفة",
+    hookahsSold: "جبلة مباعة",
+
+    wedjatSync: "مزامنة Wedjat RSM",
+    connectionHealth: "حالة الاتصال ومزامنة الطلبات",
+    connected: "متصل",
+    disconnected: "غير متصل",
+    connectedToWedjat: "متصل بـ Wedjat RSM",
+    checkRevocations: "فحص الإلغاءات",
+    checkRevocationsDesc: "استعلم عن الطلبات الملغاة في Wedjat",
+    syncPrices: "مزامنة الأسعار ←",
+    syncPricesDesc: "إرسال أسعار مزاج إلى Wedjat",
+    synced: "متزامن",
+    revoked: "ملغي",
+    failed: "فشل",
+    revokedByWedjat: "أُلغي بواسطة Wedjat RSM",
+    revokedBy: "أُلغي بواسطة",
+    fromWedjat: "من Wedjat RSM",
+    noSyncedOrders: "لا توجد طلبات متزامنة بعد",
+    noSyncedDesc: "الطلبات برقم طاولة تُزامن مع Wedjat RSM تلقائياً.",
+
+    egp: "ج.م",
+    perHookah: "لكل جبلة",
+    flame: "🔥",
+
+    getApp: "حمّل التطبيق",
+    getAppDesc:
+      "منصة مزاج كاملة على موبايلك — حمّلها في ثوانٍ بدون متجر تطبيقات.",
+    scanToInstall: "امسح للتحميل",
+    scanHint:
+      "وجّه كاميرا أي موبايل للكود — ستفتح شاشة تثبيت كاملة. يعمل على الآيفون والأندرويد.",
+    installNow: "حمّل الآن",
+    installing: "جارٍ التحميل…",
+    landingTagline: "الصالة كاملة في جيبك — اطلب، تابع، واكسب النقاط.",
+    installMeta: "مجاني · ٢–٤ ميجا · يثبّت في ثوانٍ",
+    installFree: "تحميل — مجاني",
+    preparingDownload: "جارٍ تجهيز التحميل…",
+    preparingHint: "لحظة واحدة — نجهّز مزاج لموبايلك.",
+    installAndroidIntro:
+      "ملف APK هو التطبيق الكامل في ملف واحد — يثبّته هاتفك مباشرةً ويظهر على شاشتك الرئيسية بأيقونة مزاج.",
+    installFallbackTitle: "خطوة أخيرة",
+    retry: "أعد المحاولة",
+    installIosTitle: "ثبّت على الآيفون",
+    installIosIntro: "آبل تثبّت التطبيقات من سفاري — الأمر يستغرق ٥ ثوانٍ فقط:",
+    iosInstallNote:
+      "بعدها يعمل مزاج كأي تطبيق — ملء الشاشة، أوفلاين، على شاشتك الرئيسية.",
+    openInSafariTitle: "افتح في سفاري للتثبيت",
+    openInSafariDesc:
+      "أنت تشاهد هذه الصفحة داخل تطبيق آخر لا يستطيع تثبيت التطبيقات. افتحها في سفاري وسيظهر دليل التثبيت.",
+    openInSafariStep: "اضغط أيقونة المشاركة ثم اختر «فتح في سفاري»",
+    installSuccessTitle: "مزاج يثبّت الآن ✓",
+    installSuccessDesc:
+      "جارٍ التحميل — ستظهر أيقونة مزاج على شاشتك الرئيسية بعد لحظات.",
+    startUsing: "ابدأ استخدام مزاج",
+    continueInBrowser: "المتابعة في المتصفح",
+    scanWithPhone: "امسحها بموبايلك",
+    howTo: "الطريقة",
+    youHaveApp: "أنت تستخدم التطبيق المثبّت",
+    iosStep1: "افتح مزاج في سفاري ثم اضغط زر المشاركة",
+    iosStep2: "مرّر للأسفل واضغط «إضافة إلى الشاشة الرئيسية»",
+    iosStep3: "افتح مزاج من الشاشة الرئيسية — بالهنا والشفا!",
+    installFromMenu:
+      "لا يظهر؟ افتح قائمة المتصفح (⋮) واختر «تثبيت التطبيق».",
+    apkButton: "حمّل التطبيق",
+    apkSub: "ملف APK مباشر — بدون Google Play",
+    apkStarted: "جارٍ تنزيل Mazaj.apk — تابع شريط التنزيل في المتصفح",
+    apkAfterTitle: "بعد اكتمال التنزيل",
+    apkStep1: "اضغط «فتح» في شريط التنزيلات",
+    apkStep2: "اسمح من هذا المصدر — أول مرة فقط",
+    apkStep3: "اضغط «تثبيت» — وهذا كل شيء",
+    orDivider: "أو",
+    instantAdd: "أضِف فورًا من هذا المتصفح",
+    iosNoStore: "بدون App Store تمامًا — المسار الرسمي من آبل",
+    sheetApk: "تنزيل ملف التطبيق (APK) · بدون Google Play",
+    syncTitle: "مزامنة ثنائية دائمة",
+    syncDesc1:
+      "الطلبات المسجّلة أوفلاين تُحفظ على موبايلك وتتزامن مع الصالة فور عودة الإنترنت.",
+    syncDesc2:
+      "الحالة الحية ونقاط مزاج+ والطابور متزامنة على كل الأجهزة — الموبايل وشاشات الموظفين والمنصة.",
+    featTracking: "تتبع مباشر للطلبات",
+    featLoyalty: "مكافآت مزاج+",
+    featOffline: "يعمل أوفلاين",
+    installBanner: "حمّل مزاج على موبايلك",
+    installBannerDesc: "التطبيق الكامل · مزامنة ثنائية · يعمل أوفلاين",
+    later: "لاحقاً",
+    offlineMode: "غير متصل",
+    queuedOrders: "طلبات في انتظار المزامنة",
+    syncingOrders: "جارٍ مزامنة الطلبات…",
+    ordersSynced: "عاد الاتصال — تمت المزامنة ✓",
+
+    // Landing — cinematic home experience
+    landKicker: "مزاج · بيت الشيشة",
+    landHeroTitleA: "حيث يصير الدخان",
+    landHeroTitleB: "شِعراً",
+    landHeroSub:
+      "سبعة بيوت معسل أصيلة. طبق واحد يُصنع حسب طلبك ويُتابع مباشرة حتى طاولتك — وتطبيق كامل يعيش على هاتفك.",
+    landHeroMeta: "٧ بيوت · +٣٠ نكهة · أطباق مصنوعة يدوياً",
+    landCtaOrder: "اطلب الآن",
+    landScroll: "مرّر",
+    landNavPlatform: "المنصة",
+    landNavExperience: "التجربة",
+    landNavApp: "التطبيق",
+    landRitualKicker: "التجربة",
+    landRitualTitle: "طقوسٌ صُقلت بإتقان",
+    landRitual1T: "اختر بيتك",
+    landRitual1D:
+      "سبعة بيوت معسل — من الكلاسيكيات المصرية الخالدة إلى خط أمي الفاخر. أو دع السوميلييه الذكي يقرأ مزاجك.",
+    landRitual2T: "يُصنع لطلبك",
+    landRitual2D:
+      "كل طبق يُحضَّر عند الطلب — ٢٠ جراماً، خلطتك، بطريقتك. أحضر معلك أو معسلك وادفع طبقاً واحداً عن كل اثنين.",
+    landRitual3T: "يُتابع حتى طاولتك",
+    landRitual3D:
+      "تابعه مباشرة — من الفحم إلى السحابة. تنبيه لطيف لحظة التقديم، ونقاط مع كل طبق.",
+    landFeatKicker: "المنصة",
+    landFeatTitle: "صالةٌ تفكّر",
+    landFeatAiT: "سوميلييه ذكي",
+    landFeatAiD: "أخبره بمزاجك — حلو، منعش، قوي — فيصوغ طبقك المثالي من القائمة الحية.",
+    landFeatTrackT: "تتبع مباشر",
+    landFeatTrackD: "من «يُحضّر» إلى «قُدّم» — كل مرحلة تصل مباشرة إلى هاتفك.",
+    landFeatOfflineT: "يعمل بلا إنترنت",
+    landFeatOfflineD: "اطلب في وضع الطيران. تتم المزامنة لحظة عودة الاتصال.",
+    landFeatLoyaltyT: "مكافآت مزاج+",
+    landFeatLoyaltyD: "كل طبق يكسبك. ارتقِ المستويات وافتح خلطات مجانية.",
+    landStatHouses: "بيوت معسل",
+    landStatFlavors: "نكهة",
+    landStatBowl: "جرام للطبق",
+    landStatBogo: "احضر معلك",
+    landAppKicker: "التطبيق",
+    landAppTitle: "احمل الصالة كاملة",
+    landAppDesc:
+      "بدون متجر تطبيقات. امسح الكود واضغط تثبيت — المنصة كاملة تعيش على شاشتك الرئيسية، تعمل بلا إنترنت، وتبقى مزامنة تماماً مع الصالة.",
+    landAppB1: "يثبت في ثوانٍ",
+    landAppB2: "يعمل بلا إنترنت",
+    landAppB3: "ينبّهك عندما يجهز",
+    landAppB4: "يكسب نقاط مزاج+",
+    landFooterCraft: "صُنع في القاهرة",
+    landFooterTagline: "اطلب · تابع · اكسب",
+    landFooterRights: "جميع الحقوق محفوظة",
+    landEnter: "ادخل الصالة",
+    landMenuPeek: "بيوت الليلة",
+    landMenuPeekSub: "اضغط لفتح القائمة كاملة",
+    // ── r59: WEDJAT RSM revenue share ──
+    rsmTitle: "RSM · مشاركة الإيرادات",
+    rsmSubtitle: "إجمالي ربح وجدة من الشيشة",
+    rsmRangeToday: "اليوم",
+    rsmRange7: "٧ أيام",
+    rsmRange30: "٣٠ يومًا",
+    rsmRangeAll: "كل الفترات",
+    rsmShishaRevenue: "إيراد الشيشة",
+    rsmShishaRevenueSub: "المحصّل · بعد الخصومات",
+    rsmCommission: "العمولة ١٢٪",
+    rsmCommissionSub: "على الشيشة فقط",
+    rsmWedjatGross: "إجمالي وجدة ٤٠٪",
+    rsmWedjatGrossSub: "حصتنا من العمولة",
+    rsmPartnerShare: "حصة الشريك ٦٠٪",
+    rsmEffective: "المعدل الفعلي ٤٫٨٪ من مبيعات الشيشة",
+    rsmFormula: "إجمالي الربح = إيراد الشيشة × ١٢٪ × ٤٠٪",
+    rsmTaxNote:
+      "الضرائب وضريبة القيمة المضافة يتحملها المكان المؤجِّر لركن الشيشة — ولا تُخصم من حصة وجدة إطلاقًا.",
+    rsmSeparationNote:
+      "تُحسب عمولة الـ١٢٪ على الشيشة منفصلة عن باقي طلبات الكافيه أو المطعم — الأكل والمشروبات بلا عمولة شيشة.",
+    rsmGrossSales: "إجمالي مبيعات القائمة",
+    rsmDiscounts: "الخصومات (احضر معلك · الولاء)",
+    rsmOrders: "طلب",
+    rsmHookahs: "شيشة",
+    rsmByBranch: "حسب الفرع",
+    rsmByVenue: "حسب المكان",
+    rsmDailyTrend: "الاتجاه اليومي",
+    rsmSyncTitle: "مزامنة وجدة RSM",
+    rsmSynced: "على الفواتير",
+    rsmPending: "معلّق",
+    rsmFailed: "فاشل",
+    rsmRevoked: "ملغى",
+    rsmNoData: "لا مبيعات شيشة في هذه الفترة بعد.",
+    rsmPlatformSection: "مشاركة إيرادات RSM",
+    rsmPlatformSectionDesc: "إجمالي وجدة اليوم — ١٢٪ على الشيشة × حصتنا ٤٠٪",
+    rsmThBranch: "الفرع",
+    rsmThVenue: "المكان",
+    rsmThRevenue: "الإيراد",
+    rsmThCommission: "١٢٪",
+    rsmThOurs: "حصتنا ٤٠٪",
+    rsmViewFull: "افتح لوحة RSM",
+
+    /* r61 — Platform Control Center */
+    pccActiveVenues: "أماكن نشطة",
+    pccActivityTitle: "النشاط المباشر",
+    pccAddPerson: "إضافة شخص",
+    pccAddPersonDesc: "أنشئ حسابًا على المنصة أو مرتبطًا بمكان.",
+    pccAlertsTitle: "تنبيهات المخزون المنخفض",
+    pccAllStatuses: "كل الحالات",
+    pccAllVenues: "كل الأماكن",
+    pccBranchesShort: "فروع",
+    pccBrandsShort: "ماركات",
+    pccByBranchTitle: "حسب الفرع",
+    pccCommissionHint: "تُطبَّق على إيراد الشيشة فقط",
+    pccCommissionPct: "العمولة على الشيشة (٪)",
+    pccCommissionToday: "عمولة اليوم",
+    pccCreatePerson: "إنشاء الحساب",
+    pccCustom: "مخصص",
+    pccDays: "{count}ي",
+    pccDbUp: "قاعدة البيانات تعمل",
+    pccDefaultLabel: "الافتراضي",
+    pccDisablePerson: "تعطيل الحساب",
+    pccEditPricing: "تعديل الأسعار",
+    pccEditPricingDesc: "النشر يحدّث كل التطبيقات فورًا — الضيوف والفريق يرون الأسعار الجديدة عند المزامنة التالية.",
+    pccEffectiveTake: "المعدل الفعلي",
+    pccEnablePerson: "تنشيط الحساب",
+    pccFilterStatus: "تصفية بالحالة",
+    pccFilterVenue: "تصفية بالمكان",
+    pccFlat: "سعر ثابت",
+    pccFlavors: "نكهات",
+    pccFruits: "فواكه",
+    pccFruitsMix: "خلطة فواكه",
+    pccHookahsShort: "شيشة",
+    pccIdentityDesc: "كيف تُعرّض المنصة نفسها.",
+    pccIdentityTitle: "هوية المنصة",
+    pccLive: "مباشر",
+    pccLoadMore: "تحميل المزيد",
+    pccLowStockChip: "{count} مخزون منخفض",
+    pccMenuDesc: "منيو المنصة الخاص — انشر الأسعار لكل التطبيقات فورًا.",
+    pccMenuOverridden: "{count} أسعار مخصصة",
+    pccMenuPublishDesc: "كل التطبيقات تلتقطها تلقائيًا.",
+    pccMenuResetToast: "أُرجعت الأسعار للافتراضي",
+    pccMenuSavedToast: "تم نشر الأسعار",
+    pccMenuTitle: "منيو الشيشة",
+    pccNoActivity: "لا طلبات بعد",
+    pccNoActivityDesc: "أول شيشة تُجهّز ستضيء هنا فورًا.",
+    pccNoOrders: "لا طلبات مطابقة",
+    pccNoOrdersDesc: "جرّب توسيع عوامل التصفية.",
+    pccNoPeople: "لا نتائج مطابقة",
+    pccNoPeopleDesc: "جرّب بحثًا مختلفًا.",
+    pccNoStock: "لا يوجد مخزون مُتابع في هذا الفرع بعد.",
+    pccNoVenue: "بدون مكان (حر)",
+    pccOrdersDesc: "كل طلبات الشيشة في كل الأماكن — القصة الكاملة لأركانك.",
+    pccOrdersTitle: "مستكشف الطلبات",
+    pccPaletteEmpty: "لا نتائج",
+    pccPaletteLabel: "لوحة الأوامر",
+    pccPaletteNavigate: "تنقّل",
+    pccPalettePlaceholder: "انتقل لتبويب أو نفّذ إجراء…",
+    pccPaletteRun: "تنفيذ",
+    pccPaletteShort: "أوامر",
+    pccPartnerGets: "الشريك يحصل على",
+    pccPendingReqChip: "{count} طلبات مفتوحة",
+    pccPeopleDesc: "كل الحسابات على المنصة — الأدوار والنطاقات ودورة الحياة.",
+    pccPeopleTitle: "الفريق",
+    pccPersonAddedToast: "تم إنشاء الحساب",
+    pccPersonDisabled: "تم تعطيل الحساب",
+    pccPersonEnabled: "تم تنشيط الحساب",
+    pccOnline: "متصل",
+    pccOnlineTitle: "{n} جلسة نشطة",
+    pccRevokeSessions: "تسجيل الخروج من كل الأجهزة",
+    pccBackupsTitle: "نسخ احتياطية خارجية",
+    pccBackupsDesc:
+      "لقطة ليلية لكل الجداول تُرفع إلى مستودع نسخ احتياطية خاص. يمكنك أيضًا تشغيلها يدويًا.",
+    pccBackupRunNow: "نسخة احتياطية الآن",
+    pccBackupRunning: "جارٍ النسخ…",
+    pccBackupDoneToast: "تمت النسخة الاحتياطية",
+    pccBackupSuccess: "ناجحة",
+    pccBackupPartial: "اللقطة تمت، لكن الرفع الخارجي فشل",
+    pccBackupFailed: "فشلت",
+    pccBackupRows: "سجل",
+    pccBackupOffsite: "نسخة خارجية ✓",
+    pccBackupOffsiteNo: "محلية فقط",
+    pccBackupLastNever: "لم تُشغّل أي نسخة احتياطية بعد.",
+    pccBackupCron: "ليلية",
+    pccBackupManual: "يدوية",
+    pccBackupCronHint:
+      "تعمل تلقائيًا كل ليلة حوالي الساعة ٣ فجرًا بتوقيت القاهرة، ويُحتفظ بآخر ٣٠ لقطة.",
+    pccBackupAgoNow: "الآن",
+    pccBackupAgoMin: "منذ {n} د",
+    pccBackupAgoHour: "منذ {n} س",
+    pccBackupAgoDay: "منذ {n} يوم",
+    pccRevokeTitle: "إلغاء الجلسات",
+    pccRevokeDesc:
+      "سيتم تسجيل خروج {name} من كل الأجهزة فورًا. يمكنه تسجيل الدخول مرة أخرى برمز الدخول.",
+    pccRevokeConfirm: "تسجيل الخروج من كل الأجهزة",
+    pccSessionsRevoked: "تم تسجيل خروج {name} من {n} جلسة",
+    pccPersonName: "الاسم",
+    pccPlatformName: "اسم العرض للمنصة",
+    pccPublishPrices: "نشر الأسعار",
+    pccRefreshAll: "تحديث كل شيء",
+    pccResetToDefault: "إرجاع للافتراضي",
+    pccRole: "الدور",
+    pccRoleAdmin: "مدير",
+    pccRoleEmployee: "موظف",
+    pccRolePlatform: "مالك المنصة",
+    pccRoleSuper: "مدير عام",
+    pccRoleVenueAdmin: "مدير المكان",
+    pccRsmEngineDesc: "النسب التي تُحسب بها كل اللوحات. الافتراضي: ١٢٪ × ٤٠٪.",
+    pccRsmEngineTitle: "محرّك مشاركة الإيرادات",
+    pccRsmSavedDesc: "كل اللوحات تُعيد الحساب عند التحديث التالي.",
+    pccSaveEngine: "حفظ المحرّك",
+    pccScopePlatform: "على مستوى المنصة",
+    pccSearchPeople: "ابحث عن شخص أو مكان…",
+    pccSettingsSavedToast: "تم حفظ الإعدادات",
+    pccShareHint: "حصتك من العمولة",
+    pccSharePct: "حصة وجدة من العمولة (٪)",
+    pccStockTitle: "مخزون المنصة",
+    pccStockTotal: "الإجمالي {grams} جم",
+    pccSubtitle: "منصتك — كل المقابض في مكان واحد",
+    pccSuppliesShort: "مستلزمات",
+    pccTabFinance: "المالية",
+    pccTabInventory: "المخزون",
+    pccTabMenu: "المنيو",
+    pccTabOrders: "الطلبات",
+    pccTabPeople: "الفريق",
+    pccTabPulse: "النبضة",
+    pccTabSettings: "الإعدادات",
+    pccTabVenues: "الأماكن",
+    pccTitle: "مركز تحكم المنصة",
+    pccToggleLanguage: "تبديل اللغة",
+    pccTrendDesc: "إيراد الشيشة عبر كل الأماكن",
+    pccTrendRevenue: "الإيراد",
+    pccTrendTitle: "نبضة ٧ أيام",
+    pccUnassigned: "غير مُعيّن",
+    pccVenueOptional: "المكان (اختياري)",
+    pccWedjatChip: "وجدة: {synced} مُزامن · {pending} معلّق",
+    pccYou: "أنت",
+  },
+};

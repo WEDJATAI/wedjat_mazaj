@@ -1,0 +1,12 @@
+{
+  "app": "Mazaj",
+  "platform": "android",
+  "package": "com.mazaj.hookah",
+  "version": "1.0.0",
+  "versionCode": 1,
+  "sizeBytes": 4191595,
+  "sha256": "41d001db680895f5372442945b1d422da51eabda475596e4efc64fdffe4530c8",
+  "apk": "/downloads/mazaj.apk",
+  "minAndroid": 6.0,
+  "noStore": true
+}

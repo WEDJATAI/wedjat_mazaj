@@ -1,0 +1,7 @@
+{
+  "name": "mock-rsm",
+  "private": true,
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  }
+}
